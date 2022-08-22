@@ -9,6 +9,12 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Wemogy.Infrastructure.Datab
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Wemogy.Infrastructure.Database.Core.UnitTests", "core\Wemogy.Infrastructure.Database.Core.UnitTests\Wemogy.Infrastructure.Database.Core.UnitTests.csproj", "{7DBFFDE9-C11F-4BC5-AA47-FEDBB0C0072F}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "cosmos", "cosmos", "{6398B935-DFD3-4487-8C59-E23EFC9A4FFE}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Wemogy.Infrastructure.Database.Cosmos", "cosmos\Wemogy.Infrastructure.Database.Cosmos\Wemogy.Infrastructure.Database.Cosmos.csproj", "{80FDAE1E-DA9B-4FE2-B097-4194D2929D57}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Wemogy.Infrastructure.Database.Cosmos.UnitTests", "cosmos\Wemogy.Infrastructure.Database.Cosmos.UnitTests\Wemogy.Infrastructure.Database.Cosmos.UnitTests.csproj", "{C157F2D0-138A-4D4C-AC2A-474500AD73EA}"
+EndProject
 Global
   GlobalSection(SolutionConfigurationPlatforms) = preSolution
     Debug|Any CPU = Debug|Any CPU
@@ -46,9 +52,35 @@ Global
     {7DBFFDE9-C11F-4BC5-AA47-FEDBB0C0072F}.Release|x64.Build.0 = Release|Any CPU
     {7DBFFDE9-C11F-4BC5-AA47-FEDBB0C0072F}.Release|x86.ActiveCfg = Release|Any CPU
     {7DBFFDE9-C11F-4BC5-AA47-FEDBB0C0072F}.Release|x86.Build.0 = Release|Any CPU
+    {80FDAE1E-DA9B-4FE2-B097-4194D2929D57}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+    {80FDAE1E-DA9B-4FE2-B097-4194D2929D57}.Debug|Any CPU.Build.0 = Debug|Any CPU
+    {80FDAE1E-DA9B-4FE2-B097-4194D2929D57}.Debug|x64.ActiveCfg = Debug|Any CPU
+    {80FDAE1E-DA9B-4FE2-B097-4194D2929D57}.Debug|x64.Build.0 = Debug|Any CPU
+    {80FDAE1E-DA9B-4FE2-B097-4194D2929D57}.Debug|x86.ActiveCfg = Debug|Any CPU
+    {80FDAE1E-DA9B-4FE2-B097-4194D2929D57}.Debug|x86.Build.0 = Debug|Any CPU
+    {80FDAE1E-DA9B-4FE2-B097-4194D2929D57}.Release|Any CPU.ActiveCfg = Release|Any CPU
+    {80FDAE1E-DA9B-4FE2-B097-4194D2929D57}.Release|Any CPU.Build.0 = Release|Any CPU
+    {80FDAE1E-DA9B-4FE2-B097-4194D2929D57}.Release|x64.ActiveCfg = Release|Any CPU
+    {80FDAE1E-DA9B-4FE2-B097-4194D2929D57}.Release|x64.Build.0 = Release|Any CPU
+    {80FDAE1E-DA9B-4FE2-B097-4194D2929D57}.Release|x86.ActiveCfg = Release|Any CPU
+    {80FDAE1E-DA9B-4FE2-B097-4194D2929D57}.Release|x86.Build.0 = Release|Any CPU
+    {C157F2D0-138A-4D4C-AC2A-474500AD73EA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+    {C157F2D0-138A-4D4C-AC2A-474500AD73EA}.Debug|Any CPU.Build.0 = Debug|Any CPU
+    {C157F2D0-138A-4D4C-AC2A-474500AD73EA}.Debug|x64.ActiveCfg = Debug|Any CPU
+    {C157F2D0-138A-4D4C-AC2A-474500AD73EA}.Debug|x64.Build.0 = Debug|Any CPU
+    {C157F2D0-138A-4D4C-AC2A-474500AD73EA}.Debug|x86.ActiveCfg = Debug|Any CPU
+    {C157F2D0-138A-4D4C-AC2A-474500AD73EA}.Debug|x86.Build.0 = Debug|Any CPU
+    {C157F2D0-138A-4D4C-AC2A-474500AD73EA}.Release|Any CPU.ActiveCfg = Release|Any CPU
+    {C157F2D0-138A-4D4C-AC2A-474500AD73EA}.Release|Any CPU.Build.0 = Release|Any CPU
+    {C157F2D0-138A-4D4C-AC2A-474500AD73EA}.Release|x64.ActiveCfg = Release|Any CPU
+    {C157F2D0-138A-4D4C-AC2A-474500AD73EA}.Release|x64.Build.0 = Release|Any CPU
+    {C157F2D0-138A-4D4C-AC2A-474500AD73EA}.Release|x86.ActiveCfg = Release|Any CPU
+    {C157F2D0-138A-4D4C-AC2A-474500AD73EA}.Release|x86.Build.0 = Release|Any CPU
   EndGlobalSection
   GlobalSection(NestedProjects) = preSolution
     {E891674B-721B-4F97-A1CB-2C76F4C542C6} = {0722D2A7-76C6-430F-A238-56685022F264}
     {7DBFFDE9-C11F-4BC5-AA47-FEDBB0C0072F} = {0722D2A7-76C6-430F-A238-56685022F264}
+    {80FDAE1E-DA9B-4FE2-B097-4194D2929D57} = {6398B935-DFD3-4487-8C59-E23EFC9A4FFE}
+    {C157F2D0-138A-4D4C-AC2A-474500AD73EA} = {6398B935-DFD3-4487-8C59-E23EFC9A4FFE}
   EndGlobalSection
 EndGlobal

@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>netstandard2.1</TargetFramework>
+    <IsPackable>true</IsPackable>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <PackageId>Wemogy.Infrastructure.Database.Core</PackageId>
+    <Authors>wemogy GmbH</Authors>
+    <Company>wemogy GmbH</Company>
+    <PackageDescription>Unified infrastructure database layer</PackageDescription>
+    <PackageTags>wemogy</PackageTags>
+    <RepositoryUrl>https://github.com/wemogy/libs-infrastructure-database</RepositoryUrl>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="NuGetizer" Version="0.7.1">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+  </ItemGroup>
+</Project>

@@ -1,6 +1,7 @@
 using System;
 using System.Threading.Tasks;
 using FluentAssertions;
+using Wemogy.Infrastructure.Database.Core.Factories;
 using Wemogy.Infrastructure.Database.Core.UnitTests.DatabaseRepositories;
 using Wemogy.Infrastructure.Database.Core.UnitTests.Fakes.Entities;
 using Xunit;
@@ -16,6 +17,7 @@ public abstract partial class RepositoryTestBase : IDisposable
     {
         UserRepository = userRepositoryFactory();
         UserRepositoryFactory = userRepositoryFactory;
+        RepositoryFactoryFactory.DatabaseClientProxy = null;
     }
 
     protected async Task SeedAsync()

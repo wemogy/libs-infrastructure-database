@@ -20,6 +20,11 @@ jobs:
           source-url: https://nuget.pkg.github.com/wemogy/index.json
         env:
           NUGET_AUTH_TOKEN: ${{ secrets.WEMOGY_PACKAGES_TOKEN }}
+      
+      - name: docker-compose
+        shell: bash
+        run: docker-compose -f env/cosmos/docker-compose.yaml up -d
+          
       - name: Test .NET Solution
         working-directory: src
         shell: bash

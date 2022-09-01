@@ -20,15 +20,14 @@ jobs:
           source-url: https://nuget.pkg.github.com/wemogy/index.json
         env:
           NUGET_AUTH_TOKEN: ${{ secrets.WEMOGY_PACKAGES_TOKEN }}
-      
-      - name: docker-compose
-        shell: bash
-        run: docker-compose -f env/cosmos/docker-compose.yaml up -d
-          
+
       - name: Test .NET Solution
         working-directory: src
         shell: bash
         run: dotnet test -c Release /p:CollectCoverage=true -m:1
+        env:
+          COSMOS_CONNECTION_STRING: ${{ secrets.COSMOS_CONNECTION_STRING }}
+          COSMOS_DATABASE_NAME: testdata
 
       - name: Code Coverage Summary Report
         uses: irongut/CodeCoverageSummary@v1.0.2

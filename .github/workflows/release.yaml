@@ -34,7 +34,7 @@ jobs:
           version: ${{ steps.release-version.outputs.next-version }}${{ github.event.inputs.version && 'pre' || '' }}
           cosmos-connection-string: ${{ secrets.COSMOS_CONNECTION_STRING }}
       - name: Create Nuget package(s)
-        run: dotnet pack --no-build --configuration Release /p:VersionPrefix=${{ steps.release-version.outputs.next-version }}${{ github.event.inputs.version && 'pre' || '' }}
+        run: dotnet pack --configuration Release /p:VersionPrefix=${{ steps.release-version.outputs.next-version }}${{ github.event.inputs.version && 'pre' || '' }}
         working-directory: src
       - name: Publish Nuget package(s)
         run: dotnet nuget push **/*.nupkg --skip-duplicate --source https://nuget.pkg.github.com/${{ github.repository_owner }} --api-key ${{ secrets.GITHUB_TOKEN }}

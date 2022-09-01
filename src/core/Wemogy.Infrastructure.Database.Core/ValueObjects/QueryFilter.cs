@@ -17,5 +17,11 @@ namespace Wemogy.Infrastructure.Database.Core.ValueObjects
         public int ParentGroupId => ExpressionTreeNodeId / 10000000;
 
         public bool HasComplexPropertyAccess => Property.Contains("<");
+
+        public QueryFilter()
+        {
+            Property = string.Empty;
+            Value = string.Empty;
+        }
     }
 }

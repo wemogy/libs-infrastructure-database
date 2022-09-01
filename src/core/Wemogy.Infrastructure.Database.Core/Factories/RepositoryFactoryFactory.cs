@@ -18,9 +18,10 @@ namespace Wemogy.Infrastructure.Database.Core.Factories;
 
 public class RepositoryFactoryFactory
 {
-    internal static IAsyncInterceptor? DatabaseClientProxy;
+    internal static IAsyncInterceptor? DatabaseClientProxy { get; set; }
 
-    public Func<IServiceProvider, Type, object[], TDatabaseRepository> GetRepositoryFactory<TDatabaseRepository>(DatabaseRepositoryTypeMetadata databaseRepositoryTypeMetadata)
+    public Func<IServiceProvider, Type, object[], TDatabaseRepository> GetRepositoryFactory<TDatabaseRepository>(
+        DatabaseRepositoryTypeMetadata databaseRepositoryTypeMetadata)
         where TDatabaseRepository : class
     {
         var databaseRepositoryType = typeof(TDatabaseRepository);
@@ -28,8 +29,9 @@ public class RepositoryFactoryFactory
         // create database repository
         var createDatabaseRepositoryMethodInfo = typeof(RepositoryFactoryFactory)
             .GetMethods(BindingFlags.Instance | BindingFlags.NonPublic)
-            .First(x => x.Name == nameof(CreateDatabaseRepository) && x.IsGenericMethodDefinition &&
-                        x.GetGenericArguments().Length == 3);
+            .First(
+                x => x.Name == nameof(CreateDatabaseRepository) && x.IsGenericMethodDefinition &&
+                     x.GetGenericArguments().Length == 3);
         var createDatabaseRepositoryGenericMethod = createDatabaseRepositoryMethodInfo.MakeGenericMethod(
             databaseRepositoryTypeMetadata.EntityType,
             databaseRepositoryTypeMetadata.PartitionKeyType,
@@ -40,8 +42,9 @@ public class RepositoryFactoryFactory
 
         var getReadQueryFiltersMethodBase = typeof(RepositoryFactoryFactory)
             .GetMethods(BindingFlags.Instance | BindingFlags.NonPublic)
-            .First(x => x.Name == nameof(GetReadQueryFilters) && x.IsGenericMethodDefinition &&
-                        x.GetGenericArguments().Length == 2);
+            .First(
+                x => x.Name == nameof(GetReadQueryFilters) && x.IsGenericMethodDefinition &&
+                     x.GetGenericArguments().Length == 2);
         var getReadQueryFiltersGenericMethod = getReadQueryFiltersMethodBase.MakeGenericMethod(
             databaseRepositoryTypeMetadata.EntityType,
             databaseRepositoryTypeMetadata.IdType);
@@ -50,22 +53,35 @@ public class RepositoryFactoryFactory
         var retryProxy =
             new RetryProxy<PreconditionFailedErrorException>(
                 Backoff.ExponentialBackoff(
-                TimeSpan.FromMilliseconds(100),
-                3));
+                    TimeSpan.FromMilliseconds(100),
+                    3));
 
         var t = typeof(IDatabaseClient<,,>);
-        var interT = t.MakeGenericType(databaseRepositoryTypeMetadata.EntityType,
-            databaseRepositoryTypeMetadata.PartitionKeyType, databaseRepositoryTypeMetadata.IdType);
+        var interT = t.MakeGenericType(
+            databaseRepositoryTypeMetadata.EntityType,
+            databaseRepositoryTypeMetadata.PartitionKeyType,
+            databaseRepositoryTypeMetadata.IdType);
 
         return (serviceProvider, databaseClientType, parameters) =>
         {
-            var databaseClientInstance = ActivatorUtilities.CreateInstance(serviceProvider, databaseClientType, parameters);
+            var databaseClientInstance =
+                ActivatorUtilities.CreateInstance(
+                    serviceProvider,
+                    databaseClientType,
+                    parameters);
             if (DatabaseClientProxy != null)
             {
-                databaseClientInstance = DatabaseClientProxy.Wrap(interT, databaseClientInstance);
+                databaseClientInstance = DatabaseClientProxy.Wrap(
+                    interT,
+                    databaseClientInstance);
             }
-            var readFilters = getReadQueryFiltersGenericMethod.Invoke(this, new object[] { serviceProvider, repositoryReadFilterAttribute });
-            var databaseRepository = createDatabaseRepositoryGenericMethod.Invoke(this, new[] { databaseClientInstance, databaseRepositoryOptions, readFilters });
+
+            var readFilters = getReadQueryFiltersGenericMethod.Invoke(
+                this,
+                new object[] { serviceProvider, repositoryReadFilterAttribute });
+            var databaseRepository = createDatabaseRepositoryGenericMethod.Invoke(
+                this,
+                new[] { databaseClientInstance, databaseRepositoryOptions, readFilters });
             return retryProxy.Wrap<TDatabaseRepository>(databaseRepository.ActLike<TDatabaseRepository>());
         };
     }
@@ -78,15 +94,23 @@ public class RepositoryFactoryFactory
         where TPartitionKey : IEquatable<TPartitionKey>
         where TId : IEquatable<TId>
     {
-        return new DatabaseRepository<TEntity, TPartitionKey, TId>(databaseClient, options, readFilters);
+        return new DatabaseRepository<TEntity, TPartitionKey, TId>(
+            databaseClient,
+            options,
+            readFilters);
     }
 
-    private List<IDatabaseRepositoryReadFilter<TEntity>> GetReadQueryFilters<TEntity, TId>(IServiceProvider serviceProvider, RepositoryReadFilterAttribute? repositoryReadFilterAttribute)
+    private List<IDatabaseRepositoryReadFilter<TEntity>> GetReadQueryFilters<TEntity, TId>(
+        IServiceProvider serviceProvider, RepositoryReadFilterAttribute? repositoryReadFilterAttribute)
         where TEntity : class, IEntityBase<TId>
         where TId : IEquatable<TId>
     {
         var readFilters = repositoryReadFilterAttribute?.FilterTypes
-            .Select(x => (IDatabaseRepositoryReadFilter<TEntity>)ActivatorUtilities.CreateInstance(serviceProvider, x)).ToList() ?? new List<IDatabaseRepositoryReadFilter<TEntity>>();
+            .Select(
+                x => (IDatabaseRepositoryReadFilter<TEntity>)ActivatorUtilities.CreateInstance(
+                    serviceProvider,
+                    x))
+            .ToList() ?? new List<IDatabaseRepositoryReadFilter<TEntity>>();
         return readFilters;
     }
 }

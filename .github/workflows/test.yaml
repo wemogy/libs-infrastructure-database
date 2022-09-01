@@ -20,23 +20,14 @@ jobs:
           source-url: https://nuget.pkg.github.com/wemogy/index.json
         env:
           NUGET_AUTH_TOKEN: ${{ secrets.WEMOGY_PACKAGES_TOKEN }}
-      
-      - name: Start Cosmos DB emulator
-        shell: bash
-        run: docker-compose -f env/cosmos/docker-compose.yaml up cosmosdb
-        
-      - name: Seed Cosmos DB emulator
-        shell: bash
-        run: |
-          docker run --rm --network host \
-            -e DELAY=60 \
-            -e CONNECTION_STRING='AccountEndpoint=https://localhost:8081/;AccountKey=C2y6yDjf5/R+ob0N8A7Cgv30VRDJIWEHLM+4QDU5DE2nQ9nDuVTqobD4b8mGGyPMbIZnqyMsEcaGQy67XIw/Jw==' \
-            robinmanuelthiel/cosmos-db-setup:2.0.0 "{\"databaseName\": \"infrastructuredbtests\", \"containers\": [{\"name\": \"users\", \"partitionKey\": \"/tenantId\"}]}"      
-          
+
       - name: Test .NET Solution
         working-directory: src
         shell: bash
         run: dotnet test -c Release /p:CollectCoverage=true -m:1
+        env:
+          COSMOS_CONNECTION_STRING: ${{ secrets.COSMOS_CONNECTION_STRING }}
+          COSMOS_DATABASE_NAME: testdata
 
       - name: Code Coverage Summary Report
         uses: irongut/CodeCoverageSummary@v1.0.2

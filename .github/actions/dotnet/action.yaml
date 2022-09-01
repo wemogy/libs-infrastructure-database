@@ -32,3 +32,6 @@ runs:
       working-directory: src
       shell: bash
       run: dotnet test --configuration ${{ inputs.configuration }} --no-build --verbosity normal
+      env:
+        COSMOS_CONNECTION_STRING: ${{ secrets.COSMOS_CONNECTION_STRING }}
+        COSMOS_DATABASE_NAME: testdata

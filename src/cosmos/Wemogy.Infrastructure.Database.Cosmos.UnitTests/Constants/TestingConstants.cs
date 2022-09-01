@@ -13,5 +13,12 @@ public static class TestingConstants
         }
     }
 
-    public static readonly string DatabaseName = "infrastructuredbtests";
+    public static string DatabaseName
+    {
+        get
+        {
+            var configuration = ConfigurationFactory.BuildConfiguration();
+            return configuration["COSMOS_DATABASE_NAME"];
+        }
+    }
 }

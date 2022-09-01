@@ -23,7 +23,7 @@ jobs:
       
       - name: Start Cosmos DB emulator
         shell: bash
-        run: docker-compose -f env/cosmos/docker-compose.yaml up cosmosdb -d
+        run: docker-compose -f env/cosmos/docker-compose.yaml up -d cosmosdb
         
       - name: Seed Cosmos DB emulator
         shell: bash

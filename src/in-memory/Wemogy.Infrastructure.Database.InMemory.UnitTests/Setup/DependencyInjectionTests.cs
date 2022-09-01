@@ -1,0 +1,25 @@
+using Microsoft.Extensions.DependencyInjection;
+using Wemogy.Infrastructure.Database.Core.UnitTests.DatabaseRepositories;
+using Wemogy.Infrastructure.Database.InMemory.Setup;
+using Xunit;
+
+namespace Wemogy.Infrastructure.Database.InMemory.UnitTests.Setup;
+
+public class DependencyInjectionTests
+{
+    [Fact]
+    public void AddRepository_ShouldWork()
+    {
+        // Arrange
+        var serviceCollection = new ServiceCollection();
+        serviceCollection
+            .AddInMemoryDatabaseClient()
+            .AddRepository<IUserRepository>();
+
+        // Act
+        var userRepository = serviceCollection.BuildServiceProvider().GetRequiredService<IUserRepository>();
+
+        // Assert
+        Assert.NotNull(userRepository);
+    }
+}

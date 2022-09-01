@@ -2,8 +2,8 @@
   <PropertyGroup>
     <TargetFramework>netstandard2.1</TargetFramework>
     <IsPackable>true</IsPackable>
+    <LangVersion>10</LangVersion>
   </PropertyGroup>
-
   <PropertyGroup>
     <PackageId>Wemogy.Infrastructure.Database.Core</PackageId>
     <Authors>wemogy GmbH</Authors>
@@ -12,11 +12,14 @@
     <PackageTags>wemogy</PackageTags>
     <RepositoryUrl>https://github.com/wemogy/libs-infrastructure-database</RepositoryUrl>
   </PropertyGroup>
-
   <ItemGroup>
+    <PackageReference Include="ImpromptuInterface" Version="7.0.1" />
+    <PackageReference Include="Microsoft.CSharp" Version="4.7.0" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="6.0.0" />
     <PackageReference Include="NuGetizer" Version="0.7.1">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
+    <PackageReference Include="Wemogy.Core" Version="0.4.7" />
   </ItemGroup>
 </Project>

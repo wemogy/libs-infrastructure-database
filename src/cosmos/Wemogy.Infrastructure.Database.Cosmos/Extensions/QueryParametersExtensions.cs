@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
@@ -13,6 +14,10 @@ using Wemogy.Infrastructure.Database.Core.ValueObjects;
 using Wemogy.Infrastructure.Database.Cosmos.Helpers;
 using Wemogy.Infrastructure.Database.Cosmos.Models;
 
+#pragma warning disable CS8602
+
+// ReSharper disable All
+
 namespace Wemogy.Infrastructure.Database.Cosmos.Extensions
 {
     public static class QueryParametersExtensions
@@ -23,20 +28,25 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Extensions
         {
             if (string.IsNullOrWhiteSpace(value))
             {
-                return "";
+                return string.Empty;
             }
 
             return $"{keyword} {value}";
         }
 
-        private static QueryDefinition GetQueryDefinition(this Container container, string selectStatement, QueryParameters queryParameters, MappingMetadata mappingMetadata, IQueryable generalFilter)
+        private static QueryDefinition GetQueryDefinition(this Container container, string selectStatement,
+            QueryParameters queryParameters, MappingMetadata mappingMetadata, IQueryable generalFilter)
         {
             queryParameters.EnsureCamelCase();
             var whereCondition = queryParameters.GetQueryDefinitionFilterCondition(mappingMetadata);
             var sorting = queryParameters.GetQueryDefinitionSort();
 
-            var whereStatement = UseIfNotNullOrWhiteSpace("WHERE", whereCondition.QueryText);
-            var orderStatement = UseIfNotNullOrWhiteSpace("ORDER BY", sorting.QueryText);
+            var whereStatement = UseIfNotNullOrWhiteSpace(
+                "WHERE",
+                whereCondition.QueryText);
+            var orderStatement = UseIfNotNullOrWhiteSpace(
+                "ORDER BY",
+                sorting.QueryText);
             var limitStatement = queryParameters.Take.HasValue ? $"OFFSET 0 LIMIT {queryParameters.Take}" : "";
             var joinStatement = "";
 
@@ -50,11 +60,18 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Extensions
                 Console.WriteLine(generalFilterSql);
 
                 // extract JOIN condition
-                var join = generalFilterSql.SplitOnFirstOccurrence("FROM root").Last().SplitOnLastOccurrence("WHERE").First().Trim();
+                var join = generalFilterSql.SplitOnFirstOccurrence("FROM root").Last().SplitOnLastOccurrence("WHERE")
+                    .First().Trim();
                 join = join
-                    .Replace("root[", "c[")
-                    .Replace("FROM root", "FROM c");
-                join = join.Replace("\\\"", "\"");
+                    .Replace(
+                        "root[",
+                        "c[")
+                    .Replace(
+                        "FROM root",
+                        "FROM c");
+                join = join.Replace(
+                    "\\\"",
+                    "\"");
                 if (!string.IsNullOrWhiteSpace(join))
                 {
                     Console.WriteLine("JOIN");
@@ -66,12 +83,19 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Extensions
                 // extract the WHERE condition from the SQL query
                 generalFilterSql = generalFilterSql.Split("WHERE").LastOrDefault();
                 generalFilterSql = generalFilterSql?.Remove(generalFilterSql.Length - 2);
+
                 // remove whitespace at begin and end
                 generalFilterSql = generalFilterSql?.Trim();
+
                 // replace the root alias, which is used by converting with the c alias which we are using for the container
-                generalFilterSql = generalFilterSql?.Replace("root[", "c[");
+                generalFilterSql = generalFilterSql?.Replace(
+                    "root[",
+                    "c[");
+
                 // remove escape character before quotes
-                generalFilterSql = generalFilterSql?.Replace("\\\"", "\"");
+                generalFilterSql = generalFilterSql?.Replace(
+                    "\\\"",
+                    "\"");
 
                 if (!string.IsNullOrWhiteSpace(generalFilterSql))
                 {
@@ -81,7 +105,9 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Extensions
                     }
                     else
                     {
-                        whereStatement = whereStatement.Replace("WHERE", $"WHERE {generalFilterSql} AND ");
+                        whereStatement = whereStatement.Replace(
+                            "WHERE",
+                            $"WHERE {generalFilterSql} AND ");
                     }
                 }
             }
@@ -99,7 +125,9 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Extensions
 
             foreach (var parameter in whereCondition.Parameters)
             {
-                queryDefinition = queryDefinition.WithParameter(parameter.Key, parameter.Value);
+                queryDefinition = queryDefinition.WithParameter(
+                    parameter.Key,
+                    parameter.Value);
             }
 
             Console.WriteLine("Query:");
@@ -109,42 +137,57 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Extensions
             return queryDefinition;
         }
 
-        public static FeedIterator<T> GetItemQueryIterator<T, TId>(this Container container, QueryParameters queryParameters, MappingMetadata mappingMetadata, IQueryable<T> generalFilter)
+        public static FeedIterator<T> GetItemQueryIterator<T, TId>(this Container container,
+            QueryParameters queryParameters, MappingMetadata mappingMetadata, IQueryable<T> generalFilter)
             where T : class, IEntityBase<TId>
             where TId : IEquatable<TId>
         {
-            var queryDefinition = container.GetQueryDefinition("SELECT VALUE c", queryParameters, mappingMetadata, generalFilter);
+            var queryDefinition = container.GetQueryDefinition(
+                "SELECT VALUE c",
+                queryParameters,
+                mappingMetadata,
+                generalFilter);
 
             return container.GetItemQueryIterator<T>(queryDefinition);
         }
 
-        public static FeedIterator<JObject> GetCount(this Container container, QueryParameters queryParameters, MappingMetadata mappingMetadata, bool softDeleteEnabled, IQueryable generalFilter)
+        public static FeedIterator<JObject> GetCount(this Container container, QueryParameters queryParameters,
+            MappingMetadata mappingMetadata, bool softDeleteEnabled, IQueryable generalFilter)
         {
-            var queryDefinition = container.GetQueryDefinition("SELECT COUNT(1)", queryParameters, mappingMetadata, generalFilter);
+            var queryDefinition = container.GetQueryDefinition(
+                "SELECT COUNT(1)",
+                queryParameters,
+                mappingMetadata,
+                generalFilter);
 
             return container.GetItemQueryIterator<JObject>(queryDefinition);
         }
 
-        private static QueryDefinitionFilterCondition GetQueryDefinitionFilterCondition(this QueryParameters queryParameters, MappingMetadata mappingMetadata)
+        private static QueryDefinitionFilterCondition GetQueryDefinitionFilterCondition(
+            this QueryParameters queryParameters, MappingMetadata mappingMetadata)
         {
             var result = new QueryDefinitionFilterCondition();
 
             foreach (var filter in queryParameters.Filters)
             {
                 string condition;
-                var valueDeserialized = mappingMetadata.Deserialize(filter.Property, filter.Value);
+                var valueDeserialized = mappingMetadata.Deserialize(
+                    filter.Property,
+                    filter.Value);
 
                 switch (filter.Comparator)
                 {
                     case Comparator.Equals:
                         if (valueDeserialized == null)
                         {
-                            condition = $"(IS_DEFINED(c.{filter.Property}) = false OR IS_NULL(c.{filter.Property}) = true)";
+                            condition =
+                                $"(IS_DEFINED(c.{filter.Property}) = false OR IS_NULL(c.{filter.Property}) = true)";
                         }
                         else
                         {
                             condition = $"c.{filter.Property} = @paramHere";
                         }
+
                         break;
                     case Comparator.NotEquals:
                         if (valueDeserialized == null)
@@ -170,35 +213,53 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Extensions
                         condition = $"ARRAY_LENGTH(c.{filter.Property}) > 0";
                         break;
                     case Comparator.IsOneOf:
-                        var arr = mappingMetadata.Deserialize(filter.Property, filter.Value) as JArray;
+                        var arr = mappingMetadata.Deserialize(
+                            filter.Property,
+                            filter.Value) as JArray;
                         if (arr == null)
                         {
-                            Console.WriteLine($"Comparator.IsOneOf failed for filter: {JsonConvert.SerializeObject(filter)}");
+                            Console.WriteLine(
+                                $"Comparator.IsOneOf failed for filter: {JsonConvert.SerializeObject(filter)}");
                             continue;
                         }
+
                         var isOneOfQueryDefinition = new QueryDefinitionFilterCondition();
                         foreach (var item in arr)
                         {
                             var json = JsonConvert.SerializeObject(item);
-                            isOneOfQueryDefinition.Or($"c.{filter.Property} = @paramHere", mappingMetadata.Deserialize(filter.Property, json), true);
+                            isOneOfQueryDefinition.Or(
+                                $"c.{filter.Property} = @paramHere",
+                                mappingMetadata.Deserialize(
+                                    filter.Property,
+                                    json),
+                                true);
                         }
 
                         condition = isOneOfQueryDefinition.QueryText;
                         result.MergeParameters(isOneOfQueryDefinition);
-                        result.And(condition, true);
+                        result.And(
+                            condition,
+                            true);
                         continue;
                     case Comparator.Contains:
                         condition = $"ARRAY_CONTAINS(c.{filter.Property}, @paramHere)";
+
                         // ToDo: remove next two lines and fix todo in 203
-                        result.Or(condition, valueDeserialized, true);
+                        result.Or(
+                            condition,
+                            valueDeserialized,
+                            true);
                         continue;
                     default:
-                        Console.WriteLine($"GetQueryDefinitionFilterCondition failed for filter: {JsonConvert.SerializeObject(filter)}");
+                        Console.WriteLine(
+                            $"GetQueryDefinitionFilterCondition failed for filter: {JsonConvert.SerializeObject(filter)}");
                         continue;
                 }
 
                 // ToDo: support OR conditions (build the correct expression tree)
-                result.And(condition, valueDeserialized);
+                result.And(
+                    condition,
+                    valueDeserialized);
             }
 
             var sortingQueryDefinition = new QueryDefinitionFilterCondition();
@@ -217,14 +278,23 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Extensions
                 var condition = $"c.{sorting.OrderBy} > @paramHere";
 
                 previousQueryDefinition.ReplaceGreaterThanWithEquals();
-                // mappingMetadata.Deserialize(propertyName, value)
-                previousQueryDefinition.And(condition, mappingMetadata.Deserialize(sorting.OrderBy, sorting.SearchAfter));
 
-                sortingQueryDefinition.Or(previousQueryDefinition.QueryText, true);
+                // mappingMetadata.Deserialize(propertyName, value)
+                previousQueryDefinition.And(
+                    condition,
+                    mappingMetadata.Deserialize(
+                        sorting.OrderBy,
+                        sorting.SearchAfter));
+
+                sortingQueryDefinition.Or(
+                    previousQueryDefinition.QueryText,
+                    true);
                 sortingQueryDefinition.MergeParameters(previousQueryDefinition);
             }
 
-            result.And(sortingQueryDefinition.QueryText, true);
+            result.And(
+                sortingQueryDefinition.QueryText,
+                true);
             result.MergeParameters(sortingQueryDefinition);
 
             return result;
@@ -258,13 +328,19 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Extensions
             var propertyName = querySorting.OrderBy.ToPascalCase();
 
             // x =>
-            var param = Expression.Parameter(typeof(T), "x");
+            var param = Expression.Parameter(
+                typeof(T),
+                "x");
 
             // x.PropertyNameA.PropertyNameB
-            var propertyExpression = GetPropertyExpression(propertyName, param);
+            var propertyExpression = GetPropertyExpression(
+                propertyName,
+                param);
 
             var propertyType = ResolvePropertyType<T>(propertyName);
-            var searchAfterValue = JsonConvert.DeserializeObject(querySorting.SearchAfter, propertyType);
+            var searchAfterValue = JsonConvert.DeserializeObject(
+                querySorting.SearchAfter,
+                propertyType);
 
             MethodInfo comparisonMethod = null;
             Expression searchAfterValueExpression = Expression.Constant(searchAfterValue);
@@ -272,10 +348,18 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Extensions
             // CompareTo is not working for GUID, for that reason we handle the GUID as string in comparison
             if (propertyType == typeof(Guid))
             {
-                comparisonMethod = typeof(string).GetMethod(nameof(string.CompareTo), new[] {typeof(string)});
-                var guidToStringMethod = propertyType.GetMethod(nameof(string.ToString),new Type[0]);
-                propertyExpression = Expression.Call(propertyExpression, guidToStringMethod);
-                searchAfterValueExpression = Expression.Call(searchAfterValueExpression, guidToStringMethod);
+                comparisonMethod = typeof(string).GetMethod(
+                    nameof(string.CompareTo),
+                    new[] { typeof(string) });
+                var guidToStringMethod = propertyType.GetMethod(
+                    nameof(string.ToString),
+                    new Type[0]);
+                propertyExpression = Expression.Call(
+                    propertyExpression,
+                    guidToStringMethod);
+                searchAfterValueExpression = Expression.Call(
+                    searchAfterValueExpression,
+                    guidToStringMethod);
             }
             else if (propertyType == typeof(DateTime))
             {
@@ -283,29 +367,48 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Extensions
             }
             else if (propertyType == typeof(JValue))
             {
-                comparisonMethod = typeof(string).GetMethod(nameof(string.CompareTo), new[] {typeof(string)});
-                var jValueToStringMethod = typeof(JValue).GetMethod(nameof(string.ToString),new Type[0]);
-                propertyExpression= Expression.Call(propertyExpression, jValueToStringMethod);
-                searchAfterValueExpression = Expression.Call(searchAfterValueExpression, jValueToStringMethod);
+                comparisonMethod = typeof(string).GetMethod(
+                    nameof(string.CompareTo),
+                    new[] { typeof(string) });
+                var jValueToStringMethod = typeof(JValue).GetMethod(
+                    nameof(string.ToString),
+                    new Type[0]);
+                propertyExpression = Expression.Call(
+                    propertyExpression,
+                    jValueToStringMethod);
+                searchAfterValueExpression = Expression.Call(
+                    searchAfterValueExpression,
+                    jValueToStringMethod);
             }
             else
             {
-                comparisonMethod = propertyType.GetMethod(nameof(string.CompareTo), new[] {propertyType});
+                comparisonMethod = propertyType.GetMethod(
+                    nameof(string.CompareTo),
+                    new[] { propertyType });
             }
 
             Expression searchExpr;
             if (comparisonMethod == null)
             {
-                searchExpr = Expression.GreaterThan(propertyExpression, searchAfterValueExpression);
+                searchExpr = Expression.GreaterThan(
+                    propertyExpression,
+                    searchAfterValueExpression);
             }
             else
             {
-                Expression callExpr = Expression.Call(propertyExpression, comparisonMethod, searchAfterValueExpression);
-                searchExpr = Expression.GreaterThan(callExpr, Expression.Constant(0));
+                Expression callExpr = Expression.Call(
+                    propertyExpression,
+                    comparisonMethod,
+                    searchAfterValueExpression);
+                searchExpr = Expression.GreaterThan(
+                    callExpr,
+                    Expression.Constant(0));
             }
 
-            Expression<Func<T, bool>> myLambda =
-                Expression.Lambda<Func<T, bool>>(searchExpr, param);
+            var myLambda =
+                Expression.Lambda<Func<T, bool>>(
+                    searchExpr,
+                    param);
 
             return myLambda;
 
@@ -344,20 +447,33 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Extensions
         public static Expression<Func<T, bool>> BuildExpressionTree<T>(List<QueryFilter> queryFilters)
         {
             // x =>
-            var param = Expression.Parameter(typeof(T), "x");
+            var param = Expression.Parameter(
+                typeof(T),
+                "x");
 
-            if (queryFilters == null || queryFilters.Count == 0)
+            if (queryFilters.Count == 0)
             {
-                return Expression.Lambda<Func<T, bool>>(Expression.Constant(true, typeof(bool)), param);
+                return Expression.Lambda<Func<T, bool>>(
+                    Expression.Constant(
+                        true,
+                        typeof(bool)),
+                    param);
             }
 
             // create all expressions
-            Dictionary<QueryFilter, Expression> queryFilterExpressions = queryFilters
-                .Select(x => new KeyValuePair<QueryFilter, Expression>(x, GetQueryFilterExpression<T>(x, param)))
-                .ToDictionary(x => x.Key, x => x.Value);
+            var queryFilterExpressions = queryFilters
+                .Select(
+                    x => new KeyValuePair<QueryFilter, Expression>(
+                        x,
+                        GetQueryFilterExpression<T>(
+                            x,
+                            param)))
+                .ToDictionary(
+                    x => x.Key,
+                    x => x.Value);
 
             // create a node for each expression group
-            Dictionary<int, List<Expression>> previousLevelGroupsExpressions = new Dictionary<int, List<Expression>>();
+            var previousLevelGroupsExpressions = new Dictionary<int, List<Expression>>();
 
             // get levels and order them from bottom to top
             var levels = queryFilters.GroupBy(x => x.LevelId).OrderByDescending(x => x.Key);
@@ -371,13 +487,16 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Extensions
                     var groupId = group.Key;
                     var parentGroupId = group.First().ParentGroupId;
                     var itemsInGroup = group.Count();
-                    var subLevelGroupExpressions = previousLevelGroupsExpressions.Get(groupId) ?? new List<Expression>();
+                    var subLevelGroupExpressions =
+                        previousLevelGroupsExpressions.Get(groupId) ?? new List<Expression>();
                     previousLevelGroupsExpressions.Remove(groupId);
                     var hasSubLevelGroupExpressions = subLevelGroupExpressions.Any();
 
                     if (itemsInGroup == 1 && !hasSubLevelGroupExpressions)
                     {
-                        previousLevelGroupsExpressions.AddItem(parentGroupId, queryFilterExpressions[group.First()]);
+                        previousLevelGroupsExpressions.AddItem(
+                            parentGroupId,
+                            queryFilterExpressions[group.First()]);
                         continue;
                     }
 
@@ -386,36 +505,51 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Extensions
 
                     if (itemsInGroup == 1 && subLevelGroupExpressions.Count == 1)
                     {
-                        previousLevelGroupsExpressions.AddItem(parentGroupId,
-                            expressionBuilderOfGroup(queryFilterExpressions[group.First()], subLevelGroupExpressions.First()));
+                        previousLevelGroupsExpressions.AddItem(
+                            parentGroupId,
+                            expressionBuilderOfGroup(
+                                queryFilterExpressions[group.First()],
+                                subLevelGroupExpressions.First()));
                         continue;
                     }
 
                     var groupItems = group.ToList();
 
-                    var partialExpression = expressionBuilderOfGroup(queryFilterExpressions[groupItems[0]], queryFilterExpressions[groupItems[1]]);
+                    var partialExpression = expressionBuilderOfGroup(
+                        queryFilterExpressions[groupItems[0]],
+                        queryFilterExpressions[groupItems[1]]);
 
-                    for (int i = 2; i < groupItems.Count; i++)
+                    for (var i = 2; i < groupItems.Count; i++)
                     {
                         partialExpression =
-                            expressionBuilderOfGroup(partialExpression, queryFilterExpressions[groupItems[i]]);
+                            expressionBuilderOfGroup(
+                                partialExpression,
+                                queryFilterExpressions[groupItems[i]]);
                     }
 
                     foreach (var subLevelGroupExpression in subLevelGroupExpressions)
                     {
-                        partialExpression = expressionBuilderOfGroup(partialExpression, subLevelGroupExpression);
+                        partialExpression = expressionBuilderOfGroup(
+                            partialExpression,
+                            subLevelGroupExpression);
                     }
 
-                    previousLevelGroupsExpressions.AddItem(parentGroupId, partialExpression);
+                    previousLevelGroupsExpressions.AddItem(
+                        parentGroupId,
+                        partialExpression);
                 }
             }
 
-            return Expression.Lambda<Func<T, bool>>(previousLevelGroupsExpressions.First().Value.First(), param);
+            return Expression.Lambda<Func<T, bool>>(
+                previousLevelGroupsExpressions.First().Value.First(),
+                param);
         }
 
         public static Type ResolvePropertyType<T>(string propertyName)
         {
-            return ResolvePropertyType(propertyName, typeof(T));
+            return ResolvePropertyType(
+                propertyName,
+                typeof(T));
         }
 
         public static Type ResolvePropertyType(string propertyName, Type type)
@@ -423,7 +557,7 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Extensions
             var propertyPath = propertyName.Split('.');
             if (propertyPath.Length == 0)
             {
-                throw new System.Exception($"propertyPath for property {propertyName} is not valid!");
+                throw new Exception($"propertyPath for property {propertyName} is not valid!");
             }
 
             var currentPropertyName = propertyPath.First();
@@ -436,8 +570,12 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Extensions
 
             if (propertyPath.Length > 1)
             {
-                var subPropertyName = string.Join(".", propertyPath.Skip(1));
-                return ResolvePropertyType(subPropertyName, propertyInfo.PropertyType);
+                var subPropertyName = string.Join(
+                    ".",
+                    propertyPath.Skip(1));
+                return ResolvePropertyType(
+                    subPropertyName,
+                    propertyInfo.PropertyType);
             }
 
             return propertyInfo.PropertyType;
@@ -450,9 +588,9 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Extensions
 
             if (comparator == Comparator.IsOneOf)
             {
-                Type iEnumerable = typeof(List<>);
+                var iEnumerable = typeof(List<>);
 
-                valueType = iEnumerable.MakeGenericType(new []{valueType});
+                valueType = iEnumerable.MakeGenericType(valueType);
             }
             else if (comparator == Comparator.Contains)
             {
@@ -460,25 +598,28 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Extensions
             }
 
             // JsonConvert.Deserialize
-            var valueObj = JsonConvert.DeserializeObject(value, valueType);
+            var valueObj = JsonConvert.DeserializeObject(
+                value,
+                valueType);
 
             var constant = Expression.Constant(valueObj);
-            return Expression.Convert(constant, valueType);
+            return Expression.Convert(
+                constant,
+                valueType);
         }
 
         /// <summary>
-        /// e.g. x.PropA.PropB.PropC
+        ///     e.g. x.PropA.PropB.PropC
         /// </summary>
-        /// <param name="propertyName"></param>
-        /// <param name="parameterExpression"></param>
-        /// <returns></returns>
         public static Expression GetPropertyExpression(string propertyName, ParameterExpression parameterExpression)
         {
             Expression body = parameterExpression;
 
             foreach (var member in propertyName.Split('.'))
             {
-                body = Expression.PropertyOrField(body, member);
+                body = Expression.PropertyOrField(
+                    body,
+                    member);
             }
 
             return body;
@@ -487,52 +628,81 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Extensions
         public static Expression<Func<T, object>> GetXPropertyExpression<T>(string propertyName)
         {
             // x =>
-            var param = Expression.Parameter(typeof(T), "x");
+            var param = Expression.Parameter(
+                typeof(T),
+                "x");
 
             // This not work! ToDo: ThenBy support https://stackoverflow.com/questions/1689199/c-sharp-code-to-order-by-a-property-using-the-property-name-as-a-string (3. Answer)
-            var property = GetPropertyExpression(propertyName, param);
-            var propAsObject = Expression.Convert(property, typeof(object));
+            var property = GetPropertyExpression(
+                propertyName,
+                param);
+            var propAsObject = Expression.Convert(
+                property,
+                typeof(object));
 
-            return Expression.Lambda<Func<T, dynamic>>(propAsObject, param);
+            return Expression.Lambda<Func<T, dynamic>>(
+                propAsObject,
+                param);
         }
 
         /// <summary>
-        /// e.g. $x.Folder != null && ($x.Folder).Parent != null && target
+        ///     e.g. $x.Folder != null && ($x.Folder).Parent != null && target
         /// </summary>
-        /// <param name="propertyName"></param>
-        /// <param name="parameterExpression"></param>
-        /// <param name="target"></param>
-        /// <returns></returns>
-        public static Expression AddPropertyNullCheckExpression(string propertyName, ParameterExpression parameterExpression, Expression target)
+        public static Expression AddPropertyNullCheckExpression(
+            string propertyName,
+            ParameterExpression parameterExpression,
+            Expression target)
         {
             Expression body = parameterExpression;
 
-            var nullExpression = Expression.Constant(null, typeof(object));
+            var nullExpression = Expression.Constant(
+                null,
+                typeof(object));
             var propertyMembers = propertyName.Split('.');
 
             // if normal direct property => nothing to do
-            if(propertyMembers.Length == 1)
+            if (propertyMembers.Length == 1)
             {
                 return target;
             }
 
             if (propertyMembers.Length == 2)
             {
-                return Expression.AndAlso(Expression.NotEqual(Expression.PropertyOrField(body, propertyMembers[0]), nullExpression), target);
+                return Expression.AndAlso(
+                    Expression.NotEqual(
+                        Expression.PropertyOrField(
+                            body,
+                            propertyMembers[0]),
+                        nullExpression),
+                    target);
             }
 
             var nullCheckExpression = Expression.AndAlso(
-                Expression.NotEqual(Expression.PropertyOrField(body, propertyMembers[0]), nullExpression),
-                Expression.NotEqual(NestedPropertyOrField(body, propertyMembers.TakeAsArray(2)), nullExpression));
+                Expression.NotEqual(
+                    Expression.PropertyOrField(
+                        body,
+                        propertyMembers[0]),
+                    nullExpression),
+                Expression.NotEqual(
+                    NestedPropertyOrField(
+                        body,
+                        propertyMembers.TakeAsArray(2)),
+                    nullExpression));
 
-            for (var i = 2; i < propertyMembers.Length- 1; i++)
+            for (var i = 2; i < propertyMembers.Length - 1; i++)
             {
                 nullCheckExpression = Expression.AndAlso(
                     nullCheckExpression,
-                    Expression.NotEqual(NestedPropertyOrField(body, propertyMembers.TakeAsArray(i + 1)), nullExpression));
+                    Expression.NotEqual(
+                        NestedPropertyOrField(
+                            body,
+                            propertyMembers.TakeAsArray(i + 1)),
+                        nullExpression));
             }
 
-            return Expression.AndAlso(nullCheckExpression, target);
+            return Expression.AndAlso(
+                nullCheckExpression,
+                target);
         }
 
         public static Expression NestedPropertyOrField(Expression expression, string[] pathPropertyMembers)
@@ -540,19 +710,25 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Extensions
             // if nothing nested => nothing to do
             if (pathPropertyMembers.Length == 1)
             {
-                return Expression.PropertyOrField(expression, pathPropertyMembers.First());
+                return Expression.PropertyOrField(
+                    expression,
+                    pathPropertyMembers.First());
             }
 
             // otherwise resolve from deepest to direct
             // Prop1.Prop2.Prop3 ==> Prop3 is deepest
-            string deepestPropertyName = pathPropertyMembers.Last();
+            var deepestPropertyName = pathPropertyMembers.Last();
 
-
-            return Expression.PropertyOrField(NestedPropertyOrField(expression, pathPropertyMembers.RemoveLast()),
+            return Expression.PropertyOrField(
+                NestedPropertyOrField(
+                    expression,
+                    pathPropertyMembers.RemoveLast()),
                 deepestPropertyName);
         }
 
-        public static Func<Expression, Expression, Expression> GetComparatorExpressionBuilder<T>(string propertyName, Comparator comparator)
+        public static Func<Expression, Expression, Expression> GetComparatorExpressionBuilder<T>(
+            string propertyName,
+            Comparator comparator)
         {
             switch (comparator)
             {
@@ -571,75 +747,104 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Extensions
                 case Comparator.IsOneOf:
                     return CustomExpressions.IsOneOfExpression;
                 default:
-                    throw new Exception($"Comparator {comparator} is currently not supported by GetComparatorExpressionBuilder");
+                    throw new Exception(
+                        $"Comparator {comparator} is currently not supported by GetComparatorExpressionBuilder");
             }
         }
 
         /// <summary>
-        /// Workflow:
-        /// 1. Get the Property expression
-        /// 2. Get the value expression
-        /// 3. Get the Comparator expression
-        /// 4. Merge them into one expression
-        /// Simple:
-        /// e.g. $x.Name == (System.String)"A"
-        ///
-        /// Complex:
-        /// e.g. x.Versions != null && x.Versions.Any(x => x.Name != null && x.Name.StartsWith('xx'))
+        ///     Workflow:
+        ///     1. Get the Property expression
+        ///     2. Get the value expression
+        ///     3. Get the Comparator expression
+        ///     4. Merge them into one expression
+        ///     Simple:
+        ///     e.g. $x.Name == (System.String)"A"
+        ///     Complex:
+        ///     e.g. x.Versions != null && x.Versions.Any(x => x.Name != null && x.Name.StartsWith('xx'))
         /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="queryFilter"></param>
-        /// <param name="parameterExpression"></param>
-        /// <returns></returns>
-        public static Expression GetQueryFilterExpression<T>(QueryFilter queryFilter, ParameterExpression parameterExpression)
+        public static Expression GetQueryFilterExpression<T>(
+            QueryFilter queryFilter,
+            ParameterExpression parameterExpression)
         {
             // First check if the query filter has a complex property access
             if (queryFilter.HasComplexPropertyAccess)
             {
                 // get the propertyPath to the complex property
                 string[] complexTypeIdentifierSplitted = queryFilter.Property.Split('<');
-                string pathToTheComplexProperty = complexTypeIdentifierSplitted.First().ToPascalCase(); // e.g. versions
+                var pathToTheComplexProperty = complexTypeIdentifierSplitted.First().ToPascalCase(); // e.g. versions
                 string[] complexTypeIdentifierEndSplitted = complexTypeIdentifierSplitted[1].Split('>');
-                string complexPropertyKind = complexTypeIdentifierEndSplitted.First(); // e.g. ANY
-                var complexPropertyExpression = GetPropertyExpression(pathToTheComplexProperty, parameterExpression);
-                Type complexPropertyType = typeof(T).ResolvePropertyTypeOfPropertyPath(pathToTheComplexProperty); // will be a list for now
-                Type innerParameterExpressionType = complexPropertyType.GenericTypeArguments.First(); // List<Version> ==> Version
+                var complexPropertyKind = complexTypeIdentifierEndSplitted.First(); // e.g. ANY
+                var complexPropertyExpression = GetPropertyExpression(
+                    pathToTheComplexProperty,
+                    parameterExpression);
+                var complexPropertyType =
+                    typeof(T).ResolvePropertyTypeOfPropertyPath(pathToTheComplexProperty); // will be a list for now
+                var innerParameterExpressionType =
+                    complexPropertyType.GenericTypeArguments.First(); // List<Version> ==> Version
 
                 // build the inner parameter expression
-                string innerParameterExpressionName = $"{parameterExpression.Name}1"; // x ==> x1   x1 ==> x11   ...
-                ParameterExpression innerParameterExpression =
-                    Expression.Parameter(innerParameterExpressionType, innerParameterExpressionName);
+                var innerParameterExpressionName = $"{parameterExpression.Name}1"; // x ==> x1   x1 ==> x11   ...
+                var innerParameterExpression =
+                    Expression.Parameter(
+                        innerParameterExpressionType,
+                        innerParameterExpressionName);
 
                 // build the query filter for the inner parameter expression
-                QueryFilter innerQueryFilter = queryFilter.Clone();
+                var innerQueryFilter = queryFilter.Clone();
                 innerQueryFilter.Property = complexTypeIdentifierEndSplitted.Skip(1).Join(">").Substring(1);
 
 
-                Expression innerExpression = typeof(QueryParametersExtensions)
+                var innerExpression = typeof(QueryParametersExtensions)
                     .GetMethod(nameof(GetQueryFilterExpression))?.MakeGenericMethod(innerParameterExpressionType)
-                    .Invoke(null, new object[]{ innerQueryFilter, innerParameterExpression }) as Expression;
+                    .Invoke(
+                        null,
+                        new object[] { innerQueryFilter, innerParameterExpression }) as Expression;
 
-                Expression predicateExpression = Expression.Lambda(innerExpression, innerParameterExpression);
+                Expression predicateExpression = Expression.Lambda(
+                    innerExpression,
+                    innerParameterExpression);
 
-                Expression complexExpression = GetComplexPropertyExpressionBuilder(complexPropertyKind,
-                    innerParameterExpressionType, complexPropertyExpression, predicateExpression);
+                var complexExpression = GetComplexPropertyExpressionBuilder(
+                    complexPropertyKind,
+                    innerParameterExpressionType,
+                    complexPropertyExpression,
+                    predicateExpression);
 
-                return AddPropertyNullCheckExpression(pathToTheComplexProperty, parameterExpression, complexExpression);
+                return AddPropertyNullCheckExpression(
+                    pathToTheComplexProperty,
+                    parameterExpression,
+                    complexExpression);
             }
 
             var propertyName = queryFilter.Property.ToPascalCase();
-            var propertyExpression = GetPropertyExpression(propertyName, parameterExpression);
-            var valueExpression = GetValueExpression<T>(propertyName, queryFilter.Value, queryFilter.Comparator);
-            var comparatorExpressionBuilder = GetComparatorExpressionBuilder<T>(propertyName, queryFilter.Comparator);
+            var propertyExpression = GetPropertyExpression(
+                propertyName,
+                parameterExpression);
+            var valueExpression = GetValueExpression<T>(
+                propertyName,
+                queryFilter.Value,
+                queryFilter.Comparator);
+            var comparatorExpressionBuilder = GetComparatorExpressionBuilder<T>(
+                propertyName,
+                queryFilter.Comparator);
 
-            var fullExpression = comparatorExpressionBuilder(propertyExpression, valueExpression);
+            var fullExpression = comparatorExpressionBuilder(
+                propertyExpression,
+                valueExpression);
 
 
-            return AddPropertyNullCheckExpression(queryFilter.Property.ToPascalCase(), parameterExpression, fullExpression);
+            return AddPropertyNullCheckExpression(
+                queryFilter.Property.ToPascalCase(),
+                parameterExpression,
+                fullExpression);
         }
 
         public static Expression GetComplexPropertyExpressionBuilder(
-            string complexPropertyKind, Type complexPropertyType, Expression complexPropertyExpression, Expression predicateExpression)
+            string complexPropertyKind,
+            Type complexPropertyType,
+            Expression complexPropertyExpression,
+            Expression predicateExpression)
         {
             switch (complexPropertyKind.ToLower())
             {
@@ -649,16 +854,21 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Extensions
                         .First(m => m.Name == "Any" && m.GetParameters().Count() == 2);
                     anyInfo = anyInfo.MakeGenericMethod(complexPropertyType);
 
-                    return CustomExpressions.FalseIfPropertyIsNull(complexPropertyExpression, Expression.Call(anyInfo,
-                        complexPropertyExpression, predicateExpression));
+                    return CustomExpressions.FalseIfPropertyIsNull(
+                        complexPropertyExpression,
+                        Expression.Call(
+                            anyInfo,
+                            complexPropertyExpression,
+                            predicateExpression));
                 default:
                     throw new Exception($"The complex property kind {complexPropertyKind} is not supported!");
             }
         }
 
-        public static Func<Expression, Expression, Expression> GetExpressionTreeNodeIdExpressionBuilder(int expressionTreeNodeId)
+        public static Func<Expression, Expression, Expression> GetExpressionTreeNodeIdExpressionBuilder(
+            int expressionTreeNodeId)
         {
-            int expressionIndicator = expressionTreeNodeId % 10;
+            var expressionIndicator = expressionTreeNodeId % 10;
             switch (expressionIndicator)
             {
                 case 0:
@@ -666,7 +876,8 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Extensions
                 case 1:
                     return Expression.OrElse;
                 default:
-                    throw new Exception($"The expression indicator {expressionIndicator} of expressionTreeNodeId {expressionTreeNodeId} is not supported");
+                    throw new Exception(
+                        $"The expression indicator {expressionIndicator} of expressionTreeNodeId {expressionTreeNodeId} is not supported");
             }
         }
     }

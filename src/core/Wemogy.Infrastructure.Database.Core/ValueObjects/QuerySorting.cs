@@ -8,10 +8,15 @@ namespace Wemogy.Infrastructure.Database.Core.ValueObjects
 
         public string OrderBy { get; set; }
 
-        public string SearchAfter { get; set; }
+        public string? SearchAfter { get; set; }
 
         public bool IsAscending => SortOrder == SortOrder.Ascending;
 
         public bool ContainsSearchAfter => !string.IsNullOrWhiteSpace(SearchAfter);
+
+        public QuerySorting()
+        {
+            OrderBy = string.Empty;
+        }
     }
 }

@@ -19,6 +19,11 @@ namespace Wemogy.Infrastructure.Database.Core.ValueObjects
 
         private List<string> _noCamelCasePathList;
 
+        public QueryParameters()
+        {
+            _noCamelCasePathList = new List<string>();
+        }
+
         public void SetNoCamelCasePathList(List<string> noCamelCasePathList)
         {
             _noCamelCasePathList = noCamelCasePathList;

@@ -50,9 +50,10 @@ namespace Wemogy.Infrastructure.Database.InMemory.Client
             Func<TEntity, Task> callback,
             CancellationToken cancellationToken)
         {
+            var compiledPredicate = predicate.Compile();
             foreach (var entityPartition in EntityPartitions)
             {
-                foreach (var entity in entityPartition.Value)
+                foreach (var entity in entityPartition.Value.Where(compiledPredicate))
                 {
                     await callback(entity);
                 }

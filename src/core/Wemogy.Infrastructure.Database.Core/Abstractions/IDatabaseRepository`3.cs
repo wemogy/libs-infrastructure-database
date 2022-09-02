@@ -20,6 +20,8 @@ namespace Wemogy.Infrastructure.Database.Core.Abstractions
 
         Task<TEntity> GetAsync(Expression<Func<TEntity, bool>> predicate, CancellationToken cancellationToken = default);
 
+        Task<List<TEntity>> GetAllAsync(CancellationToken cancellationToken = default);
+
         Task<List<TEntity>> QueryAsync(Expression<Func<TEntity, bool>> predicate, CancellationToken cancellationToken = default);
 
         Task<List<TEntity>> QueryAsync(QueryParameters queryParameters, CancellationToken cancellationToken = default);
@@ -41,5 +43,11 @@ namespace Wemogy.Infrastructure.Database.Core.Abstractions
         Task DeleteAsync(TId id, TPartitionKey partitionKey);
 
         Task DeleteAsync(Expression<Func<TEntity, bool>> predicate);
+
+        Task<bool> ExistsAsync(TId id, TPartitionKey partitionKey, CancellationToken cancellationToken = default);
+
+        Task<bool> ExistsAsync(TId id, CancellationToken cancellationToken = default);
+
+        Task<bool> ExistsAsync(Expression<Func<TEntity, bool>> predicate, CancellationToken cancellationToken = default);
     }
 }

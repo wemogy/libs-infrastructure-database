@@ -5,6 +5,7 @@ using System.Linq.Expressions;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
+using Wemogy.Core.Errors.Exceptions;
 using Wemogy.Infrastructure.Database.Core.Abstractions;
 using Wemogy.Infrastructure.Database.Core.Errors;
 using Wemogy.Infrastructure.Database.Core.Models;
@@ -98,11 +99,21 @@ public class DatabaseRepository<TEntity, TPartitionKey, TId> : IDatabaseReposito
         return entity;
     }
 
+    public Task<List<TEntity>> GetAllAsync(CancellationToken cancellationToken = default)
+    {
+        return QueryAsync(x => true, cancellationToken);
+    }
+
     public async Task<List<TEntity>> QueryAsync(
         Expression<Func<TEntity, bool>> predicate,
         CancellationToken cancellationToken = default)
     {
         var entities = new List<TEntity>();
+
+        if (SoftDelete.IsEnabled)
+        {
+            predicate = predicate.And(x => !x.Deleted);
+        }
 
         await _database.IterateAsync(
             predicate,
@@ -189,6 +200,52 @@ public class DatabaseRepository<TEntity, TPartitionKey, TId> : IDatabaseReposito
     public Task DeleteAsync(Expression<Func<TEntity, bool>> predicate)
     {
         return _database.DeleteAsync(predicate);
+    }
+
+    public async Task<bool> ExistsAsync(TId id, TPartitionKey partitionKey, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            await GetAsync(
+                id,
+                partitionKey,
+                cancellationToken);
+            return true;
+        }
+        catch (NotFoundErrorException)
+        {
+            return false;
+        }
+    }
+
+    public async Task<bool> ExistsAsync(TId id, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            await GetAsync(
+                id,
+                cancellationToken);
+            return true;
+        }
+        catch (NotFoundErrorException)
+        {
+            return false;
+        }
+    }
+
+    public async Task<bool> ExistsAsync(Expression<Func<TEntity, bool>> predicate, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            await GetAsync(
+                predicate,
+                cancellationToken);
+            return true;
+        }
+        catch (NotFoundErrorException)
+        {
+            return false;
+        }
     }
 
     private async Task<Func<TEntity, bool>> GetQueryFilter()

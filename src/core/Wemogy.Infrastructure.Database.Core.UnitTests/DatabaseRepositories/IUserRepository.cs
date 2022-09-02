@@ -1,7 +1,7 @@
 using Wemogy.Infrastructure.Database.Core.Abstractions;
 using Wemogy.Infrastructure.Database.Core.CustomAttributes;
+using Wemogy.Infrastructure.Database.Core.UnitTests.DatabaseRepositories.ReadFilters;
 using Wemogy.Infrastructure.Database.Core.UnitTests.Fakes.Entities;
-using Wemogy.Infrastructure.Database.Core.UnitTests.Repositories.ReadFilters;
 
 namespace Wemogy.Infrastructure.Database.Core.UnitTests.DatabaseRepositories;
 

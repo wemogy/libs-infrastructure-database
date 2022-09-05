@@ -293,8 +293,6 @@ public partial class DatabaseRepository<TEntity, TPartitionKey, TId> : IDatabase
         return combinedExpressionBody.Compile();
     }
 
-
-
     internal IDatabaseClient<TEntity, TPartitionKey, TId> GetDatabaseClient()
     {
         return _database;

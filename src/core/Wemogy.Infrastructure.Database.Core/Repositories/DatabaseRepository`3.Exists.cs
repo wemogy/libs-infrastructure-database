@@ -1,15 +1,10 @@
 using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Linq.Expressions;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Wemogy.Core.Errors.Exceptions;
 using Wemogy.Infrastructure.Database.Core.Abstractions;
-using Wemogy.Infrastructure.Database.Core.Errors;
-using Wemogy.Infrastructure.Database.Core.Models;
-using Wemogy.Infrastructure.Database.Core.ValueObjects;
 
 [assembly: InternalsVisibleTo("Wemogy.Infrastructure.Database.Core.UnitTests")]
 [assembly: InternalsVisibleTo("Wemogy.Infrastructure.Database.Cosmos.UnitTests")]

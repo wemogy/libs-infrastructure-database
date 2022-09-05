@@ -10,7 +10,5 @@ namespace Wemogy.Infrastructure.Database.Core.Abstractions
         public DateTime CreatedAt { get; set; }
 
         public DateTime UpdatedAt { get; set; }
-
-        public bool Deleted { get; set; }
     }
 }

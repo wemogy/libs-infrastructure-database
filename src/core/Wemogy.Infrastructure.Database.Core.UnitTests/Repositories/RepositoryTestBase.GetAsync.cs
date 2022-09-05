@@ -13,7 +13,7 @@ public partial class RepositoryTestBase
     public async Task GetAsync_ShouldGetAnExistingItemById()
     {
         // Arrange
-        await SeedAsync();
+        await ResetAsync();
         var user = User.Faker.Generate();
         await UserRepository.CreateAsync(user);
 
@@ -28,7 +28,7 @@ public partial class RepositoryTestBase
     public async Task GetAsync_ShouldThrowIfItemNotFound()
     {
         // Arrange
-        await SeedAsync();
+        await ResetAsync();
 
         // Act & Assert
         await Assert.ThrowsAsync<NotFoundErrorException>(
@@ -39,7 +39,7 @@ public partial class RepositoryTestBase
     public async Task GetAsync_ShouldGetAnExistingItemByIdAndPartitionKey()
     {
         // Arrange
-        await SeedAsync();
+        await ResetAsync();
         var user = User.Faker.Generate();
         await UserRepository.CreateAsync(user);
 
@@ -54,7 +54,7 @@ public partial class RepositoryTestBase
     public async Task GetAsync_ShouldThrowIfIdOrPartitionKeyNotFound()
     {
         // Arrange
-        await SeedAsync();
+        await ResetAsync();
 
         // Act & Assert
         await Assert.ThrowsAsync<NotFoundErrorException>(

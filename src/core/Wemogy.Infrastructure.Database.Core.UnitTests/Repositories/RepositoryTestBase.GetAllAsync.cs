@@ -13,7 +13,7 @@ public partial class RepositoryTestBase
     public async Task GetAllAsync_ShouldReturnAllItems()
     {
         // Arrange
-        await SeedAsync();
+        await ResetAsync();
         var users = User.Faker.Generate(20);
         foreach (var user in users)
         {
@@ -31,7 +31,7 @@ public partial class RepositoryTestBase
     public async Task GetAllAsync_ShouldRespectSoftDeleteReturnAllItems()
     {
         // Arrange
-        await SeedAsync();
+        await ResetAsync();
         var users = User.Faker.Generate(20);
         foreach (var user in users)
         {

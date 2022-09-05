@@ -17,12 +17,13 @@ public class RepositoryFactoryRegistry : RegistryBase<Type, Func<Type>>
     private DatabaseRepository<TEntity, TPartitionKey, TId> CreateDatabaseRepository<TEntity, TPartitionKey, TId>(
         IDatabaseClient<TEntity, TPartitionKey, TId> databaseClient,
         DatabaseRepositoryOptions options,
-        List<IDatabaseRepositoryReadFilter<TEntity>> readFilters)
+        List<IDatabaseRepositoryReadFilter<TEntity>> readFilters,
+        List<IDatabaseRepositoryPropertyFilter<TEntity>> propertyFilters)
         where TEntity : class, IEntityBase<TId>
         where TPartitionKey : IEquatable<TPartitionKey>
         where TId : IEquatable<TId>
     {
-        return new DatabaseRepository<TEntity, TPartitionKey, TId>(databaseClient, options, readFilters);
+        return new DatabaseRepository<TEntity, TPartitionKey, TId>(databaseClient, options, readFilters, propertyFilters);
     }
 
     private Type GetGenericDatabaseRepositoryType(Type databaseRepositoryType)

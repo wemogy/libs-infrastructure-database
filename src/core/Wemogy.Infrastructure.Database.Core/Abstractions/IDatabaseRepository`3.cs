@@ -7,12 +7,12 @@ using Wemogy.Infrastructure.Database.Core.ValueObjects;
 
 namespace Wemogy.Infrastructure.Database.Core.Abstractions
 {
-    public interface IDatabaseRepository<TEntity, in TPartitionKey, in TId> : IDatabaseRepository
+    public partial interface IDatabaseRepository<TEntity, in TPartitionKey, in TId> : IDatabaseRepository
         where TEntity : IEntityBase<TId>
         where TPartitionKey : IEquatable<TPartitionKey>
         where TId : IEquatable<TId>
     {
-        SoftDeleteState SoftDelete { get; }
+        SoftDeleteState<TEntity> SoftDelete { get; }
 
         Task<TEntity> GetAsync(TId id, TPartitionKey partitionKey, CancellationToken cancellationToken = default);
 
@@ -25,6 +25,14 @@ namespace Wemogy.Infrastructure.Database.Core.Abstractions
         Task<List<TEntity>> QueryAsync(Expression<Func<TEntity, bool>> predicate, CancellationToken cancellationToken = default);
 
         Task<List<TEntity>> QueryAsync(QueryParameters queryParameters, CancellationToken cancellationToken = default);
+
+        Task IterateAsync(Expression<Func<TEntity, bool>> predicate, Func<TEntity, Task> callback, CancellationToken cancellationToken = default);
+
+        Task IterateAsync(QueryParameters queryParameters, Func<TEntity, Task> callback, CancellationToken cancellationToken = default);
+
+        Task IterateAsync(Expression<Func<TEntity, bool>> predicate, Action<TEntity> callback, CancellationToken cancellationToken = default);
+
+        Task IterateAsync(QueryParameters queryParameters, Action<TEntity> callback, CancellationToken cancellationToken = default);
 
         Task<TEntity> CreateAsync(TEntity entity);
 
@@ -43,11 +51,5 @@ namespace Wemogy.Infrastructure.Database.Core.Abstractions
         Task DeleteAsync(TId id, TPartitionKey partitionKey);
 
         Task DeleteAsync(Expression<Func<TEntity, bool>> predicate);
-
-        Task<bool> ExistsAsync(TId id, TPartitionKey partitionKey, CancellationToken cancellationToken = default);
-
-        Task<bool> ExistsAsync(TId id, CancellationToken cancellationToken = default);
-
-        Task<bool> ExistsAsync(Expression<Func<TEntity, bool>> predicate, CancellationToken cancellationToken = default);
     }
 }

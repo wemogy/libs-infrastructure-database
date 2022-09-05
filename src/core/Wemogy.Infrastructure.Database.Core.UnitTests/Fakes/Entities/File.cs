@@ -1,7 +1,7 @@
 using Bogus;
 using Wemogy.Infrastructure.Database.Core.Abstractions;
+using Wemogy.Infrastructure.Database.Core.Attributes;
 using Wemogy.Infrastructure.Database.Core.Constants;
-using Wemogy.Infrastructure.Database.Core.CustomAttributes;
 
 namespace Wemogy.Infrastructure.Database.Core.UnitTests.Fakes.Entities;
 

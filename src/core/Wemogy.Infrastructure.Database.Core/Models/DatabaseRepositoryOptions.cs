@@ -1,3 +1,6 @@
+using System;
+using Wemogy.Infrastructure.Database.Core.Extensions;
+
 namespace Wemogy.Infrastructure.Database.Core.Models
 {
     public class DatabaseRepositoryOptions
@@ -9,6 +12,10 @@ namespace Wemogy.Infrastructure.Database.Core.Models
             EnableSoftDelete = enableSoftDelete;
         }
 
-        public static DatabaseRepositoryOptions Default => new DatabaseRepositoryOptions(false);
+        public static DatabaseRepositoryOptions GetDefault(Type entityType)
+        {
+            var enableSoftDelete = entityType.IsSoftDeletable();
+            return new DatabaseRepositoryOptions(enableSoftDelete);
+        }
     }
 }

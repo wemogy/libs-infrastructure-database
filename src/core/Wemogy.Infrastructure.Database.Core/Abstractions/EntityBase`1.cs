@@ -1,9 +1,9 @@
 using System;
-using Wemogy.Infrastructure.Database.Core.CustomAttributes;
+using Wemogy.Infrastructure.Database.Core.Attributes;
 
 namespace Wemogy.Infrastructure.Database.Core.Abstractions
 {
-    public abstract class EntityBase<TId> : IEntityBase<TId>
+    public abstract class EntityBase<TId> : IEntityBase<TId>, ISoftDeletable
         where TId : IEquatable<TId>
     {
         [Id]

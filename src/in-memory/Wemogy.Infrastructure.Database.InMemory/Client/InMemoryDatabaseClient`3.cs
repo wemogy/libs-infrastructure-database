@@ -7,6 +7,8 @@ using System.Threading.Tasks;
 using Wemogy.Core.Errors;
 using Wemogy.Infrastructure.Database.Core.Abstractions;
 using Wemogy.Infrastructure.Database.Core.Errors;
+using Wemogy.Infrastructure.Database.Core.ValueObjects;
+using Wemogy.Infrastructure.Database.InMemory.Extensions;
 
 namespace Wemogy.Infrastructure.Database.InMemory.Client
 {
@@ -43,6 +45,34 @@ namespace Wemogy.Infrastructure.Database.InMemory.Client
             }
 
             return Task.FromResult(entity);
+        }
+
+        public Task IterateAsync(
+            QueryParameters queryParameters,
+            Expression<Func<TEntity, bool>>? generalFilterPredicate,
+            Func<TEntity, Task> callback,
+            CancellationToken cancellationToken)
+        {
+            Func<TEntity, bool> predicate = generalFilterPredicate?.Compile() ?? (x => true);
+            var queryCondition = queryParameters.GetLambdaExpression<TEntity>();
+
+            var compiledQueryCondition = queryCondition.Compile();
+            var predicate1 = predicate;
+            predicate = x => predicate1(x) && compiledQueryCondition(x);
+
+            var count = 0;
+            return IterateAsync(
+                x => predicate(x),
+                entity =>
+                {
+                    if (queryParameters.Take.HasValue && count++ < queryParameters.Take)
+                    {
+                        return Task.CompletedTask;
+                    }
+
+                    return callback(entity);
+                },
+                cancellationToken);
         }
 
         public async Task IterateAsync(

@@ -13,7 +13,7 @@ public partial class RepositoryTestBase
     public async Task UpdateAsync_ShouldWork()
     {
         // Arrange
-        await SeedAsync();
+        await ResetAsync();
         var user = User.Faker.Generate();
         await UserRepository.CreateAsync(user);
 
@@ -36,7 +36,7 @@ public partial class RepositoryTestBase
     public async Task UpdateAsync_ShouldThrowIfTheItemNotExists()
     {
         // Arrange
-        await SeedAsync();
+        await ResetAsync();
 
         void UpdateAction(User user)
         {

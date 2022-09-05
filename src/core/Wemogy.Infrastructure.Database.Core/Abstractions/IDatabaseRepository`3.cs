@@ -7,12 +7,12 @@ using Wemogy.Infrastructure.Database.Core.ValueObjects;
 
 namespace Wemogy.Infrastructure.Database.Core.Abstractions
 {
-    public interface IDatabaseRepository<TEntity, TPartitionKey, TId> : IDatabaseRepository
+    public partial interface IDatabaseRepository<TEntity, in TPartitionKey, in TId> : IDatabaseRepository
         where TEntity : IEntityBase<TId>
         where TPartitionKey : IEquatable<TPartitionKey>
         where TId : IEquatable<TId>
     {
-        SoftDeleteState SoftDelete { get; }
+        SoftDeleteState<TEntity> SoftDelete { get; }
 
         Task<TEntity> GetAsync(TId id, TPartitionKey partitionKey, CancellationToken cancellationToken = default);
 
@@ -20,9 +20,19 @@ namespace Wemogy.Infrastructure.Database.Core.Abstractions
 
         Task<TEntity> GetAsync(Expression<Func<TEntity, bool>> predicate, CancellationToken cancellationToken = default);
 
+        Task<List<TEntity>> GetAllAsync(CancellationToken cancellationToken = default);
+
         Task<List<TEntity>> QueryAsync(Expression<Func<TEntity, bool>> predicate, CancellationToken cancellationToken = default);
 
         Task<List<TEntity>> QueryAsync(QueryParameters queryParameters, CancellationToken cancellationToken = default);
+
+        Task IterateAsync(Expression<Func<TEntity, bool>> predicate, Func<TEntity, Task> callback, CancellationToken cancellationToken = default);
+
+        Task IterateAsync(QueryParameters queryParameters, Func<TEntity, Task> callback, CancellationToken cancellationToken = default);
+
+        Task IterateAsync(Expression<Func<TEntity, bool>> predicate, Action<TEntity> callback, CancellationToken cancellationToken = default);
+
+        Task IterateAsync(QueryParameters queryParameters, Action<TEntity> callback, CancellationToken cancellationToken = default);
 
         Task<TEntity> CreateAsync(TEntity entity);
 

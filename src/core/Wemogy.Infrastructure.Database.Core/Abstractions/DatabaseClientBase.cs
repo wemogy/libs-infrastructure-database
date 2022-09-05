@@ -5,7 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Wemogy.Core.Errors;
 using Wemogy.Core.Extensions;
-using Wemogy.Infrastructure.Database.Core.CustomAttributes;
+using Wemogy.Infrastructure.Database.Core.Attributes;
 
 namespace Wemogy.Infrastructure.Database.Core.Abstractions;
 

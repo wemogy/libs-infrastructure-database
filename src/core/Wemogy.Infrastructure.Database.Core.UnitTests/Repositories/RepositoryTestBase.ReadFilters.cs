@@ -12,7 +12,7 @@ public partial class RepositoryTestBase
     public async Task GetAsync_ShouldThrowNotFoundIfEntityIsFilteredOut()
     {
         // Arrange
-        await SeedAsync();
+        await ResetAsync();
         var user = User.Faker.Generate();
         user.Firstname = "John";
         await UserRepository.CreateAsync(user);

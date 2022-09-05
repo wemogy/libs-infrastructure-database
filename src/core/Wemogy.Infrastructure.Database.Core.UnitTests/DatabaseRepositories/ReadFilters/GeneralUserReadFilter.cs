@@ -4,7 +4,7 @@ using System.Threading.Tasks;
 using Wemogy.Infrastructure.Database.Core.Abstractions;
 using Wemogy.Infrastructure.Database.Core.UnitTests.Fakes.Entities;
 
-namespace Wemogy.Infrastructure.Database.Core.UnitTests.Repositories.ReadFilters;
+namespace Wemogy.Infrastructure.Database.Core.UnitTests.DatabaseRepositories.ReadFilters;
 
 public class GeneralUserReadFilter : IDatabaseRepositoryReadFilter<User>
 {

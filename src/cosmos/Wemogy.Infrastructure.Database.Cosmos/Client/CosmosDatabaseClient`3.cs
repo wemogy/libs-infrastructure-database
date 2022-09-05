@@ -55,6 +55,17 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Client
             }
         }
 
+        public async Task IterateAsync(
+            QueryParameters queryParameters,
+            Expression<Func<TEntity, bool>>? generalFilterPredicate,
+            Func<TEntity, Task> callback,
+            CancellationToken cancellationToken)
+        {
+            var feedIterator = GetFeedIterator(queryParameters, generalFilterPredicate);
+
+            await feedIterator.IterateAsync(callback, cancellationToken);
+        }
+
         public Task IterateAsync(
             Expression<Func<TEntity, bool>> predicate,
             Func<TEntity, Task> callback,
@@ -136,11 +147,24 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Client
             });
         }
 
-        private Task DeleteAsync(TId id, PartitionKey<TPartitionKey> partitionKey)
+        private async Task DeleteAsync(TId id, PartitionKey<TPartitionKey> partitionKey)
         {
-            return _container.DeleteItemAsync<TEntity>(
-                id.ToString(),
-                partitionKey.CosmosPartitionKey);
+            try
+            {
+                await _container.DeleteItemAsync<TEntity>(
+                    id.ToString(),
+                    partitionKey.CosmosPartitionKey);
+            }
+            catch (CosmosException e)
+            {
+                switch (e.StatusCode)
+                {
+                    case HttpStatusCode.NotFound:
+                        throw DatabaseError.EntityNotFound(id.ToString(), partitionKey.ToString());
+                    default:
+                        throw;
+                }
+            }
         }
 
         private PartitionKey<TPartitionKey> ResolvePartitionKey(TEntity item)
@@ -149,14 +173,35 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Client
             return new PartitionKey<TPartitionKey>(partitionKeyValue);
         }
 
-        private async Task<FeedIterator<TEntity>> GetFeedIteratorAsync(
+        private FeedIterator<TEntity> GetFeedIterator(
             QueryParameters queryParameters,
-            CancellationToken cancellationToken)
+            Expression<Func<TEntity, bool>>? generalFilterPredicate)
         {
-            // ToDo: ensure that queryParameters contains the soft-delete and authorization filters
-            var queryable = _container.GetItemLinqQueryable<TEntity>();
-            var mappingMetadata = new MappingMetadata();
+            IQueryable<TEntity> queryable = _container.GetItemLinqQueryable<TEntity>();
+            if (generalFilterPredicate != null)
+            {
+                queryable = queryable.Where(generalFilterPredicate);
+            }
+
+            var mappingMetadata = GetMappingMetadata();
             return _container.GetItemQueryIterator<TEntity, TId>(queryParameters, mappingMetadata, queryable);
+        }
+
+        private static MappingMetadata? cachedMappingMetadata = null;
+
+        private static MappingMetadata GetMappingMetadata()
+        {
+            if (cachedMappingMetadata != null)
+            {
+                return cachedMappingMetadata;
+            }
+
+            var mappingMetadata = new MappingMetadata();
+            mappingMetadata.InitializeUsingReflection(typeof(TEntity));
+
+            cachedMappingMetadata = mappingMetadata;
+
+            return mappingMetadata;
         }
     }
 }

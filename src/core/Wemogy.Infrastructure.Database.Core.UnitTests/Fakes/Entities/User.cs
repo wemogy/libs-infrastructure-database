@@ -1,7 +1,7 @@
 using System;
 using Bogus;
 using Wemogy.Infrastructure.Database.Core.Abstractions;
-using Wemogy.Infrastructure.Database.Core.CustomAttributes;
+using Wemogy.Infrastructure.Database.Core.Attributes;
 
 namespace Wemogy.Infrastructure.Database.Core.UnitTests.Fakes.Entities;
 
@@ -14,11 +14,14 @@ public class User : EntityBase
 
     public string Lastname { get; set; }
 
+    public string PrivateNote { get; set; }
+
     public User()
     {
         TenantId = Guid.Empty;
         Firstname = string.Empty;
         Lastname = string.Empty;
+        PrivateNote = string.Empty;
     }
 
     public static Faker<User> Faker

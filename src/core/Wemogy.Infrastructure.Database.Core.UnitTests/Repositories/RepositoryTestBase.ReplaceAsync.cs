@@ -11,7 +11,7 @@ public partial class RepositoryTestBase
     public async Task ReplaceAsync_ShouldThrowIfTheItemNotExists()
     {
         // Arrange
-        await SeedAsync();
+        await ResetAsync();
         var user = User.Faker.Generate();
 
         // Act & Assert

@@ -19,7 +19,7 @@ public partial class RepositoryTestBase
     public async Task UpdateAsync_ShouldRetryAutomatically()
     {
         // Arrange
-        await SeedAsync();
+        await ResetAsync();
         var user = User.Faker.Generate();
         await UserRepository.CreateAsync(user);
 
@@ -51,7 +51,7 @@ public partial class RepositoryTestBase
     public async Task UpdateAsync_ShouldRetryOnlyMaxAttempts()
     {
         // Arrange
-        await SeedAsync();
+        await ResetAsync();
         var user = User.Faker.Generate();
         await UserRepository.CreateAsync(user);
 

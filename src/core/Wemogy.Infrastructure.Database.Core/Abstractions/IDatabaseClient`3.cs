@@ -2,6 +2,7 @@ using System;
 using System.Linq.Expressions;
 using System.Threading;
 using System.Threading.Tasks;
+using Wemogy.Infrastructure.Database.Core.ValueObjects;
 
 namespace Wemogy.Infrastructure.Database.Core.Abstractions
 {
@@ -11,6 +12,8 @@ namespace Wemogy.Infrastructure.Database.Core.Abstractions
         where TId : IEquatable<TId>
     {
         Task<TEntity> GetAsync(TId id, TPartitionKey partitionKey, CancellationToken cancellationToken);
+
+        Task IterateAsync(QueryParameters queryParameters, Expression<Func<TEntity, bool>>? generalFilterPredicate, Func<TEntity, Task> callback, CancellationToken cancellationToken);
 
         /// <summary>
         /// Iterates over all items which matches the predicate.

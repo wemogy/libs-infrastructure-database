@@ -1,7 +1,7 @@
 using System;
 using Wemogy.Infrastructure.Database.Core.Models;
 
-namespace Wemogy.Infrastructure.Database.Core.CustomAttributes
+namespace Wemogy.Infrastructure.Database.Core.Attributes
 {
     [AttributeUsage(AttributeTargets.Interface)]
     public class RepositoryOptionsAttribute : Attribute

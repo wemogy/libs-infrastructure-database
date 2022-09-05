@@ -20,7 +20,7 @@ public abstract partial class RepositoryTestBase : IDisposable
         RepositoryFactoryFactory.DatabaseClientProxy = null;
     }
 
-    protected async Task SeedAsync()
+    protected async Task ResetAsync()
     {
         await UserRepository.DeleteAsync(x => true);
     }
@@ -29,7 +29,7 @@ public abstract partial class RepositoryTestBase : IDisposable
     public async Task DeleteAsync_ShouldWork()
     {
         // Arrange
-        await SeedAsync();
+        await ResetAsync();
         await UserRepository.CreateAsync(User.Faker.Generate());
 
         // Act

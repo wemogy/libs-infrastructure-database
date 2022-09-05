@@ -11,7 +11,7 @@ public partial class RepositoryTestBase
     public async Task CreateAsync_ShouldThrowIfTheItemAlreadyExists()
     {
         // Arrange
-        await SeedAsync();
+        await ResetAsync();
         var user = User.Faker.Generate();
         await UserRepository.CreateAsync(user);
 

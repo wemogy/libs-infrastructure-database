@@ -21,15 +21,12 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Client
         where TPartitionKey : IEquatable<TPartitionKey>
         where TId : IEquatable<TId>
     {
-        private readonly CosmosClient _cosmosClient;
         private readonly Container _container;
 
         public CosmosDatabaseClient(CosmosClient cosmosClient, CosmosDatabaseClientOptions options)
         {
-            _cosmosClient = cosmosClient;
             var database = cosmosClient.GetDatabase(options.DatabaseName);
-
-            var containerName = options.GetContainerName<TEntity>();
+            var containerName = options.ContainerName;
             _container = database.GetContainer(containerName);
         }
 

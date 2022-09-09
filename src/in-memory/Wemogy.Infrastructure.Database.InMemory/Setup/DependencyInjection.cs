@@ -1,13 +1,16 @@
 using Microsoft.Extensions.DependencyInjection;
+using Wemogy.Infrastructure.Database.Core.Setup;
 using Wemogy.Infrastructure.Database.InMemory.Factories;
 
 namespace Wemogy.Infrastructure.Database.InMemory.Setup
 {
     public static class DependencyInjection
     {
-        public static InMemorySetupEnvironment AddInMemoryDatabaseClient(this IServiceCollection serviceCollection)
+        public static DatabaseSetupEnvironment AddInMemoryDatabaseClient(this IServiceCollection serviceCollection)
         {
-            return new InMemorySetupEnvironment(new InMemoryDatabaseRepositoryFactory(serviceCollection));
+            return new DatabaseSetupEnvironment(
+                serviceCollection,
+                new InMemoryDatabaseClientFactory());
         }
     }
 }

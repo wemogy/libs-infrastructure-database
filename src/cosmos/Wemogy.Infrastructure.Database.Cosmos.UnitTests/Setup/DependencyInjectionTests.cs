@@ -1,6 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
+using Wemogy.Infrastructure.Database.Core.Setup;
 using Wemogy.Infrastructure.Database.Core.UnitTests.DatabaseRepositories;
-using Wemogy.Infrastructure.Database.Cosmos.Setup;
+using Wemogy.Infrastructure.Database.Cosmos.Factories;
 using Wemogy.Infrastructure.Database.Cosmos.UnitTests.Abstractions;
 using Xunit;
 
@@ -12,8 +13,11 @@ public class DependencyInjectionTests : CosmosUnitTestBase
     public void AddRepository_ShouldWork()
     {
         // Arrange
+        var cosmosDatabaseClientFactory = new CosmosDatabaseClientFactory(
+            ConnectionString,
+            DatabaseName);
         ServiceCollection
-            .AddCosmosDatabaseClient(ConnectionString, DatabaseName)
+            .AddDatabase(cosmosDatabaseClientFactory)
             .AddRepository<IUserRepository>();
 
         // Act

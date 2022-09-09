@@ -28,7 +28,7 @@ public partial class RepositoryTestBase
                 FlakyStrategy.ThrowBeforeInvocation,
                 () => Error.PreconditionFailed("EtagMismatch", "Etag mismatch"))
             .OnlyForMethodsWithName(nameof(IDatabaseClient<User, Guid, Guid>.ReplaceAsync));
-        RepositoryFactoryFactory.DatabaseClientProxy = flakyProxy;
+        DatabaseRepositoryFactoryFactory.DatabaseClientProxy = flakyProxy;
         var flakyUserRepository = UserRepositoryFactory();
 
         void UpdateAction(User u)
@@ -60,7 +60,7 @@ public partial class RepositoryTestBase
                 FlakyStrategy.ThrowBeforeInvocation,
                 () => Error.PreconditionFailed("EtagMismatch", "Etag mismatch"))
             .OnlyForMethodsWithName(nameof(IDatabaseClient<User, Guid, Guid>.ReplaceAsync));
-        RepositoryFactoryFactory.DatabaseClientProxy = flakyProxy;
+        DatabaseRepositoryFactoryFactory.DatabaseClientProxy = flakyProxy;
         var flakyUserRepository = UserRepositoryFactory();
 
         void UpdateAction(User u)

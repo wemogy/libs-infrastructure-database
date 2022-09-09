@@ -1,12 +1,13 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Linq.Expressions;
+using System.Reflection;
 using System.Runtime.CompilerServices;
-using System.Threading;
 using System.Threading.Tasks;
+using Wemogy.Core.Extensions;
+using Wemogy.Core.ValueObjects.Abstractions;
 using Wemogy.Infrastructure.Database.Core.Abstractions;
-using Wemogy.Infrastructure.Database.Core.Errors;
+using Wemogy.Infrastructure.Database.Core.Attributes;
 using Wemogy.Infrastructure.Database.Core.Models;
 using Wemogy.Infrastructure.Database.Core.ValueObjects;
 
@@ -21,262 +22,75 @@ public partial class DatabaseRepository<TEntity, TPartitionKey, TId> : IDatabase
     where TId : IEquatable<TId>
 {
     private IDatabaseClient<TEntity, TPartitionKey, TId> _database;
-
-    public SoftDeleteState<TEntity> SoftDelete { get; }
+    public IEnabledState SoftDelete { get; }
     public PropertyFiltersState<TEntity> PropertyFilters { get; }
 
     private readonly List<IDatabaseRepositoryReadFilter<TEntity>> _readFilters;
+
+    private readonly Expression<Func<TEntity, bool>> _softDeleteFilterExpression;
+
+    private readonly PropertyInfo? _softDeleteFlagProperty;
 
     public DatabaseRepository(
         IDatabaseClient<TEntity, TPartitionKey, TId> database,
         DatabaseRepositoryOptions options,
         List<IDatabaseRepositoryReadFilter<TEntity>> readFilters,
         List<IDatabaseRepositoryPropertyFilter<TEntity>> propertyFilters)
+    : this(
+        database,
+        readFilters,
+        propertyFilters,
+        new SoftDeleteState<TEntity>(options.EnableSoftDelete))
+    {
+    }
+
+    public DatabaseRepository(
+        IDatabaseClient<TEntity, TPartitionKey, TId> database,
+        List<IDatabaseRepositoryReadFilter<TEntity>> readFilters,
+        List<IDatabaseRepositoryPropertyFilter<TEntity>> propertyFilters,
+        IEnabledState softDeleteState)
     {
         _database = database;
         _readFilters = readFilters;
-        SoftDelete = new SoftDeleteState<TEntity>(options.EnableSoftDelete);
+        SoftDelete = softDeleteState;
         PropertyFilters = new PropertyFiltersState<TEntity>(
             true,
             propertyFilters);
+        _softDeleteFlagProperty = typeof(TEntity).GetPropertyByCustomAttribute<SoftDeleteFlagAttribute>();
+
+        // predicate = predicate.And(x => !((ISoftDeletable)x).Deleted);
+        // ToDo: implement this
+        if (_softDeleteFlagProperty == null)
+        {
+            _softDeleteFilterExpression = x => true;
+        }
+        else
+        {
+            // 1. Define the lambda expression parameter
+            var parameterExpression = Expression.Parameter(typeof(TEntity), "entity");
+
+            // 2. Call the getter and retrieve the value of the property
+            var propertyExpr = Expression.Property(parameterExpression, _softDeleteFlagProperty);
+
+            // 3. define the constant expression for the false boolean value
+            var constant = Expression.Constant(false);
+
+            // 4. create the binary equal expression
+            var expression = Expression.Equal(propertyExpr, constant);
+
+            // Create a lambda expression of the latest call
+            _softDeleteFilterExpression = Expression.Lambda<Func<TEntity, bool>>(expression, parameterExpression);
+        }
     }
 
-    public async Task<TEntity> GetAsync(
-        TId id,
-        TPartitionKey partitionKey,
-        CancellationToken cancellationToken = default)
+    private bool IsSoftDeleted(TEntity entity)
     {
-        var entity = await _database.GetAsync(
-            id,
-            partitionKey,
-            cancellationToken);
-
-        // Throw exception if soft delete is enabled and entity is deleted
-        if (SoftDelete.IsEnabled && ((ISoftDeletable)entity).Deleted)
+        if (_softDeleteFlagProperty == null)
         {
-            throw DatabaseError.EntityNotFound(
-                id.ToString(),
-                partitionKey.ToString());
+            return false;
         }
 
-        var filter = await GetReadFilter();
-
-        if (!filter(entity))
-        {
-            throw DatabaseError.EntityNotFound(
-                id.ToString(),
-                partitionKey.ToString());
-        }
-
-        await PropertyFilters.ApplyAsync(entity);
-
-        return entity;
-    }
-
-    public Task<TEntity> GetAsync(TId id, CancellationToken cancellationToken = default)
-    {
-        return GetAsync(
-            x => x.Id.ToString() == id.ToString(),
-            cancellationToken);
-    }
-
-    public async Task<TEntity> GetAsync(
-        Expression<Func<TEntity, bool>> predicate,
-        CancellationToken cancellationToken = default)
-    {
-        var items = await QueryAsync(
-            predicate,
-            cancellationToken);
-
-        // throw exception if no item found
-        if (!items.Any())
-        {
-            throw DatabaseError.EntityNotFound(predicate.ToString());
-        }
-
-        var entity = items.First();
-
-        // Throw exception if soft delete is enabled and entity is deleted
-        if (SoftDelete.IsEnabled && ((ISoftDeletable)entity).Deleted)
-        {
-            throw DatabaseError.EntityNotFound(predicate.ToString());
-        }
-
-        await PropertyFilters.ApplyAsync(entity);
-
-        return entity;
-    }
-
-    public Task<List<TEntity>> GetAllAsync(CancellationToken cancellationToken = default)
-    {
-        return QueryAsync(
-            x => true,
-            cancellationToken);
-    }
-
-    public async Task<List<TEntity>> QueryAsync(
-        Expression<Func<TEntity, bool>> predicate,
-        CancellationToken cancellationToken = default)
-    {
-        var entities = new List<TEntity>();
-
-        await IterateAsync(
-            predicate,
-            entities.Add,
-            cancellationToken);
-
-        return entities;
-    }
-
-    public async Task<List<TEntity>> QueryAsync(
-        QueryParameters queryParameters,
-        CancellationToken cancellationToken = default)
-    {
-        var entities = new List<TEntity>();
-
-        await IterateAsync(
-            queryParameters,
-            entities.Add,
-            cancellationToken);
-
-        return entities;
-    }
-
-    public Task IterateAsync(
-        Expression<Func<TEntity, bool>> predicate,
-        Func<TEntity, Task> callback,
-        CancellationToken cancellationToken = default)
-    {
-        if (SoftDelete.IsEnabled)
-        {
-            predicate = predicate.And(x => !((ISoftDeletable)x).Deleted);
-        }
-
-        callback = PropertyFilters.Wrap(callback);
-
-        return _database.IterateAsync(
-            predicate,
-            callback,
-            cancellationToken);
-    }
-
-    public Task IterateAsync(
-        QueryParameters queryParameters,
-        Func<TEntity, Task> callback,
-        CancellationToken cancellationToken = default)
-    {
-        Expression<Func<TEntity, bool>>? predicate = null;
-
-        if (SoftDelete.IsEnabled)
-        {
-            predicate = x => !((ISoftDeletable)x).Deleted;
-        }
-
-        callback = PropertyFilters.Wrap(callback);
-
-        return _database.IterateAsync(
-            queryParameters,
-            predicate,
-            callback,
-            cancellationToken);
-    }
-
-    public Task IterateAsync(
-        Expression<Func<TEntity, bool>> predicate,
-        Action<TEntity> callback,
-        CancellationToken cancellationToken = default)
-    {
-        return IterateAsync(
-            predicate,
-            entity =>
-            {
-                callback(entity);
-                return Task.CompletedTask;
-            },
-            cancellationToken);
-    }
-
-    public Task IterateAsync(
-        QueryParameters queryParameters,
-        Action<TEntity> callback,
-        CancellationToken cancellationToken = default)
-    {
-        return IterateAsync(
-            queryParameters,
-            entity =>
-            {
-                callback(entity);
-                return Task.CompletedTask;
-            },
-            cancellationToken);
-    }
-
-    public Task<TEntity> CreateAsync(TEntity entity)
-    {
-        return _database.CreateAsync(entity);
-    }
-
-    public Task<TEntity> ReplaceAsync(TEntity entity)
-    {
-        return _database.ReplaceAsync(entity);
-    }
-
-    public Task<TEntity> UpdateAsync(TId id, TPartitionKey partitionKey, Action<TEntity> updateAction)
-    {
-        return UpdateAsync(
-            id,
-            partitionKey,
-            entity =>
-            {
-                updateAction(entity);
-                return Task.CompletedTask;
-            });
-    }
-
-    public Task<TEntity> UpdateAsync(TId id, Action<TEntity> updateAction)
-    {
-        return UpdateAsync(
-            id,
-            entity =>
-            {
-                updateAction(entity);
-                return Task.CompletedTask;
-            });
-    }
-
-    public async Task<TEntity> UpdateAsync(TId id, TPartitionKey partitionKey, Func<TEntity, Task> updateAction)
-    {
-        var entity = await GetAsync(
-            id,
-            partitionKey);
-        await updateAction(entity);
-        var updatedEntity = await _database.ReplaceAsync(entity);
-        return updatedEntity;
-    }
-
-    public async Task<TEntity> UpdateAsync(TId id, Func<TEntity, Task> updateAction)
-    {
-        var entity = await GetAsync(id);
-        await updateAction(entity);
-        var updatedEntity = await _database.ReplaceAsync(entity);
-        return updatedEntity;
-    }
-
-    public Task DeleteAsync(TId id)
-    {
-        return _database.DeleteAsync(x => id.ToString() == x.Id.ToString());
-    }
-
-    public Task DeleteAsync(TId id, TPartitionKey partitionKey)
-    {
-        return _database.DeleteAsync(
-            id,
-            partitionKey);
-    }
-
-    public Task DeleteAsync(Expression<Func<TEntity, bool>> predicate)
-    {
-        return _database.DeleteAsync(predicate);
+        return (bool)_softDeleteFlagProperty.GetValue(entity);
     }
 
     private async Task<Func<TEntity, bool>> GetReadFilter()

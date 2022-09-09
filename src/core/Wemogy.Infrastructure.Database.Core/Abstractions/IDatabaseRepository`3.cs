@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq.Expressions;
 using System.Threading;
 using System.Threading.Tasks;
+using Wemogy.Core.ValueObjects.Abstractions;
 using Wemogy.Infrastructure.Database.Core.ValueObjects;
 
 namespace Wemogy.Infrastructure.Database.Core.Abstractions;
@@ -12,7 +13,7 @@ public partial interface IDatabaseRepository<TEntity, in TPartitionKey, in TId> 
     where TPartitionKey : IEquatable<TPartitionKey>
     where TId : IEquatable<TId>
 {
-    SoftDeleteState<TEntity> SoftDelete { get; }
+    IEnabledState SoftDelete { get; }
 
     Task<TEntity> GetAsync(TId id, TPartitionKey partitionKey, CancellationToken cancellationToken = default);
 

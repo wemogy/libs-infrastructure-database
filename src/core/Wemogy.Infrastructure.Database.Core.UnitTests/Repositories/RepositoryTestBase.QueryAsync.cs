@@ -31,7 +31,7 @@ public partial class RepositoryTestBase
         await ResetAsync();
         var queryParameters = new QueryParameters();
         var user = User.Faker.Generate();
-        user.Deleted = true;
+        user.IsDeleted = true;
         await UserRepository.CreateAsync(user);
 
         // Act

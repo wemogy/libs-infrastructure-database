@@ -17,27 +17,12 @@ public abstract partial class RepositoryTestBase : IDisposable
     {
         UserRepository = userRepositoryFactory();
         UserRepositoryFactory = userRepositoryFactory;
-        RepositoryFactoryFactory.DatabaseClientProxy = null;
+        DatabaseRepositoryFactoryFactory.DatabaseClientProxy = null;
     }
 
     protected async Task ResetAsync()
     {
         await UserRepository.DeleteAsync(x => true);
-    }
-
-    [Fact]
-    public async Task DeleteAsync_ShouldWork()
-    {
-        // Arrange
-        await ResetAsync();
-        await UserRepository.CreateAsync(User.Faker.Generate());
-
-        // Act
-        await UserRepository.DeleteAsync(x => true);
-
-        // Assert
-        var entities = await UserRepository.QueryAsync(x => true);
-        entities.Should().BeEmpty();
     }
 
     public void Dispose()

@@ -3,7 +3,7 @@ using Wemogy.Infrastructure.Database.Core.Attributes;
 
 namespace Wemogy.Infrastructure.Database.Core.Abstractions
 {
-    public abstract class EntityBase<TId> : IEntityBase<TId>, ISoftDeletable
+    public abstract class EntityBase<TId> : IEntityBase<TId>
         where TId : IEquatable<TId>
     {
         [Id]
@@ -13,8 +13,8 @@ namespace Wemogy.Infrastructure.Database.Core.Abstractions
 
         public DateTime UpdatedAt { get; set; }
 
-        // ToDo: discuss if we move this property into a new abstract subclass called SoftDeletableEntity
-        public bool Deleted { get; set; }
+        [SoftDeleteFlag]
+        public bool IsDeleted { get; set; }
 
         protected EntityBase(TId id)
         {

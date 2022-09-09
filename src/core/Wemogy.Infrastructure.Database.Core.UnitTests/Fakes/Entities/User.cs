@@ -1,5 +1,6 @@
 using System;
 using Bogus;
+using Wemogy.Core.Extensions;
 using Wemogy.Infrastructure.Database.Core.Abstractions;
 using Wemogy.Infrastructure.Database.Core.Attributes;
 
@@ -29,6 +30,8 @@ public class User : EntityBase
         get
         {
             return new Faker<User>()
+                .RuleFor(x => x.CreatedAt, f => f.Date.Past().Clone())
+                .RuleFor(x => x.UpdatedAt, f => f.Date.Past().Clone())
                 .RuleFor(x => x.TenantId, f => f.Random.Guid())
                 .RuleFor(x => x.Firstname, f => f.Name.FirstName())
                 .RuleFor(x => x.Lastname, f => f.Name.LastName());

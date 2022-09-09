@@ -1,53 +1,23 @@
-using System;
 using Microsoft.Extensions.DependencyInjection;
 using Wemogy.Infrastructure.Database.Core.Abstractions;
-using Wemogy.Infrastructure.Database.Cosmos.Client;
+using Wemogy.Infrastructure.Database.Cosmos.Setup;
 
 namespace Wemogy.Infrastructure.Database.Cosmos.Factories
 {
-    public class CosmosDatabaseRepositoryFactory : DatabaseRepositoryFactoryBase<CosmosDatabaseClientOptions>
+    public static class CosmosDatabaseRepositoryFactory
     {
-        public CosmosDatabaseRepositoryFactory(
-            IServiceCollection serviceCollection,
-            string connectionString,
-            bool insecureDevelopmentMode = false)
-            : base(serviceCollection)
-        {
-            var cosmosClient = CosmosClientFactory.FromConnectionString(connectionString, insecureDevelopmentMode);
-            GeneralDatabaseClientParameters.Add(cosmosClient);
-        }
-
-        public TDatabaseRepository CreateDatabaseRepository<TDatabaseRepository>(
-            string databaseName,
-            string? customContainerName = null)
-            where TDatabaseRepository : class, IDatabaseRepository
-        {
-            var options = new CosmosDatabaseClientOptions(databaseName, customContainerName);
-            return CreateDatabaseRepository<TDatabaseRepository>(options);
-        }
-
-        protected override Type GetDatabaseClientType<TEntity, TPartitionKey, TId>()
-            where TEntity : class
-        {
-            return typeof(CosmosDatabaseClient<TEntity, TPartitionKey, TId>);
-        }
-
         public static TDatabaseRepository CreateInstance<TDatabaseRepository>(
             string connectionString,
             string databaseName,
-            bool insecureDevelopmentMode = false,
-            string? customContainerName = null,
-            IServiceCollection? serviceCollection = null)
+            bool insecureDevelopmentMode = false)
             where TDatabaseRepository : class, IDatabaseRepository
         {
-            serviceCollection ??= new ServiceCollection();
-
-            var factory = new CosmosDatabaseRepositoryFactory(
-                serviceCollection,
-                connectionString,
-                insecureDevelopmentMode);
-            return factory.CreateDatabaseRepository<TDatabaseRepository>(
-                new CosmosDatabaseClientOptions(databaseName, customContainerName));
+            var serviceCollection = new ServiceCollection();
+            serviceCollection
+                .AddCosmosDatabase(connectionString, databaseName, insecureDevelopmentMode)
+                .AddRepository<TDatabaseRepository>();
+            var serviceProvider = serviceCollection.BuildServiceProvider();
+            return serviceProvider.GetRequiredService<TDatabaseRepository>();
         }
     }
 }

@@ -20,7 +20,6 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
-    <PackageReference Include="Wemogy.Core" Version="0.4.10" />
   </ItemGroup>
   <ItemGroup>
     <Compile Update="Repositories\DatabaseRepository`3.Exists.cs">
@@ -68,5 +67,113 @@
       <DefaultPackFolder>content</DefaultPackFolder>
       <BuildAction>Compile</BuildAction>
     </Compile>
+    <Compile Update="Repositories\DatabaseRepository`3.Get.cs">
+      <CodeLanguage>cs</CodeLanguage>
+      <DefaultPackFolder>content</DefaultPackFolder>
+      <BuildAction>Compile</BuildAction>
+    </Compile>
+    <Compile Update="Repositories\DatabaseRepository`3.Template.cs">
+      <CodeLanguage>cs</CodeLanguage>
+      <DefaultPackFolder>content</DefaultPackFolder>
+      <BuildAction>Compile</BuildAction>
+    </Compile>
+    <Compile Update="Repositories\DatabaseRepository`3.GetAll.cs">
+      <CodeLanguage>cs</CodeLanguage>
+      <DefaultPackFolder>content</DefaultPackFolder>
+      <BuildAction>Compile</BuildAction>
+    </Compile>
+    <Compile Update="Repositories\DatabaseRepository`3.Query.cs">
+      <CodeLanguage>cs</CodeLanguage>
+      <DefaultPackFolder>content</DefaultPackFolder>
+      <BuildAction>Compile</BuildAction>
+    </Compile>
+    <Compile Update="Repositories\DatabaseRepository`3.Iterate.cs">
+      <CodeLanguage>cs</CodeLanguage>
+      <DefaultPackFolder>content</DefaultPackFolder>
+      <BuildAction>Compile</BuildAction>
+    </Compile>
+    <Compile Update="Repositories\DatabaseRepository`3.Create.cs">
+      <CodeLanguage>cs</CodeLanguage>
+      <DefaultPackFolder>content</DefaultPackFolder>
+      <BuildAction>Compile</BuildAction>
+    </Compile>
+    <Compile Update="Repositories\DatabaseRepository`3.Replace.cs">
+      <CodeLanguage>cs</CodeLanguage>
+      <DefaultPackFolder>content</DefaultPackFolder>
+      <BuildAction>Compile</BuildAction>
+    </Compile>
+    <Compile Update="Repositories\DatabaseRepository`3.Update.cs">
+      <CodeLanguage>cs</CodeLanguage>
+      <DefaultPackFolder>content</DefaultPackFolder>
+      <BuildAction>Compile</BuildAction>
+    </Compile>
+    <Compile Update="Repositories\DatabaseRepository`3.Delete.cs">
+      <CodeLanguage>cs</CodeLanguage>
+      <DefaultPackFolder>content</DefaultPackFolder>
+      <BuildAction>Compile</BuildAction>
+    </Compile>
+    <Compile Update="Plugins\ComposedPrimaryKey\Repositories\ComposedPrimaryKeyDatabaseRepository`5.Get.cs">
+      <CodeLanguage>cs</CodeLanguage>
+      <DefaultPackFolder>content</DefaultPackFolder>
+      <BuildAction>Compile</BuildAction>
+    </Compile>
+    <Compile Update="Setup\DependencyInjection.cs">
+      <CodeLanguage>cs</CodeLanguage>
+      <DefaultPackFolder>content</DefaultPackFolder>
+      <BuildAction>Compile</BuildAction>
+    </Compile>
+    <Compile Update="Plugins\ComposedPrimaryKey\Delegates\ComposedPrimaryKeyDatabaseRepositoryFactoryDelegate.cs">
+      <CodeLanguage>cs</CodeLanguage>
+      <DefaultPackFolder>content</DefaultPackFolder>
+      <BuildAction>Compile</BuildAction>
+    </Compile>
+    <Compile Update="Plugins\ComposedPrimaryKey\Repositories\ComposedPrimaryKeyDatabaseRepository`5.Template.cs">
+      <CodeLanguage>cs</CodeLanguage>
+      <DefaultPackFolder>content</DefaultPackFolder>
+      <BuildAction>Compile</BuildAction>
+    </Compile>
+    <Compile Update="Plugins\ComposedPrimaryKey\Repositories\ComposedPrimaryKeyDatabaseRepository`5.Create.cs">
+      <CodeLanguage>cs</CodeLanguage>
+      <DefaultPackFolder>content</DefaultPackFolder>
+      <BuildAction>Compile</BuildAction>
+    </Compile>
+    <Compile Update="Plugins\ComposedPrimaryKey\Repositories\ComposedPrimaryKeyDatabaseRepository`5.GetAll.cs">
+      <CodeLanguage>cs</CodeLanguage>
+      <DefaultPackFolder>content</DefaultPackFolder>
+      <BuildAction>Compile</BuildAction>
+    </Compile>
+    <Compile Update="Plugins\ComposedPrimaryKey\Repositories\ComposedPrimaryKeyDatabaseRepository`5.Query.cs">
+      <CodeLanguage>cs</CodeLanguage>
+      <DefaultPackFolder>content</DefaultPackFolder>
+      <BuildAction>Compile</BuildAction>
+    </Compile>
+    <Compile Update="Plugins\ComposedPrimaryKey\Repositories\ComposedPrimaryKeyDatabaseRepository`5.Update.cs">
+      <CodeLanguage>cs</CodeLanguage>
+      <DefaultPackFolder>content</DefaultPackFolder>
+      <BuildAction>Compile</BuildAction>
+    </Compile>
+    <Compile Update="Plugins\ComposedPrimaryKey\Repositories\ComposedPrimaryKeyDatabaseRepository`5.Iterate.cs">
+      <CodeLanguage>cs</CodeLanguage>
+      <DefaultPackFolder>content</DefaultPackFolder>
+      <BuildAction>Compile</BuildAction>
+    </Compile>
+    <Compile Update="Plugins\ComposedPrimaryKey\Repositories\ComposedPrimaryKeyDatabaseRepository`5.Replace.cs">
+      <CodeLanguage>cs</CodeLanguage>
+      <DefaultPackFolder>content</DefaultPackFolder>
+      <BuildAction>Compile</BuildAction>
+    </Compile>
+    <Compile Update="Plugins\ComposedPrimaryKey\Repositories\ComposedPrimaryKeyDatabaseRepository`5.Delete.cs">
+      <CodeLanguage>cs</CodeLanguage>
+      <DefaultPackFolder>content</DefaultPackFolder>
+      <BuildAction>Compile</BuildAction>
+    </Compile>
+    <Compile Update="Plugins\ComposedPrimaryKey\Repositories\ComposedPrimaryKeyDatabaseRepository`5.Exists.cs">
+      <CodeLanguage>cs</CodeLanguage>
+      <DefaultPackFolder>content</DefaultPackFolder>
+      <BuildAction>Compile</BuildAction>
+    </Compile>
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../../../libs/helpers/src/Wemogy.Core/Wemogy.Core.csproj" />
   </ItemGroup>
 </Project>

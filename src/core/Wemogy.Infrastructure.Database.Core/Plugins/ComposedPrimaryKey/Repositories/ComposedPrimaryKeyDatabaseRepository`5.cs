@@ -85,7 +85,6 @@ public partial class ComposedPrimaryKeyDatabaseRepository<TEntity, TPartitionKey
         return _composedPrimaryKeyBuilder.BuildComposedPrimaryKey(id);
     }
 
-
     private QueryParameters AdaptToInternalEntityQueryParameters(QueryParameters queryParameters)
     {
         var idPropertyName = nameof(IEntityBase<TId>.Id).ToCamelCase();

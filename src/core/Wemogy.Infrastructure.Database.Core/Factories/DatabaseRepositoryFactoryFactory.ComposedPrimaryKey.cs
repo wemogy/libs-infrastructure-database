@@ -79,14 +79,15 @@ public partial class DatabaseRepositoryFactoryFactory
                     TimeSpan.FromMilliseconds(100),
                     3));
 
+        var databaseClientParameters = new[]
+        {
+            internalEntityType,
+            databaseRepositoryTypeMetadata.PartitionKeyType,
+            typeof(string)
+        };
         var databaseClient = databaseClientFactory.InvokeGenericMethod<IDatabaseClient>(
             nameof(IDatabaseClientFactory.CreateClient),
-            new[]
-            {
-                internalEntityType,
-                databaseRepositoryTypeMetadata.PartitionKeyType,
-                typeof(string)
-            },
+            databaseClientParameters,
             databaseRepositoryOptions);
 
         object databaseClientInstance = databaseClient;
@@ -110,23 +111,24 @@ public partial class DatabaseRepositoryFactoryFactory
                 new object[] { serviceProvider, repositoryReadFilterAttribute });
             var internalReadFilters = getWrappedReadFiltersGenericMethod.Invoke(
                 this,
-                new object[] { readFilters, composedPrimaryKeyBuilder.GetComposedPrimaryKeyPrefix() });
+                new[] { readFilters, composedPrimaryKeyBuilder.GetComposedPrimaryKeyPrefix() });
             var propertyFilters = getPropertyFiltersGenericMethod.Invoke(
                 this,
                 new object[] { serviceProvider, repositoryPropertyFilterAttribute });
             var internalPropertyFilters = getWrappedPropertyFiltersGenericMethod.Invoke(
                 this,
-                new object[] { propertyFilters });
+                new[] { propertyFilters });
+            object[] databaseRepositoryParameters = new[]
+            {
+                databaseClientInstance,
+                databaseRepositoryOptions,
+                internalReadFilters,
+                internalPropertyFilters,
+                composedPrimaryKeyBuilder
+            };
             var databaseRepository = createComposedPrimaryKeyDatabaseRepositoryGenericMethod.Invoke(
                 this,
-                new[]
-                {
-                    databaseClientInstance,
-                    databaseRepositoryOptions,
-                    internalReadFilters,
-                    internalPropertyFilters,
-                    composedPrimaryKeyBuilder
-                });
+                databaseRepositoryParameters);
             return retryProxy.Wrap<TDatabaseRepository>(databaseRepository.ActLike<TDatabaseRepository>());
         };
     }
@@ -163,19 +165,23 @@ public partial class DatabaseRepositoryFactoryFactory
     {
         var internalReadFilters = readFilters
             .Select(
-                x => new ComposedPrimaryKeyReadFilterWrapper<TInternalEntity, TEntity>(x, prefix) as IDatabaseRepositoryReadFilter<TInternalEntity>)
+                x => new ComposedPrimaryKeyReadFilterWrapper<TInternalEntity, TEntity>(
+                    x,
+                    prefix) as IDatabaseRepositoryReadFilter<TInternalEntity>)
             .ToList();
         return internalReadFilters;
     }
 
-    private List<IDatabaseRepositoryPropertyFilter<TInternalEntity>> GetWrappedPropertyFilters<TInternalEntity, TEntity, TId>(
+    private List<IDatabaseRepositoryPropertyFilter<TInternalEntity>> GetWrappedPropertyFilters<TInternalEntity, TEntity,
+        TId>(
         List<IDatabaseRepositoryPropertyFilter<TEntity>> propertyFilters)
         where TEntity : class, IEntityBase<TId>
         where TId : IEquatable<TId>
         where TInternalEntity : IEntityBase<string>
     {
-        var composedPrimaryKeyPropertyFilterWrapper = new ComposedPrimaryKeyPropertyFilterWrapper<TInternalEntity, TEntity, TId>(
-            propertyFilters);
+        var composedPrimaryKeyPropertyFilterWrapper =
+            new ComposedPrimaryKeyPropertyFilterWrapper<TInternalEntity, TEntity, TId>(
+                propertyFilters);
 
         if (composedPrimaryKeyPropertyFilterWrapper.IsEmpty)
         {

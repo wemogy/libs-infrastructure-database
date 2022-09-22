@@ -20,6 +20,7 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
+    <PackageReference Include="Wemogy.Core" Version="0.4.12" />
   </ItemGroup>
   <ItemGroup>
     <Compile Update="Repositories\DatabaseRepository`3.Exists.cs">
@@ -182,8 +183,5 @@
       <DefaultPackFolder>content</DefaultPackFolder>
       <BuildAction>Compile</BuildAction>
     </Compile>
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="../../../../libs/helpers/src/Wemogy.Core/Wemogy.Core.csproj" />
   </ItemGroup>
 </Project>

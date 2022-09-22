@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Reflection;
 using ImpromptuInterface;
 using Microsoft.Extensions.DependencyInjection;
@@ -14,6 +15,7 @@ using Wemogy.Infrastructure.Database.Core.Attributes;
 using Wemogy.Infrastructure.Database.Core.Models;
 using Wemogy.Infrastructure.Database.Core.Plugins.ComposedPrimaryKey.Abstractions;
 using Wemogy.Infrastructure.Database.Core.Plugins.ComposedPrimaryKey.Delegates;
+using Wemogy.Infrastructure.Database.Core.Plugins.ComposedPrimaryKey.ReadFilters;
 using Wemogy.Infrastructure.Database.Core.Plugins.ComposedPrimaryKey.Repositories;
 
 namespace Wemogy.Infrastructure.Database.Core.Factories;
@@ -44,20 +46,30 @@ public partial class DatabaseRepositoryFactoryFactory
                 internalEntityType,
                 typeof(TComposedPrimaryKeyBuilder));
 
-        // ToDo: wrap
         var getReadFiltersGenericMethod = typeof(DatabaseRepositoryFactoryFactory)
             .GetGenericMethod(
                 nameof(GetReadFilters),
+                databaseRepositoryTypeMetadata.EntityType,
+                databaseRepositoryTypeMetadata.IdType);
+        var getWrappedReadFiltersGenericMethod = typeof(DatabaseRepositoryFactoryFactory)
+            .GetGenericMethod(
+                nameof(GetWrappedReadFilters),
                 internalEntityType,
-                typeof(string));
+                databaseRepositoryTypeMetadata.EntityType,
+                databaseRepositoryTypeMetadata.IdType);
         var repositoryReadFilterAttribute = databaseRepositoryType.GetCustomAttribute<RepositoryReadFilterAttribute>();
 
-        // ToDo: wrap
         var getPropertyFiltersGenericMethod = typeof(DatabaseRepositoryFactoryFactory)
             .GetGenericMethod(
                 nameof(GetPropertyFilters),
+                databaseRepositoryTypeMetadata.EntityType,
+                databaseRepositoryTypeMetadata.IdType);
+        var getWrappedPropertyFiltersGenericMethod = typeof(DatabaseRepositoryFactoryFactory)
+            .GetGenericMethod(
+                nameof(GetWrappedPropertyFilters),
                 internalEntityType,
-                typeof(string));
+                databaseRepositoryTypeMetadata.EntityType,
+                databaseRepositoryTypeMetadata.IdType);
         var repositoryPropertyFilterAttribute =
             databaseRepositoryType.GetCustomAttribute<RepositoryPropertyFilterAttribute>();
 
@@ -92,18 +104,27 @@ public partial class DatabaseRepositoryFactoryFactory
 
         return serviceProvider =>
         {
+            var composedPrimaryKeyBuilder = serviceProvider.GetRequiredService<TComposedPrimaryKeyBuilder>();
             var readFilters = getReadFiltersGenericMethod.Invoke(
                 this,
                 new object[] { serviceProvider, repositoryReadFilterAttribute });
+            var internalReadFilters = getWrappedReadFiltersGenericMethod.Invoke(
+                this,
+                new object[] { readFilters, composedPrimaryKeyBuilder.GetComposedPrimaryKeyPrefix() });
             var propertyFilters = getPropertyFiltersGenericMethod.Invoke(
                 this,
                 new object[] { serviceProvider, repositoryPropertyFilterAttribute });
-            var composedPrimaryKeyBuilder = serviceProvider.GetRequiredService<TComposedPrimaryKeyBuilder>();
+            var internalPropertyFilters = getWrappedPropertyFiltersGenericMethod.Invoke(
+                this,
+                new object[] { propertyFilters });
             var databaseRepository = createComposedPrimaryKeyDatabaseRepositoryGenericMethod.Invoke(
                 this,
                 new[]
                 {
-                    databaseClientInstance, databaseRepositoryOptions, readFilters, propertyFilters,
+                    databaseClientInstance,
+                    databaseRepositoryOptions,
+                    internalReadFilters,
+                    internalPropertyFilters,
                     composedPrimaryKeyBuilder
                 });
             return retryProxy.Wrap<TDatabaseRepository>(databaseRepository.ActLike<TDatabaseRepository>());
@@ -132,6 +153,39 @@ public partial class DatabaseRepositoryFactoryFactory
             readFilters,
             propertyFilters,
             composedPrimaryKeyBuilder);
+    }
+
+    private List<IDatabaseRepositoryReadFilter<TInternalEntity>> GetWrappedReadFilters<TInternalEntity, TEntity, TId>(
+        List<IDatabaseRepositoryReadFilter<TEntity>> readFilters,
+        string prefix)
+        where TEntity : class, IEntityBase<TId>
+        where TId : IEquatable<TId>
+    {
+        var internalReadFilters = readFilters
+            .Select(
+                x => new ComposedPrimaryKeyReadFilterWrapper<TInternalEntity, TEntity>(x, prefix) as IDatabaseRepositoryReadFilter<TInternalEntity>)
+            .ToList();
+        return internalReadFilters;
+    }
+
+    private List<IDatabaseRepositoryPropertyFilter<TInternalEntity>> GetWrappedPropertyFilters<TInternalEntity, TEntity, TId>(
+        List<IDatabaseRepositoryPropertyFilter<TEntity>> propertyFilters)
+        where TEntity : class, IEntityBase<TId>
+        where TId : IEquatable<TId>
+        where TInternalEntity : IEntityBase<string>
+    {
+        var composedPrimaryKeyPropertyFilterWrapper = new ComposedPrimaryKeyPropertyFilterWrapper<TInternalEntity, TEntity, TId>(
+            propertyFilters);
+
+        if (composedPrimaryKeyPropertyFilterWrapper.IsEmpty)
+        {
+            return new List<IDatabaseRepositoryPropertyFilter<TInternalEntity>>();
+        }
+
+        return new List<IDatabaseRepositoryPropertyFilter<TInternalEntity>>
+        {
+            composedPrimaryKeyPropertyFilterWrapper
+        };
     }
 
     private Type GetInternalEntityType(Type entityType, Type idType)

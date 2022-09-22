@@ -1,5 +1,6 @@
 using System;
 using System.Threading.Tasks;
+using Mapster;
 using Wemogy.Infrastructure.Database.Core.Abstractions;
 using Wemogy.Infrastructure.Database.Core.Plugins.ComposedPrimaryKey.Abstractions;
 
@@ -45,6 +46,8 @@ public partial class ComposedPrimaryKeyDatabaseRepository<TEntity, TPartitionKey
             {
                 var entity = AdaptToEntity(internalEntity);
                 await updateAction(entity);
+                entity.Adapt(internalEntity);
+                internalEntity.Id = BuildComposedPrimaryKey(id);
             });
 
         var entity = AdaptToEntity(updatedInternalEntity);

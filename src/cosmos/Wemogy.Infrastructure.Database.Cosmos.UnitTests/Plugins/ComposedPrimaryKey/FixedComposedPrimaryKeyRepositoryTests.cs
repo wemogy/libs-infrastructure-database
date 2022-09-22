@@ -2,10 +2,11 @@ using Microsoft.Extensions.DependencyInjection;
 using Wemogy.Infrastructure.Database.Core.UnitTests.DatabaseRepositories;
 using Wemogy.Infrastructure.Database.Core.UnitTests.Plugins.ComposedPrimaryKey.TestingData.Models;
 using Wemogy.Infrastructure.Database.Core.UnitTests.Repositories;
-using Wemogy.Infrastructure.Database.InMemory.Setup;
+using Wemogy.Infrastructure.Database.Cosmos.Setup;
+using Wemogy.Infrastructure.Database.Cosmos.UnitTests.Constants;
 using Xunit;
 
-namespace Wemogy.Infrastructure.Database.InMemory.UnitTests.Plugins.ComposedPrimaryKey;
+namespace Wemogy.Infrastructure.Database.Cosmos.UnitTests.Plugins.ComposedPrimaryKey;
 
 [Collection("Sequential")]
 public class FixedComposedPrimaryKeyRepositoryTests : RepositoryTestBase
@@ -19,7 +20,7 @@ public class FixedComposedPrimaryKeyRepositoryTests : RepositoryTestBase
             serviceCollection.AddSingleton(new PrefixContext("tenantA"));
 
             serviceCollection
-                .AddInMemoryDatabaseClient()
+                .AddCosmosDatabase(TestingConstants.ConnectionString, TestingConstants.DatabaseName, true)
                 .AddRepository<IUserRepository, PrefixComposedPrimaryKeyBuilder>();
 
             var serviceProvider = serviceCollection.BuildServiceProvider();

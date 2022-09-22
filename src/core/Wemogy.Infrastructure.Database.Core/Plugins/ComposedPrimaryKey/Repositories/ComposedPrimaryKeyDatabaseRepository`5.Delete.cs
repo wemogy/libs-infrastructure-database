@@ -29,6 +29,7 @@ public partial class ComposedPrimaryKeyDatabaseRepository<TEntity, TPartitionKey
 
     public Task DeleteAsync(Expression<Func<TEntity, bool>> predicate)
     {
-        throw new NotImplementedException();
+        var internalEntityExpression = AdaptToInternalEntityExpression(predicate);
+        return _databaseRepository.DeleteAsync(internalEntityExpression);
     }
 }

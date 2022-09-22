@@ -4,12 +4,12 @@ using Wemogy.Infrastructure.Database.Core.Factories;
 using Wemogy.Infrastructure.Database.Core.UnitTests.DatabaseRepositories;
 using Wemogy.Infrastructure.Database.Core.UnitTests.Plugins.ComposedPrimaryKey.TestingData.Models;
 
-namespace Wemogy.Infrastructure.Database.Core.UnitTests.Plugins.ComposedPrimaryKey.Repositories;
+namespace Wemogy.Infrastructure.Database.Core.UnitTests.Plugins.ComposedPrimaryKey.Repositories.UserEntity;
 
 public abstract partial class ComposedPrimaryKeyDatabaseRepositoryTestBase : IDisposable
 {
     private readonly IServiceCollection _serviceCollection;
-    protected IUserRepository UserRepository => _serviceCollection.BuildServiceProvider().GetRequiredService<IUserRepository>();
+    private IUserRepository UserRepository => _serviceCollection.BuildServiceProvider().GetRequiredService<IUserRepository>();
 
     protected ComposedPrimaryKeyDatabaseRepositoryTestBase(Action<IServiceCollection> addRepositoryAction)
     {
@@ -22,10 +22,10 @@ public abstract partial class ComposedPrimaryKeyDatabaseRepositoryTestBase : IDi
     public void Dispose()
     {
         // Cleanup
-        // UserRepository.DeleteAsync(x => true).Wait();
+        UserRepository.DeleteAsync(x => true).Wait();
     }
 
-    protected void SetPrefixContext(string prefix)
+    private void SetPrefixContext(string prefix)
     {
         _serviceCollection.AddSingleton(new PrefixContext(prefix));
     }

@@ -3,7 +3,7 @@ using FluentAssertions;
 using Wemogy.Infrastructure.Database.Core.UnitTests.Fakes.Entities;
 using Xunit;
 
-namespace Wemogy.Infrastructure.Database.Core.UnitTests.Plugins.ComposedPrimaryKey.Repositories;
+namespace Wemogy.Infrastructure.Database.Core.UnitTests.Plugins.ComposedPrimaryKey.Repositories.AnimalEntity;
 
 public abstract partial class ComposedPrimaryKeyDatabaseRepositoryTestBase
 {
@@ -11,17 +11,17 @@ public abstract partial class ComposedPrimaryKeyDatabaseRepositoryTestBase
     public async Task GetAsync_ShouldRespectComposedKey()
     {
         // Arrange
-        var user = User.Faker.Generate();
+        var animal = Animal.Faker.Generate();
         var prefix = "tenantA";
         SetPrefixContext(prefix);
-        await UserRepository.CreateAsync(user);
+        await AnimalRepository.CreateAsync(animal);
 
         // Act
-        var userFromDb = await UserRepository.GetAsync(
-            user.Id,
-            user.TenantId);
+        var animalFromDb = await AnimalRepository.GetAsync(
+            animal.Id,
+            animal.TenantId);
 
         // Assert
-        userFromDb.Should().BeEquivalentTo(user);
+        animalFromDb.Should().BeEquivalentTo(animal);
     }
 }

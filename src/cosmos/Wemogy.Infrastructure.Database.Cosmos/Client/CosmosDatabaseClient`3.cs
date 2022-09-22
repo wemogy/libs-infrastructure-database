@@ -85,7 +85,7 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Client
                     partitionKey.CosmosPartitionKey,
                     new ItemRequestOptions
                     {
-                        EnableContentResponseOnWrite = false
+                        EnableContentResponseOnWrite = true
                     });
 
                 return createResponse.Resource;

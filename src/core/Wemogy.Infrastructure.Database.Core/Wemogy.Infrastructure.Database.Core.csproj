@@ -172,6 +172,16 @@
       <DefaultPackFolder>content</DefaultPackFolder>
       <BuildAction>Compile</BuildAction>
     </Compile>
+    <Compile Update="Plugins\ComposedPrimaryKey\ReadFilters\ComposedPrimaryKeyReadFilterWrapper.cs">
+      <CodeLanguage>cs</CodeLanguage>
+      <DefaultPackFolder>content</DefaultPackFolder>
+      <BuildAction>Compile</BuildAction>
+    </Compile>
+    <Compile Update="Plugins\ComposedPrimaryKey\ReadFilters\ComposedPrimaryKeyPropertyFilterWrapper.cs">
+      <CodeLanguage>cs</CodeLanguage>
+      <DefaultPackFolder>content</DefaultPackFolder>
+      <BuildAction>Compile</BuildAction>
+    </Compile>
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="../../../../libs/helpers/src/Wemogy.Core/Wemogy.Core.csproj" />

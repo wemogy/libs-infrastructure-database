@@ -2,4 +2,5 @@ namespace Wemogy.Infrastructure.Database.Core.Plugins.ComposedPrimaryKey.Abstrac
 
 public interface IComposedPrimaryKeyBuilder
 {
+    string GetComposedPrimaryKeyPrefix();
 }

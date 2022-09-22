@@ -1,10 +1,7 @@
 using System;
 using System.Threading.Tasks;
-using FluentAssertions;
 using Wemogy.Infrastructure.Database.Core.Factories;
 using Wemogy.Infrastructure.Database.Core.UnitTests.DatabaseRepositories;
-using Wemogy.Infrastructure.Database.Core.UnitTests.Fakes.Entities;
-using Xunit;
 
 namespace Wemogy.Infrastructure.Database.Core.UnitTests.Repositories;
 

@@ -4,11 +4,11 @@ using Wemogy.Infrastructure.Database.Core.Plugins.ComposedPrimaryKey.Abstraction
 
 namespace Wemogy.Infrastructure.Database.Core.UnitTests.Plugins.ComposedPrimaryKey.TestingData.Models;
 
-public class PrefixComposedPrimaryKeyBuilder : IComposedPrimaryKeyBuilder<Guid>
+public class StringPrefixComposedPrimaryKeyBuilder : IComposedPrimaryKeyBuilder<string>
 {
     private readonly PrefixContext _prefixContext;
 
-    public PrefixComposedPrimaryKeyBuilder(PrefixContext prefixContext)
+    public StringPrefixComposedPrimaryKeyBuilder(PrefixContext prefixContext)
     {
         _prefixContext = prefixContext;
     }
@@ -18,13 +18,13 @@ public class PrefixComposedPrimaryKeyBuilder : IComposedPrimaryKeyBuilder<Guid>
         return $"{_prefixContext.Prefix}_";
     }
 
-    public string BuildComposedPrimaryKey(Guid id)
+    public string BuildComposedPrimaryKey(string id)
     {
         return $"{_prefixContext.Prefix}_{id}";
     }
 
-    public Guid ExtractIdFromComposedPrimaryKey(string composedPrimaryKey)
+    public string ExtractIdFromComposedPrimaryKey(string composedPrimaryKey)
     {
-        return Guid.Parse(composedPrimaryKey.SplitOnFirstOccurrence("_")[1]);
+        return composedPrimaryKey.SplitOnFirstOccurrence("_")[1];
     }
 }

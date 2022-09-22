@@ -17,8 +17,10 @@ public partial class ComposedPrimaryKeyDatabaseRepository<TEntity, TPartitionKey
     where TInternalEntity : IEntityBase<string>
     where TComposedPrimaryKeyBuilder : IComposedPrimaryKeyBuilder<TId>
 {
-    public Task<TEntity> ReplaceAsync(TEntity entity)
+    public async Task<TEntity> ReplaceAsync(TEntity entity)
     {
-        throw new NotImplementedException();
+        var internalEntity = AdaptToInternalEntity(entity);
+        var replacedInternalEntity = await _databaseRepository.ReplaceAsync(internalEntity);
+        return AdaptToEntity(replacedInternalEntity);
     }
 }

@@ -7,13 +7,12 @@ using Xunit;
 namespace Wemogy.Infrastructure.Database.InMemory.UnitTests.Plugins.ComposedPrimaryKey;
 
 [Collection("Sequential")]
-public class ComposedPrimaryKeyRepositoryTests : ComposedPrimaryKeyDatabaseRepositoryTestBase
+public class AnimalComposedPrimaryKeyRepositoryTests : ComposedPrimaryKeyDatabaseRepositoryTestBase
 {
-    public ComposedPrimaryKeyRepositoryTests()
+    public AnimalComposedPrimaryKeyRepositoryTests()
         : base(
             serviceCollection => serviceCollection
                 .AddInMemoryDatabaseClient()
-                .AddRepository<IUserRepository, PrefixComposedPrimaryKeyBuilder>()
                 .AddRepository<IAnimalRepository, StringPrefixComposedPrimaryKeyBuilder>())
     {
     }

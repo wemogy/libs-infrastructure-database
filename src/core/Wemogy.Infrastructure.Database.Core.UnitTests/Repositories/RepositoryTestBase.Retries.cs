@@ -3,7 +3,6 @@ using System.Threading.Tasks;
 using FluentAssertions;
 using Wemogy.Core.DynamicProxies;
 using Wemogy.Core.DynamicProxies.Enums;
-using Wemogy.Core.DynamicProxies.Extensions;
 using Wemogy.Core.Errors;
 using Wemogy.Core.Errors.Exceptions;
 using Wemogy.Infrastructure.Database.Core.Abstractions;
@@ -21,15 +20,15 @@ public partial class RepositoryTestBase
         // Arrange
         await ResetAsync();
         var user = User.Faker.Generate();
-        await UserRepository.CreateAsync(user);
 
         var flakyProxy = new FlakyProxy(
                 2,
                 FlakyStrategy.ThrowBeforeInvocation,
                 () => Error.PreconditionFailed("EtagMismatch", "Etag mismatch"))
             .OnlyForMethodsWithName(nameof(IDatabaseClient<User, Guid, Guid>.ReplaceAsync));
-        RepositoryFactoryFactory.DatabaseClientProxy = flakyProxy;
+        DatabaseRepositoryFactoryFactory.DatabaseClientProxy = flakyProxy;
         var flakyUserRepository = UserRepositoryFactory();
+        await flakyUserRepository.CreateAsync(user);
 
         void UpdateAction(User u)
         {
@@ -53,15 +52,15 @@ public partial class RepositoryTestBase
         // Arrange
         await ResetAsync();
         var user = User.Faker.Generate();
-        await UserRepository.CreateAsync(user);
 
         var flakyProxy = new FlakyProxy(
                 100,
                 FlakyStrategy.ThrowBeforeInvocation,
                 () => Error.PreconditionFailed("EtagMismatch", "Etag mismatch"))
             .OnlyForMethodsWithName(nameof(IDatabaseClient<User, Guid, Guid>.ReplaceAsync));
-        RepositoryFactoryFactory.DatabaseClientProxy = flakyProxy;
+        DatabaseRepositoryFactoryFactory.DatabaseClientProxy = flakyProxy;
         var flakyUserRepository = UserRepositoryFactory();
+        await flakyUserRepository.CreateAsync(user);
 
         void UpdateAction(User u)
         {

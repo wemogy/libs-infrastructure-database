@@ -39,4 +39,19 @@ public partial class RepositoryTestBase
         // Assert
         exception.Should().BeOfType<NotFoundErrorException>();
     }
+
+    [Fact]
+    public async Task DeleteAsync_ShouldWork()
+    {
+        // Arrange
+        await ResetAsync();
+        await UserRepository.CreateAsync(User.Faker.Generate());
+
+        // Act
+        await UserRepository.DeleteAsync(x => true);
+
+        // Assert
+        var entities = await UserRepository.QueryAsync(x => true);
+        entities.Should().BeEmpty();
+    }
 }

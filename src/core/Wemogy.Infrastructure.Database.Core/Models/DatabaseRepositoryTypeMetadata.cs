@@ -25,12 +25,14 @@ public class DatabaseRepositoryTypeMetadata
         return GetGenericDatabaseRepositoryType(databaseRepositoryType).GenericTypeArguments[2];
     }
 
+    public Type DatabaseRepositoryType { get; }
     public Type EntityType { get; }
     public Type PartitionKeyType { get; }
     public Type IdType { get; }
 
     public DatabaseRepositoryTypeMetadata(Type databaseRepositoryType)
     {
+        DatabaseRepositoryType = databaseRepositoryType;
         EntityType = GetEntityType(databaseRepositoryType);
         PartitionKeyType = GetPartitionKeyType(databaseRepositoryType);
         IdType = GetIdType(databaseRepositoryType);

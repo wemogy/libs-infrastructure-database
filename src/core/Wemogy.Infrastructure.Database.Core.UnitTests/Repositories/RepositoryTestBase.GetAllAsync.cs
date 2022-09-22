@@ -37,7 +37,7 @@ public partial class RepositoryTestBase
         {
             if (users.IndexOf(user) % 2 == 0)
             {
-                user.Deleted = true;
+                user.IsDeleted = true;
             }
 
             await UserRepository.CreateAsync(user);

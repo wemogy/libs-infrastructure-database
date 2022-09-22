@@ -1,13 +1,9 @@
 using System;
 using System.Linq.Expressions;
-using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Wemogy.Core.Errors.Exceptions;
 using Wemogy.Infrastructure.Database.Core.Abstractions;
-
-[assembly: InternalsVisibleTo("Wemogy.Infrastructure.Database.Core.UnitTests")]
-[assembly: InternalsVisibleTo("Wemogy.Infrastructure.Database.Cosmos.UnitTests")]
 
 namespace Wemogy.Infrastructure.Database.Core.Repositories;
 

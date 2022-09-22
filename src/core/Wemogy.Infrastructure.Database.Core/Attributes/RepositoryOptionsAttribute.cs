@@ -6,10 +6,14 @@ namespace Wemogy.Infrastructure.Database.Core.Attributes
     [AttributeUsage(AttributeTargets.Interface)]
     public class RepositoryOptionsAttribute : Attribute
     {
-        public DatabaseRepositoryOptions Options { get; set; }
-        public RepositoryOptionsAttribute(bool enableSoftDelete)
+        public bool EnableSoftDelete { get; }
+
+        public string? CollectionName { get; }
+
+        public RepositoryOptionsAttribute(bool enableSoftDelete = false, string? collectionName = null)
         {
-            Options = new DatabaseRepositoryOptions(enableSoftDelete);
+            EnableSoftDelete = enableSoftDelete;
+            CollectionName = collectionName;
         }
     }
 }

@@ -1,28 +1,20 @@
-using System;
 using Microsoft.Extensions.DependencyInjection;
 using Wemogy.Infrastructure.Database.Core.Abstractions;
-using Wemogy.Infrastructure.Database.InMemory.Client;
+using Wemogy.Infrastructure.Database.InMemory.Setup;
 
 namespace Wemogy.Infrastructure.Database.InMemory.Factories
 {
-    public class InMemoryDatabaseRepositoryFactory : DatabaseRepositoryFactoryBase<InMemoryDatabaseClientOptions>
+    public static class InMemoryDatabaseRepositoryFactory
     {
-        public InMemoryDatabaseRepositoryFactory(IServiceCollection serviceCollection)
-            : base(serviceCollection)
-        {
-        }
-
-        protected override Type GetDatabaseClientType<TEntity, TPartitionKey, TId>()
-        {
-            return typeof(InMemoryDatabaseClient<TEntity, TPartitionKey, TId>);
-        }
-
         public static TDatabaseRepository CreateInstance<TDatabaseRepository>()
             where TDatabaseRepository : class, IDatabaseRepository
         {
-            var factory = new InMemoryDatabaseRepositoryFactory(
-                new ServiceCollection());
-            return factory.CreateDatabaseRepository<TDatabaseRepository>(new InMemoryDatabaseClientOptions());
+            var serviceCollection = new ServiceCollection();
+            serviceCollection
+                .AddInMemoryDatabaseClient()
+                .AddRepository<TDatabaseRepository>();
+            var serviceProvider = serviceCollection.BuildServiceProvider();
+            return serviceProvider.GetRequiredService<TDatabaseRepository>();
         }
     }
 }

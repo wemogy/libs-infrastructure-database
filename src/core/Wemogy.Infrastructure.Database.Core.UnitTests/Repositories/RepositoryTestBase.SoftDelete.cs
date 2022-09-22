@@ -13,7 +13,7 @@ public partial class RepositoryTestBase
     {
         // Arrange
         var user = User.Faker.Generate();
-        user.Deleted = true;
+        user.IsDeleted = true;
         await UserRepository.CreateAsync(user);
 
         // Act & Assert
@@ -26,7 +26,7 @@ public partial class RepositoryTestBase
     {
         // Arrange
         var user = User.Faker.Generate();
-        user.Deleted = true;
+        user.IsDeleted = true;
         UserRepository.SoftDelete.Disable();
         await UserRepository.CreateAsync(user);
 
@@ -34,7 +34,7 @@ public partial class RepositoryTestBase
         var userFromDb = await UserRepository.GetAsync(user.Id, user.TenantId);
 
         // Assert
-        Assert.True(userFromDb.Deleted);
+        Assert.True(userFromDb.IsDeleted);
         userFromDb.Should().BeEquivalentTo(user);
     }
 }

@@ -1,21 +1,16 @@
-using System;
-using Wemogy.Infrastructure.Database.Core.Extensions;
+namespace Wemogy.Infrastructure.Database.Core.Models;
 
-namespace Wemogy.Infrastructure.Database.Core.Models
+public class DatabaseRepositoryOptions
 {
-    public class DatabaseRepositoryOptions
+    public string CollectionName { get; set; }
+
+    public bool EnableSoftDelete { get; }
+
+    public DatabaseRepositoryOptions(
+        string collectionName,
+        bool enableSoftDelete)
     {
-        public bool EnableSoftDelete { get; }
-
-        public DatabaseRepositoryOptions(bool enableSoftDelete)
-        {
-            EnableSoftDelete = enableSoftDelete;
-        }
-
-        public static DatabaseRepositoryOptions GetDefault(Type entityType)
-        {
-            var enableSoftDelete = entityType.IsSoftDeletable();
-            return new DatabaseRepositoryOptions(enableSoftDelete);
-        }
+        CollectionName = collectionName;
+        EnableSoftDelete = enableSoftDelete;
     }
 }

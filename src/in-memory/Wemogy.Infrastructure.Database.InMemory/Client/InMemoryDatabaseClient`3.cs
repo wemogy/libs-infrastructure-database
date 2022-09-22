@@ -5,6 +5,7 @@ using System.Linq.Expressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Wemogy.Core.Errors;
+using Wemogy.Core.Extensions;
 using Wemogy.Infrastructure.Database.Core.Abstractions;
 using Wemogy.Infrastructure.Database.Core.Errors;
 using Wemogy.Infrastructure.Database.Core.ValueObjects;
@@ -21,7 +22,7 @@ namespace Wemogy.Infrastructure.Database.InMemory.Client
 
         private Dictionary<TPartitionKey, List<TEntity>> EntityPartitions => Database[typeof(TEntity)];
 
-        public InMemoryDatabaseClient(InMemoryDatabaseClientOptions options)
+        public InMemoryDatabaseClient()
         {
             if (!Database.TryGetValue(typeof(TEntity), out var entityPartitions))
             {
@@ -44,7 +45,7 @@ namespace Wemogy.Infrastructure.Database.InMemory.Client
                 throw DatabaseError.EntityNotFound(id.ToString(), partitionKey.ToString());
             }
 
-            return Task.FromResult(entity);
+            return Task.FromResult(entity.Clone());
         }
 
         public Task IterateAsync(
@@ -70,7 +71,7 @@ namespace Wemogy.Infrastructure.Database.InMemory.Client
                         return Task.CompletedTask;
                     }
 
-                    return callback(entity);
+                    return callback(entity.Clone());
                 },
                 cancellationToken);
         }
@@ -85,7 +86,7 @@ namespace Wemogy.Infrastructure.Database.InMemory.Client
             {
                 foreach (var entity in entityPartition.Value.Where(compiledPredicate))
                 {
-                    await callback(entity);
+                    await callback(entity.Clone());
                 }
             }
         }
@@ -107,8 +108,8 @@ namespace Wemogy.Infrastructure.Database.InMemory.Client
                     $"Entity with id {entity.Id} already exists");
             }
 
-            entities.Add(entity);
-            return Task.FromResult(entity);
+            entities.Add(entity.Clone());
+            return Task.FromResult(entity.Clone());
         }
 
         public Task<TEntity> ReplaceAsync(TEntity entity)
@@ -128,9 +129,9 @@ namespace Wemogy.Infrastructure.Database.InMemory.Client
             }
 
             entities.Remove(existingEntity);
-            entities.Add(entity);
+            entities.Add(entity.Clone());
 
-            return Task.FromResult(entity);
+            return Task.FromResult(entity.Clone());
         }
 
         public Task DeleteAsync(TId id, TPartitionKey partitionKey)

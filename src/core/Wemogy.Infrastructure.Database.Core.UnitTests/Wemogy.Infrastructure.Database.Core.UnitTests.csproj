@@ -7,6 +7,7 @@
     <PackageReference Include="FluentAssertions" Version="6.7.0" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="6.0.0" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="16.9.4" />
+    <PackageReference Include="Wemogy.Core" Version="0.4.12" />
     <PackageReference Include="xunit" Version="2.4.1" />
     <PackageReference Include="xunit.runner.visualstudio" Version="2.4.3">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
@@ -22,7 +23,6 @@
     </PackageReference>
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="../../../../libs/helpers/src/Wemogy.Core/Wemogy.Core.csproj" />
     <ProjectReference Include="../Wemogy.Infrastructure.Database.Core/Wemogy.Infrastructure.Database.Core.csproj" />
   </ItemGroup>
 </Project>

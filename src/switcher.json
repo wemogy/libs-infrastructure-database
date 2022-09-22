@@ -3,25 +3,5 @@
   "mappings": {
     "Wemogy.Core": "../../libs/helpers/src/Wemogy.Core/Wemogy.Core.csproj"
   },
-  "restore": [
-    {
-      "name": "Wemogy.Infrastructure.Database.Core",
-      "packages": [
-        {
-          "packageName": "Wemogy.Core",
-          "version": "0.4.10"
-        }
-      ]
-    },
-    {
-      "name": "Wemogy.Infrastructure.Database.Core.UnitTests",
-      "packages": [
-        {
-          "packageName": "Wemogy.Core",
-          "version": "0.4.10"
-        }
-      ]
-    }
-  ],
   "removeProjects": true
 }

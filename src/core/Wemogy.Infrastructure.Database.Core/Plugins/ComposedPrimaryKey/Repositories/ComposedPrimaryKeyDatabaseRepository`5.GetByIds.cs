@@ -21,12 +21,7 @@ public partial class ComposedPrimaryKeyDatabaseRepository<TEntity, TPartitionKey
         var internalIds = ids.Select(BuildComposedPrimaryKey).ToList();
         var internalEntities = await _databaseRepository.GetByIdsAsync(internalIds, cancellationToken);
 
-        if (internalEntities is List<TEntity> entities)
-        {
-            return entities;
-        }
-
-        entities = internalEntities.Select(AdaptToEntity).ToList();
+        var entities = internalEntities.Select(AdaptToEntity).ToList();
 
         return entities;
     }

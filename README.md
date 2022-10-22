@@ -7,5 +7,5 @@
 #### Initialize & start the cosmos DB emulator
 
 ```bash
-docker-compose -f env/cosmos/docker-compose.yaml up
+docker compose -f env/cosmos/docker-compose.yaml up
 ```

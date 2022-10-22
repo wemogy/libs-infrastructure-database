@@ -1,3 +1,4 @@
+name: infrastructure-database-core
 version: '3.6'
 services:
   cosmosdb:

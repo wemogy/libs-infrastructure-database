@@ -18,7 +18,10 @@ public partial class ComposedPrimaryKeyDatabaseRepository<TEntity, TPartitionKey
 {
     public async Task<List<TEntity>> GetAllAsync(CancellationToken cancellationToken = default)
     {
-        var internalEntities = await _databaseRepository.GetAllAsync(cancellationToken);
+        // My guess:
+        // var internalEntities = await _databaseRepository.QueryAsync(x => x.Id.StartsWith(prefix));
+        // var prefix = _composedPrimaryKeyBuilder.GetComposedPrimaryKeyPrefix();
+        var internalEntities = await _databaseRepository.GetAllAsync();
 
         if (internalEntities is List<TEntity> entities)
         {

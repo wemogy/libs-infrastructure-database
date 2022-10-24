@@ -36,7 +36,7 @@ public partial class ComposedPrimaryKeyDatabaseRepository<TEntity, TPartitionKey
 
     public Task EnsureExistAsync(TId id, TPartitionKey partitionKey, CancellationToken cancellationToken = default)
     {
-        return _databaseRepository.ExistsAsync(
+        return _databaseRepository.EnsureExistAsync(
             BuildComposedPrimaryKey(id),
             partitionKey,
             cancellationToken);
@@ -44,7 +44,7 @@ public partial class ComposedPrimaryKeyDatabaseRepository<TEntity, TPartitionKey
 
     public Task EnsureExistAsync(TId id, CancellationToken cancellationToken = default)
     {
-        return _databaseRepository.ExistsAsync(
+        return _databaseRepository.EnsureExistAsync(
             BuildComposedPrimaryKey(id),
             cancellationToken);
     }

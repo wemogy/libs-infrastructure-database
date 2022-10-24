@@ -68,25 +68,46 @@ public partial class DatabaseRepository<TEntity, TPartitionKey, TId>
         TPartitionKey partitionKey,
         CancellationToken cancellationToken = default)
     {
-        await GetAsync(
-               id,
-               partitionKey,
-               cancellationToken);
+        try
+        {
+            await GetAsync(
+                id,
+                partitionKey,
+                cancellationToken);
+        }
+        catch (NotFoundErrorException)
+        {
+            throw;
+        }
     }
 
     public async Task EnsureExistAsync(TId id, CancellationToken cancellationToken = default)
     {
-        await GetAsync(
+        try
+        {
+            await GetAsync(
                 id,
                 cancellationToken);
+        }
+        catch (NotFoundErrorException)
+        {
+            throw;
+        }
     }
 
     public async Task EnsureExistAsync(
         Expression<Func<TEntity, bool>> predicate,
         CancellationToken cancellationToken = default)
     {
-        await GetAsync(
+        try
+        {
+            await GetAsync(
                 predicate,
                 cancellationToken);
+        }
+        catch (NotFoundErrorException)
+        {
+            throw;
+        }
     }
 }

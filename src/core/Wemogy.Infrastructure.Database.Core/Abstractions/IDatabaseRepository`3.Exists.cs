@@ -15,4 +15,10 @@ public partial interface IDatabaseRepository<TEntity, in TPartitionKey, TId>
     Task<bool> ExistsAsync(TId id, CancellationToken cancellationToken = default);
 
     Task<bool> ExistsAsync(Expression<Func<TEntity, bool>> predicate, CancellationToken cancellationToken = default);
+
+    Task EnsureExistAsync(TId id, TPartitionKey partitionKey, CancellationToken cancellationToken = default);
+
+    Task EnsureExistAsync(TId id, CancellationToken cancellationToken = default);
+
+    Task EnsureExistAsync(Expression<Func<TEntity, bool>> predicate, CancellationToken cancellationToken = default);
 }

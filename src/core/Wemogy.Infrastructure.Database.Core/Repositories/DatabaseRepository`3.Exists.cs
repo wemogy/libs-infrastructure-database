@@ -62,4 +62,31 @@ public partial class DatabaseRepository<TEntity, TPartitionKey, TId>
             return false;
         }
     }
+
+    public async Task EnsureExistAsync(
+        TId id,
+        TPartitionKey partitionKey,
+        CancellationToken cancellationToken = default)
+    {
+        await GetAsync(
+               id,
+               partitionKey,
+               cancellationToken);
+    }
+
+    public async Task EnsureExistAsync(TId id, CancellationToken cancellationToken = default)
+    {
+        await GetAsync(
+                id,
+                cancellationToken);
+    }
+
+    public async Task EnsureExistAsync(
+        Expression<Func<TEntity, bool>> predicate,
+        CancellationToken cancellationToken = default)
+    {
+        await GetAsync(
+                predicate,
+                cancellationToken);
+    }
 }

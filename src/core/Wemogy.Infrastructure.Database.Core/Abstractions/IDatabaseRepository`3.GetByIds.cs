@@ -1,5 +1,7 @@
 using System;
-using Wemogy.Core.ValueObjects.Abstractions;
+using System.Collections.Generic;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace Wemogy.Infrastructure.Database.Core.Abstractions;
 
@@ -8,5 +10,5 @@ public partial interface IDatabaseRepository<TEntity, in TPartitionKey, TId> : I
     where TPartitionKey : IEquatable<TPartitionKey>
     where TId : IEquatable<TId>
 {
-    IEnabledState SoftDelete { get; }
+    Task<List<TEntity>> GetByIdsAsync(List<TId> ids, CancellationToken cancellationToken = default);
 }

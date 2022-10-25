@@ -1,5 +1,5 @@
 using System;
-using Wemogy.Core.ValueObjects.Abstractions;
+using System.Threading.Tasks;
 
 namespace Wemogy.Infrastructure.Database.Core.Abstractions;
 
@@ -8,5 +8,5 @@ public partial interface IDatabaseRepository<TEntity, in TPartitionKey, TId> : I
     where TPartitionKey : IEquatable<TPartitionKey>
     where TId : IEquatable<TId>
 {
-    IEnabledState SoftDelete { get; }
+    Task<TEntity> CreateAsync(TEntity entity);
 }

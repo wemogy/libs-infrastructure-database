@@ -37,7 +37,7 @@ public partial class RepositoryTestBase
     }
 
     [Fact]
-    public async Task ExistsAsync_ShouldReturnTrueIfIdOrPartitionKeyWasFound()
+    public async Task ExistsAsync_ShouldReturnTrueIfIdAndPartitionKeyWasFound()
     {
         // Arrange
         await ResetAsync();
@@ -52,7 +52,7 @@ public partial class RepositoryTestBase
     }
 
     [Fact]
-    public async Task ExistsAsync_ShouldReturnFalseIfIdOrPartitionKeyNotFound()
+    public async Task ExistsAsync_ShouldReturnFalseIfIdAndPartitionKeyNotFound()
     {
         // Arrange
         await ResetAsync();

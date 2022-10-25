@@ -38,7 +38,7 @@ public partial class RepositoryTestBase
     }
 
     [Fact]
-    public async Task EnsureExistsAsync_ShouldWorkIfIdOrPartitionKeyFound()
+    public async Task EnsureExistsAsync_ShouldWorkIfIdAndPartitionKeyFound()
     {
         // Arrange
         await ResetAsync();
@@ -53,13 +53,28 @@ public partial class RepositoryTestBase
     }
 
     [Fact]
-    public async Task EnsureExistsAsync_ShouldThrowIfIdOrPartitionKeyNotFound()
+    public async Task EnsureExistsAsync_ShouldThrowIfIdAndPartitionKeyNotFound()
     {
         // Arrange
         await ResetAsync();
 
         // Act
         var exception = await Record.ExceptionAsync(() => UserRepository.EnsureExistsAsync(Guid.NewGuid(), Guid.NewGuid()));
+
+        // Assert
+        exception.Should().BeOfType<NotFoundErrorException>();
+    }
+
+    [Fact]
+    public async Task EnsureExistsAsync_ShouldThrowIfItemWasNotFoundInPartition()
+    {
+        // Arrange
+        await ResetAsync();
+        var user = User.Faker.Generate();
+        await UserRepository.CreateAsync(user);
+
+        // Act
+        var exception = await Record.ExceptionAsync(() => UserRepository.EnsureExistsAsync(user.Id, Guid.NewGuid()));
 
         // Assert
         exception.Should().BeOfType<NotFoundErrorException>();

@@ -5,6 +5,11 @@ namespace Wemogy.Infrastructure.Database.Core.Errors;
 
 public static class DatabaseError
 {
+    public static NotFoundErrorException EntityNotFound()
+    {
+        return Error.NotFound("EntityNotFound", $"Entity was requested not found");
+    }
+
     public static NotFoundErrorException EntityNotFound(string id)
     {
         return Error.NotFound("EntityNotFound", $"Entity with id {id} not found");

@@ -2,8 +2,8 @@ using System;
 using System.Linq.Expressions;
 using System.Threading;
 using System.Threading.Tasks;
-using Wemogy.Core.Errors.Exceptions;
 using Wemogy.Infrastructure.Database.Core.Abstractions;
+using Wemogy.Infrastructure.Database.Core.Errors;
 
 namespace Wemogy.Infrastructure.Database.Core.Repositories;
 
@@ -12,54 +12,45 @@ public partial class DatabaseRepository<TEntity, TPartitionKey, TId>
     where TPartitionKey : IEquatable<TPartitionKey>
     where TId : IEquatable<TId>
 {
-    public async Task<bool> ExistsAsync(
+    public async Task EnsureExistsAsync(
         TId id,
         TPartitionKey partitionKey,
         CancellationToken cancellationToken = default)
     {
-        try
+        var isExisting = await ExistsAsync(
+            id,
+            partitionKey,
+            cancellationToken);
+
+        if (!isExisting)
         {
-            await GetAsync(
-                id,
-                partitionKey,
-                cancellationToken);
-            return true;
-        }
-        catch (NotFoundErrorException)
-        {
-            return false;
+            throw DatabaseError.EntityNotFound();
         }
     }
 
-    public async Task<bool> ExistsAsync(TId id, CancellationToken cancellationToken = default)
+    public async Task EnsureExistsAsync(TId id, CancellationToken cancellationToken = default)
     {
-        try
-        {
-            await GetAsync(
+        var isExisting = await ExistsAsync(
                 id,
                 cancellationToken);
-            return true;
-        }
-        catch (NotFoundErrorException)
+
+        if (!isExisting)
         {
-            return false;
+            throw DatabaseError.EntityNotFound();
         }
     }
 
-    public async Task<bool> ExistsAsync(
+    public async Task EnsureExistsAsync(
         Expression<Func<TEntity, bool>> predicate,
         CancellationToken cancellationToken = default)
     {
-        try
-        {
-            await GetAsync(
+        var isExisting = await ExistsAsync(
                 predicate,
                 cancellationToken);
-            return true;
-        }
-        catch (NotFoundErrorException)
+
+        if (!isExisting)
         {
-            return false;
+            throw DatabaseError.EntityNotFound();
         }
     }
 }

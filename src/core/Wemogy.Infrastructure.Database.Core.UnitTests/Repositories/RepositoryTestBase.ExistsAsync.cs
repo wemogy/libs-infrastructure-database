@@ -1,6 +1,6 @@
 using System;
 using System.Threading.Tasks;
-using Wemogy.Core.Errors.Exceptions;
+using FluentAssertions;
 using Wemogy.Infrastructure.Database.Core.UnitTests.Fakes.Entities;
 using Xunit;
 
@@ -20,7 +20,7 @@ public partial class RepositoryTestBase
         var result = await UserRepository.ExistsAsync(user.Id);
 
         // Assert
-        Assert.True(result);
+        result.Should().BeTrue();
     }
 
     [Fact]
@@ -33,7 +33,7 @@ public partial class RepositoryTestBase
         var result = await UserRepository.ExistsAsync(Guid.NewGuid());
 
         // Assert
-        Assert.False(result);
+        result.Should().BeFalse();
     }
 
     [Fact]
@@ -48,7 +48,7 @@ public partial class RepositoryTestBase
         var result = await UserRepository.ExistsAsync(user.Id, user.TenantId);
 
         // Assert
-        Assert.True(result);
+        result.Should().BeTrue();
     }
 
     [Fact]
@@ -61,52 +61,6 @@ public partial class RepositoryTestBase
         var result = await UserRepository.ExistsAsync(Guid.NewGuid(), Guid.NewGuid());
 
         // Assert
-        Assert.False(result);
-    }
-
-    [Fact]
-    public async Task EnsureExistAsync_ShouldWorkIfItemWasFound()
-    {
-        // Arrange
-        await ResetAsync();
-        var user = User.Faker.Generate();
-        await UserRepository.CreateAsync(user);
-
-        // Act & Assert
-        await UserRepository.EnsureExistAsync(user.Id);
-    }
-
-    [Fact]
-    public async Task EnsureExistAsync_ShouldThrowIfItemNotWasFound()
-    {
-        // Arrange
-        await ResetAsync();
-
-        // Act & Assert
-        await Assert.ThrowsAsync<NotFoundErrorException>(
-            () => UserRepository.EnsureExistAsync(Guid.NewGuid()));
-    }
-
-    [Fact]
-    public async Task EnsureExistAsync_ShouldWorkIfIdOrPartitionKeyFound()
-    {
-        // Arrange
-        await ResetAsync();
-        var user = User.Faker.Generate();
-        await UserRepository.CreateAsync(user);
-
-        // Act & Assert
-        await UserRepository.EnsureExistAsync(user.Id, user.TenantId);
-    }
-
-    [Fact]
-    public async Task EnsureExistAsync_ShouldThrowIfIdOrPartitionKeyNotFound()
-    {
-        // Arrange
-        await ResetAsync();
-
-        // Act & Assert
-        await Assert.ThrowsAsync<NotFoundErrorException>(
-            () => UserRepository.EnsureExistAsync(Guid.NewGuid(), Guid.NewGuid()));
+        result.Should().BeFalse();
     }
 }

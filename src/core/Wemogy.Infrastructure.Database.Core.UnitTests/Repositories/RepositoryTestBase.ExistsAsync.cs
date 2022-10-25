@@ -63,4 +63,19 @@ public partial class RepositoryTestBase
         // Assert
         result.Should().BeFalse();
     }
+
+    [Fact]
+    public async Task ExistsAsync_ShouldThrowIfItemWasNotFoundInPartition()
+    {
+        // Arrange
+        await ResetAsync();
+        var user = User.Faker.Generate();
+        await UserRepository.CreateAsync(user);
+
+        // Act
+        var result = await UserRepository.ExistsAsync(user.Id, Guid.NewGuid());
+
+        // Assert
+        result.Should().BeFalse();
+    }
 }

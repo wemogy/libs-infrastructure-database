@@ -5,8 +5,6 @@ using Wemogy.Infrastructure.Database.Core.Attributes;
 using Wemogy.Infrastructure.Database.Core.Delegates;
 using Wemogy.Infrastructure.Database.Core.Extensions;
 using Wemogy.Infrastructure.Database.Core.Models;
-using Wemogy.Infrastructure.Database.Core.Plugins.ComposedPrimaryKey.Abstractions;
-using Wemogy.Infrastructure.Database.Core.Plugins.ComposedPrimaryKey.Delegates;
 
 namespace Wemogy.Infrastructure.Database.Core.Factories;
 
@@ -38,23 +36,10 @@ public class DatabaseRepositoryFactory
         return repositoryFactory;
     }
 
-    public ComposedPrimaryKeyDatabaseRepositoryFactoryDelegate<TDatabaseRepository> CreateDelegate<TDatabaseRepository, TComposedPrimaryKeyBuilder>()
-        where TDatabaseRepository : class, IDatabaseRepository
-        where TComposedPrimaryKeyBuilder : IComposedPrimaryKeyBuilder
-    {
-        var typeMetadata = new DatabaseRepositoryTypeMetadata(typeof(TDatabaseRepository));
-        var databaseRepositoryOptions = ResolveDatabaseRepositoryOptions(typeMetadata);
-        var repositoryFactory = _repositoryFactoryFactory.GetRepositoryFactory<TDatabaseRepository, TComposedPrimaryKeyBuilder>(
-            typeMetadata,
-            databaseRepositoryOptions,
-            _databaseClientFactory);
-
-        return repositoryFactory;
-    }
-
     private DatabaseRepositoryOptions ResolveDatabaseRepositoryOptions(DatabaseRepositoryTypeMetadata typeMetadata)
     {
-        var repositoryOptionsAttribute = typeMetadata.DatabaseRepositoryType.GetCustomAttribute<RepositoryOptionsAttribute>();
+        var repositoryOptionsAttribute =
+            typeMetadata.DatabaseRepositoryType.GetCustomAttribute<RepositoryOptionsAttribute>();
         var databaseRepositoryOptions = new DatabaseRepositoryOptions(
             repositoryOptionsAttribute?.CollectionName ?? $"{typeMetadata.EntityType.Name.ToLower()}s",
             repositoryOptionsAttribute?.EnableSoftDelete ?? typeMetadata.EntityType.IsSoftDeletable());

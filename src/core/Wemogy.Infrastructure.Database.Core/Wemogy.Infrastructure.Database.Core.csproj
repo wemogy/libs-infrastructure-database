@@ -113,72 +113,7 @@
       <DefaultPackFolder>content</DefaultPackFolder>
       <BuildAction>Compile</BuildAction>
     </Compile>
-    <Compile Update="Plugins\ComposedPrimaryKey\Repositories\ComposedPrimaryKeyDatabaseRepository`5.Get.cs">
-      <CodeLanguage>cs</CodeLanguage>
-      <DefaultPackFolder>content</DefaultPackFolder>
-      <BuildAction>Compile</BuildAction>
-    </Compile>
     <Compile Update="Setup\DependencyInjection.cs">
-      <CodeLanguage>cs</CodeLanguage>
-      <DefaultPackFolder>content</DefaultPackFolder>
-      <BuildAction>Compile</BuildAction>
-    </Compile>
-    <Compile Update="Plugins\ComposedPrimaryKey\Delegates\ComposedPrimaryKeyDatabaseRepositoryFactoryDelegate.cs">
-      <CodeLanguage>cs</CodeLanguage>
-      <DefaultPackFolder>content</DefaultPackFolder>
-      <BuildAction>Compile</BuildAction>
-    </Compile>
-    <Compile Update="Plugins\ComposedPrimaryKey\Repositories\ComposedPrimaryKeyDatabaseRepository`5.Template.cs">
-      <CodeLanguage>cs</CodeLanguage>
-      <DefaultPackFolder>content</DefaultPackFolder>
-      <BuildAction>Compile</BuildAction>
-    </Compile>
-    <Compile Update="Plugins\ComposedPrimaryKey\Repositories\ComposedPrimaryKeyDatabaseRepository`5.Create.cs">
-      <CodeLanguage>cs</CodeLanguage>
-      <DefaultPackFolder>content</DefaultPackFolder>
-      <BuildAction>Compile</BuildAction>
-    </Compile>
-    <Compile Update="Plugins\ComposedPrimaryKey\Repositories\ComposedPrimaryKeyDatabaseRepository`5.GetAll.cs">
-      <CodeLanguage>cs</CodeLanguage>
-      <DefaultPackFolder>content</DefaultPackFolder>
-      <BuildAction>Compile</BuildAction>
-    </Compile>
-    <Compile Update="Plugins\ComposedPrimaryKey\Repositories\ComposedPrimaryKeyDatabaseRepository`5.Query.cs">
-      <CodeLanguage>cs</CodeLanguage>
-      <DefaultPackFolder>content</DefaultPackFolder>
-      <BuildAction>Compile</BuildAction>
-    </Compile>
-    <Compile Update="Plugins\ComposedPrimaryKey\Repositories\ComposedPrimaryKeyDatabaseRepository`5.Update.cs">
-      <CodeLanguage>cs</CodeLanguage>
-      <DefaultPackFolder>content</DefaultPackFolder>
-      <BuildAction>Compile</BuildAction>
-    </Compile>
-    <Compile Update="Plugins\ComposedPrimaryKey\Repositories\ComposedPrimaryKeyDatabaseRepository`5.Iterate.cs">
-      <CodeLanguage>cs</CodeLanguage>
-      <DefaultPackFolder>content</DefaultPackFolder>
-      <BuildAction>Compile</BuildAction>
-    </Compile>
-    <Compile Update="Plugins\ComposedPrimaryKey\Repositories\ComposedPrimaryKeyDatabaseRepository`5.Replace.cs">
-      <CodeLanguage>cs</CodeLanguage>
-      <DefaultPackFolder>content</DefaultPackFolder>
-      <BuildAction>Compile</BuildAction>
-    </Compile>
-    <Compile Update="Plugins\ComposedPrimaryKey\Repositories\ComposedPrimaryKeyDatabaseRepository`5.Delete.cs">
-      <CodeLanguage>cs</CodeLanguage>
-      <DefaultPackFolder>content</DefaultPackFolder>
-      <BuildAction>Compile</BuildAction>
-    </Compile>
-    <Compile Update="Plugins\ComposedPrimaryKey\Repositories\ComposedPrimaryKeyDatabaseRepository`5.Exists.cs">
-      <CodeLanguage>cs</CodeLanguage>
-      <DefaultPackFolder>content</DefaultPackFolder>
-      <BuildAction>Compile</BuildAction>
-    </Compile>
-    <Compile Update="Plugins\ComposedPrimaryKey\ReadFilters\ComposedPrimaryKeyReadFilterWrapper.cs">
-      <CodeLanguage>cs</CodeLanguage>
-      <DefaultPackFolder>content</DefaultPackFolder>
-      <BuildAction>Compile</BuildAction>
-    </Compile>
-    <Compile Update="Plugins\ComposedPrimaryKey\ReadFilters\ComposedPrimaryKeyPropertyFilterWrapper.cs">
       <CodeLanguage>cs</CodeLanguage>
       <DefaultPackFolder>content</DefaultPackFolder>
       <BuildAction>Compile</BuildAction>

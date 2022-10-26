@@ -26,7 +26,7 @@ public class DatabaseRepositoryFactory
         var databaseRepositoryOptions = ResolveDatabaseRepositoryOptions(typeMetadata);
         var databaseClient = _databaseClientFactory.InvokeGenericMethod<IDatabaseClient>(
             nameof(IDatabaseClientFactory.CreateClient),
-            new[] { typeMetadata.EntityType, typeMetadata.PartitionKeyType, typeMetadata.IdType },
+            new[] { typeMetadata.EntityType },
             databaseRepositoryOptions);
         var repositoryFactory = _repositoryFactoryFactory.GetRepositoryFactory<TDatabaseRepository>(
             typeMetadata,

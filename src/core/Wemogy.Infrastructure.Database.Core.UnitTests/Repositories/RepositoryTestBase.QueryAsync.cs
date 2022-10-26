@@ -46,7 +46,7 @@ public partial class RepositoryTestBase
     {
         // Arrange
         await ResetAsync();
-        var queryParameters = new QueryParameters()
+        var queryParameters = new QueryParameters
         {
             Take = 5
         };

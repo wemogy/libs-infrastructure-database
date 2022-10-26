@@ -17,9 +17,15 @@ public partial class RepositoryTestBase
         await UserRepository.CreateAsync(user);
 
         // Act
-        var userExistsBeforeDeletion = await UserRepository.ExistsAsync(user.Id, user.TenantId);
-        await UserRepository.DeleteAsync(user.Id, user.TenantId);
-        var userExistsAfterDeletion = await UserRepository.ExistsAsync(user.Id, user.TenantId);
+        var userExistsBeforeDeletion = await UserRepository.ExistsAsync(
+            user.Id,
+            user.TenantId);
+        await UserRepository.DeleteAsync(
+            user.Id,
+            user.TenantId);
+        var userExistsAfterDeletion = await UserRepository.ExistsAsync(
+            user.Id,
+            user.TenantId);
 
         // Assert
         userExistsBeforeDeletion.Should().BeTrue();
@@ -30,11 +36,14 @@ public partial class RepositoryTestBase
     public async Task DeleteAsyncShouldThrowForNonExistingEntities()
     {
         // Arrange
-        var notExistingUserId = Guid.NewGuid();
-        var notExistingTenantId = Guid.NewGuid();
+        var notExistingUserId = Guid.NewGuid().ToString();
+        var notExistingTenantId = Guid.NewGuid().ToString();
 
         // Act
-        var exception = await Record.ExceptionAsync(() => UserRepository.DeleteAsync(notExistingUserId, notExistingTenantId));
+        var exception = await Record.ExceptionAsync(
+            () => UserRepository.DeleteAsync(
+                notExistingUserId,
+                notExistingTenantId));
 
         // Assert
         exception.Should().BeOfType<NotFoundErrorException>();

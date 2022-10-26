@@ -30,7 +30,7 @@ public partial class RepositoryTestBase
         await ResetAsync();
 
         // Act
-        var result = await UserRepository.ExistsAsync(Guid.NewGuid());
+        var result = await UserRepository.ExistsAsync(Guid.NewGuid().ToString());
 
         // Assert
         result.Should().BeFalse();
@@ -45,7 +45,9 @@ public partial class RepositoryTestBase
         await UserRepository.CreateAsync(user);
 
         // Act
-        var result = await UserRepository.ExistsAsync(user.Id, user.TenantId);
+        var result = await UserRepository.ExistsAsync(
+            user.Id,
+            user.TenantId);
 
         // Assert
         result.Should().BeTrue();
@@ -58,7 +60,9 @@ public partial class RepositoryTestBase
         await ResetAsync();
 
         // Act
-        var result = await UserRepository.ExistsAsync(Guid.NewGuid(), Guid.NewGuid());
+        var result = await UserRepository.ExistsAsync(
+            Guid.NewGuid().ToString(),
+            Guid.NewGuid().ToString());
 
         // Assert
         result.Should().BeFalse();
@@ -73,7 +77,9 @@ public partial class RepositoryTestBase
         await UserRepository.CreateAsync(user);
 
         // Act
-        var result = await UserRepository.ExistsAsync(user.Id, Guid.NewGuid());
+        var result = await UserRepository.ExistsAsync(
+            user.Id,
+            Guid.NewGuid().ToString());
 
         // Assert
         result.Should().BeFalse();

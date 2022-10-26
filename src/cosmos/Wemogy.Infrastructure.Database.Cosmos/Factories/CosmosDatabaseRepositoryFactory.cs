@@ -14,7 +14,10 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Factories
         {
             var serviceCollection = new ServiceCollection();
             serviceCollection
-                .AddCosmosDatabase(connectionString, databaseName, insecureDevelopmentMode)
+                .AddCosmosDatabase(
+                    connectionString,
+                    databaseName,
+                    insecureDevelopmentMode)
                 .AddRepository<TDatabaseRepository>();
             var serviceProvider = serviceCollection.BuildServiceProvider();
             return serviceProvider.GetRequiredService<TDatabaseRepository>();

@@ -13,22 +13,22 @@
     <RepositoryUrl>https://github.com/wemogy/libs-infrastructure-database</RepositoryUrl>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="ImpromptuInterface" Version="7.0.1" />
-    <PackageReference Include="Microsoft.CSharp" Version="4.7.0" />
-    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="6.0.0" />
+    <PackageReference Include="ImpromptuInterface" Version="7.0.1"/>
+    <PackageReference Include="Microsoft.CSharp" Version="4.7.0"/>
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="6.0.0"/>
     <PackageReference Include="NuGetizer" Version="0.7.1">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
-    <PackageReference Include="Wemogy.Core" Version="0.4.12" />
+    <PackageReference Include="Wemogy.Core" Version="0.4.12"/>
   </ItemGroup>
   <ItemGroup>
-    <Compile Update="Repositories\DatabaseRepository`3.Exists.cs">
+    <Compile Update="Repositories\DatabaseRepository`1.Exists.cs">
       <CodeLanguage>cs</CodeLanguage>
       <DefaultPackFolder>content</DefaultPackFolder>
       <BuildAction>Compile</BuildAction>
     </Compile>
-    <Compile Update="Abstractions\IDatabaseRepository`3.Exists.cs">
+    <Compile Update="Abstractions\IDatabaseRepository`1.Exists.cs">
       <CodeLanguage>cs</CodeLanguage>
       <DefaultPackFolder>content</DefaultPackFolder>
       <BuildAction>Compile</BuildAction>
@@ -38,17 +38,7 @@
       <DefaultPackFolder>content</DefaultPackFolder>
       <BuildAction>Compile</BuildAction>
     </Compile>
-    <Compile Update="Abstractions\EntityBase`1.cs">
-      <CodeLanguage>cs</CodeLanguage>
-      <DefaultPackFolder>content</DefaultPackFolder>
-      <BuildAction>Compile</BuildAction>
-    </Compile>
     <Compile Update="Abstractions\GlobalEntityBase.cs">
-      <CodeLanguage>cs</CodeLanguage>
-      <DefaultPackFolder>content</DefaultPackFolder>
-      <BuildAction>Compile</BuildAction>
-    </Compile>
-    <Compile Update="Abstractions\GlobalEntityBase`1.cs">
       <CodeLanguage>cs</CodeLanguage>
       <DefaultPackFolder>content</DefaultPackFolder>
       <BuildAction>Compile</BuildAction>
@@ -58,7 +48,7 @@
       <DefaultPackFolder>content</DefaultPackFolder>
       <BuildAction>Compile</BuildAction>
     </Compile>
-    <Compile Update="Abstractions\IEntityBase`1.cs">
+    <Compile Update="Abstractions\IEntityBase.cs">
       <CodeLanguage>cs</CodeLanguage>
       <DefaultPackFolder>content</DefaultPackFolder>
       <BuildAction>Compile</BuildAction>
@@ -68,47 +58,47 @@
       <DefaultPackFolder>content</DefaultPackFolder>
       <BuildAction>Compile</BuildAction>
     </Compile>
-    <Compile Update="Repositories\DatabaseRepository`3.Get.cs">
+    <Compile Update="Repositories\DatabaseRepository`1.Get.cs">
       <CodeLanguage>cs</CodeLanguage>
       <DefaultPackFolder>content</DefaultPackFolder>
       <BuildAction>Compile</BuildAction>
     </Compile>
-    <Compile Update="Repositories\DatabaseRepository`3.Template.cs">
+    <Compile Update="Repositories\DatabaseRepository`1.Template.cs">
       <CodeLanguage>cs</CodeLanguage>
       <DefaultPackFolder>content</DefaultPackFolder>
       <BuildAction>Compile</BuildAction>
     </Compile>
-    <Compile Update="Repositories\DatabaseRepository`3.GetAll.cs">
+    <Compile Update="Repositories\DatabaseRepository`1.GetAll.cs">
       <CodeLanguage>cs</CodeLanguage>
       <DefaultPackFolder>content</DefaultPackFolder>
       <BuildAction>Compile</BuildAction>
     </Compile>
-    <Compile Update="Repositories\DatabaseRepository`3.Query.cs">
+    <Compile Update="Repositories\DatabaseRepository`1.Query.cs">
       <CodeLanguage>cs</CodeLanguage>
       <DefaultPackFolder>content</DefaultPackFolder>
       <BuildAction>Compile</BuildAction>
     </Compile>
-    <Compile Update="Repositories\DatabaseRepository`3.Iterate.cs">
+    <Compile Update="Repositories\DatabaseRepository`1.Iterate.cs">
       <CodeLanguage>cs</CodeLanguage>
       <DefaultPackFolder>content</DefaultPackFolder>
       <BuildAction>Compile</BuildAction>
     </Compile>
-    <Compile Update="Repositories\DatabaseRepository`3.Create.cs">
+    <Compile Update="Repositories\DatabaseRepository`1.Create.cs">
       <CodeLanguage>cs</CodeLanguage>
       <DefaultPackFolder>content</DefaultPackFolder>
       <BuildAction>Compile</BuildAction>
     </Compile>
-    <Compile Update="Repositories\DatabaseRepository`3.Replace.cs">
+    <Compile Update="Repositories\DatabaseRepository`1.Replace.cs">
       <CodeLanguage>cs</CodeLanguage>
       <DefaultPackFolder>content</DefaultPackFolder>
       <BuildAction>Compile</BuildAction>
     </Compile>
-    <Compile Update="Repositories\DatabaseRepository`3.Update.cs">
+    <Compile Update="Repositories\DatabaseRepository`1.Update.cs">
       <CodeLanguage>cs</CodeLanguage>
       <DefaultPackFolder>content</DefaultPackFolder>
       <BuildAction>Compile</BuildAction>
     </Compile>
-    <Compile Update="Repositories\DatabaseRepository`3.Delete.cs">
+    <Compile Update="Repositories\DatabaseRepository`1.Delete.cs">
       <CodeLanguage>cs</CodeLanguage>
       <DefaultPackFolder>content</DefaultPackFolder>
       <BuildAction>Compile</BuildAction>

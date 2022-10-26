@@ -1,14 +1,16 @@
 using System;
 
-namespace Wemogy.Infrastructure.Database.Core.Attributes
+namespace Wemogy.Infrastructure.Database.Core.Attributes;
+
+[AttributeUsage(
+    AttributeTargets.Interface,
+    AllowMultiple = true)]
+public class RepositoryReadFilterAttribute : Attribute
 {
-    [AttributeUsage(AttributeTargets.Interface, AllowMultiple = true)]
-    public class RepositoryReadFilterAttribute : Attribute
+    public RepositoryReadFilterAttribute(params Type[] filterTypes)
     {
-        public Type[] FilterTypes { get; }
-        public RepositoryReadFilterAttribute(params Type[] filterTypes)
-        {
-            FilterTypes = filterTypes;
-        }
+        FilterTypes = filterTypes;
     }
+
+    public Type[] FilterTypes { get; }
 }

@@ -18,7 +18,9 @@ public partial class RepositoryTestBase
 
         // Act & Assert
         await Assert.ThrowsAsync<NotFoundErrorException>(
-            () => UserRepository.GetAsync(user.Id, user.TenantId));
+            () => UserRepository.GetAsync(
+                user.Id,
+                user.TenantId));
     }
 
     [Fact]
@@ -31,7 +33,9 @@ public partial class RepositoryTestBase
         await UserRepository.CreateAsync(user);
 
         // Act
-        var userFromDb = await UserRepository.GetAsync(user.Id, user.TenantId);
+        var userFromDb = await UserRepository.GetAsync(
+            user.Id,
+            user.TenantId);
 
         // Assert
         Assert.True(userFromDb.IsDeleted);

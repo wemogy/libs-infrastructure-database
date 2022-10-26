@@ -1,4 +1,3 @@
-using System;
 using System.Threading.Tasks;
 using FluentAssertions;
 using Wemogy.Core.DynamicProxies;
@@ -24,8 +23,10 @@ public partial class RepositoryTestBase
         var flakyProxy = new FlakyProxy(
                 2,
                 FlakyStrategy.ThrowBeforeInvocation,
-                () => Error.PreconditionFailed("EtagMismatch", "Etag mismatch"))
-            .OnlyForMethodsWithName(nameof(IDatabaseClient<User, Guid, Guid>.ReplaceAsync));
+                () => Error.PreconditionFailed(
+                    "EtagMismatch",
+                    "Etag mismatch"))
+            .OnlyForMethodsWithName(nameof(IDatabaseClient<User>.ReplaceAsync));
         DatabaseRepositoryFactoryFactory.DatabaseClientProxy = flakyProxy;
         var flakyUserRepository = UserRepositoryFactory();
         await flakyUserRepository.CreateAsync(user);
@@ -56,8 +57,10 @@ public partial class RepositoryTestBase
         var flakyProxy = new FlakyProxy(
                 100,
                 FlakyStrategy.ThrowBeforeInvocation,
-                () => Error.PreconditionFailed("EtagMismatch", "Etag mismatch"))
-            .OnlyForMethodsWithName(nameof(IDatabaseClient<User, Guid, Guid>.ReplaceAsync));
+                () => Error.PreconditionFailed(
+                    "EtagMismatch",
+                    "Etag mismatch"))
+            .OnlyForMethodsWithName(nameof(IDatabaseClient<User>.ReplaceAsync));
         DatabaseRepositoryFactoryFactory.DatabaseClientProxy = flakyProxy;
         var flakyUserRepository = UserRepositoryFactory();
         await flakyUserRepository.CreateAsync(user);
@@ -68,10 +71,11 @@ public partial class RepositoryTestBase
         }
 
         // Act
-        var updatedUserException = await Record.ExceptionAsync(() => flakyUserRepository.UpdateAsync(
-            user.Id,
-            user.TenantId,
-            UpdateAction));
+        var updatedUserException = await Record.ExceptionAsync(
+            () => flakyUserRepository.UpdateAsync(
+                user.Id,
+                user.TenantId,
+                UpdateAction));
 
         // Assert
         updatedUserException.Should().BeOfType<PreconditionFailedErrorException>();

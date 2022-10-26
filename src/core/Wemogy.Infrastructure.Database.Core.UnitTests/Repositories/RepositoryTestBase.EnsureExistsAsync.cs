@@ -31,7 +31,7 @@ public partial class RepositoryTestBase
         await ResetAsync();
 
         // Act
-        var exception = await Record.ExceptionAsync(() => UserRepository.EnsureExistsAsync(Guid.NewGuid()));
+        var exception = await Record.ExceptionAsync(() => UserRepository.EnsureExistsAsync(Guid.NewGuid().ToString()));
 
         // Assert
         exception.Should().BeOfType<NotFoundErrorException>();
@@ -46,7 +46,10 @@ public partial class RepositoryTestBase
         await UserRepository.CreateAsync(user);
 
         // Act
-        var exception = await Record.ExceptionAsync(() => UserRepository.EnsureExistsAsync(user.Id, user.TenantId));
+        var exception = await Record.ExceptionAsync(
+            () => UserRepository.EnsureExistsAsync(
+                user.Id,
+                user.TenantId));
 
         // Assert
         exception.Should().BeNull();
@@ -59,7 +62,10 @@ public partial class RepositoryTestBase
         await ResetAsync();
 
         // Act
-        var exception = await Record.ExceptionAsync(() => UserRepository.EnsureExistsAsync(Guid.NewGuid(), Guid.NewGuid()));
+        var exception = await Record.ExceptionAsync(
+            () => UserRepository.EnsureExistsAsync(
+                Guid.NewGuid().ToString(),
+                Guid.NewGuid().ToString()));
 
         // Assert
         exception.Should().BeOfType<NotFoundErrorException>();
@@ -74,7 +80,10 @@ public partial class RepositoryTestBase
         await UserRepository.CreateAsync(user);
 
         // Act
-        var exception = await Record.ExceptionAsync(() => UserRepository.EnsureExistsAsync(user.Id, Guid.NewGuid()));
+        var exception = await Record.ExceptionAsync(
+            () => UserRepository.EnsureExistsAsync(
+                user.Id,
+                Guid.NewGuid().ToString()));
 
         // Assert
         exception.Should().BeOfType<NotFoundErrorException>();

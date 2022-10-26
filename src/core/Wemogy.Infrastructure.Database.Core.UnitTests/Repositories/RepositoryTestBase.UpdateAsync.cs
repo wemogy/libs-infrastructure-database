@@ -46,8 +46,8 @@ public partial class RepositoryTestBase
         // Act & Assert
         await Assert.ThrowsAsync<NotFoundErrorException>(
             () => UserRepository.UpdateAsync(
-                Guid.NewGuid(),
-                Guid.NewGuid(),
+                Guid.NewGuid().ToString(),
+                Guid.NewGuid().ToString(),
                 UpdateAction));
     }
 }

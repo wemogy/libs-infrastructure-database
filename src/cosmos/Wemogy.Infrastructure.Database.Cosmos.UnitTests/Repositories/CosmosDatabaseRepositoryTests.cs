@@ -10,10 +10,11 @@ namespace Wemogy.Infrastructure.Database.Cosmos.UnitTests.Repositories;
 public class CosmosDatabaseRepositoryTests : RepositoryTestBase
 {
     public CosmosDatabaseRepositoryTests()
-        : base(() => CosmosDatabaseRepositoryFactory.CreateInstance<IUserRepository>(
-            TestingConstants.ConnectionString,
-            TestingConstants.DatabaseName,
-            true))
+        : base(
+            () => CosmosDatabaseRepositoryFactory.CreateInstance<IUserRepository>(
+                TestingConstants.ConnectionString,
+                TestingConstants.DatabaseName,
+                true))
     {
     }
 }

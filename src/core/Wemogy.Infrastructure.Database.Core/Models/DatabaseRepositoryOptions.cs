@@ -2,10 +2,6 @@ namespace Wemogy.Infrastructure.Database.Core.Models;
 
 public class DatabaseRepositoryOptions
 {
-    public string CollectionName { get; set; }
-
-    public bool EnableSoftDelete { get; }
-
     public DatabaseRepositoryOptions(
         string collectionName,
         bool enableSoftDelete)
@@ -13,4 +9,8 @@ public class DatabaseRepositoryOptions
         CollectionName = collectionName;
         EnableSoftDelete = enableSoftDelete;
     }
+
+    public string CollectionName { get; set; }
+
+    public bool EnableSoftDelete { get; }
 }

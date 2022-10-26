@@ -2,71 +2,72 @@ using System.Collections.Generic;
 using System.Linq;
 using Wemogy.Core.Extensions;
 
-namespace Wemogy.Infrastructure.Database.Core.ValueObjects
+namespace Wemogy.Infrastructure.Database.Core.ValueObjects;
+
+public class QueryParameters
 {
-    public class QueryParameters
+    private List<string> _noCamelCasePathList;
+
+    public QueryParameters()
     {
-        public int? Take { get; set; }
-        public List<QueryFilter> Filters { get; set; } = new List<QueryFilter>();
+        _noCamelCasePathList = new List<string>();
+    }
 
-        public List<QuerySorting> Sortings { get; set; } = new List<QuerySorting>();
+    public int? Take { get; set; }
+    public List<QueryFilter> Filters { get; set; } = new ();
 
-        public bool ContainsFilters => Filters.Any();
+    public List<QuerySorting> Sortings { get; set; } = new ();
 
-        public bool ContainsSortings => Sortings.Any();
+    public bool ContainsFilters => Filters.Any();
 
-        public bool HasSearchAfter => Sortings.Any(x => !string.IsNullOrWhiteSpace(x.SearchAfter));
+    public bool ContainsSortings => Sortings.Any();
 
-        private List<string> _noCamelCasePathList;
+    public bool HasSearchAfter => Sortings.Any(x => !string.IsNullOrWhiteSpace(x.SearchAfter));
 
-        public QueryParameters()
+    public void SetNoCamelCasePathList(List<string> noCamelCasePathList)
+    {
+        _noCamelCasePathList = noCamelCasePathList;
+    }
+
+    public bool HasSortingForProperty(string property)
+    {
+        return ContainsSortings && Sortings.Any(x => x.OrderBy == property);
+    }
+
+    public QuerySorting? GetQuerySortingForProperty(string property)
+    {
+        if (!ContainsSortings)
         {
-            _noCamelCasePathList = new List<string>();
+            return null;
         }
 
-        public void SetNoCamelCasePathList(List<string> noCamelCasePathList)
+        return Sortings.FirstOrDefault(x => x.OrderBy == property);
+    }
+
+    public QueryFilter? GetQueryFilterForProperty(string property)
+    {
+        if (!ContainsFilters)
         {
-            _noCamelCasePathList = noCamelCasePathList;
+            return null;
         }
 
-        public bool HasSortingForProperty(string property)
+        return Filters.FirstOrDefault(x => x.Property == property);
+    }
+
+    public void RemoveSorting(string property)
+    {
+        if (!ContainsSortings)
         {
-            return ContainsSortings && Sortings.Any(x => x.OrderBy == property);
+            return;
         }
 
-        public QuerySorting? GetQuerySortingForProperty(string property)
-        {
-            if (!ContainsSortings)
-            {
-                return null;
-            }
+        Sortings.RemoveAll(x => x.OrderBy == property);
+    }
 
-            return Sortings.FirstOrDefault(x => x.OrderBy == property);
-        }
-
-        public QueryFilter? GetQueryFilterForProperty(string property)
-        {
-            if (!ContainsFilters)
-            {
-                return null;
-            }
-
-            return Filters.FirstOrDefault(x => x.Property == property);
-        }
-
-        public void RemoveSorting(string property)
-        {
-            if (!ContainsSortings)
-            {
-                return;
-            }
-
-            Sortings.RemoveAll(x => x.OrderBy == property);
-        }
-
-        public void EnsureCamelCase()
-        {
-            Filters.ForEach(x =>
+    public void EnsureCamelCase()
+    {
+        Filters.ForEach(
+            x =>
             {
                 if (_noCamelCasePathList.Any(path => x.Property.StartsWith(path)))
                 {
@@ -75,7 +76,8 @@ namespace Wemogy.Infrastructure.Database.Core.ValueObjects
 
                 x.Property = x.Property.ToCamelCase();
             });
-            Sortings.ForEach(x =>
+        Sortings.ForEach(
+            x =>
             {
                 if (_noCamelCasePathList.Any(path => x.OrderBy.StartsWith(path)))
                 {
@@ -84,6 +86,5 @@ namespace Wemogy.Infrastructure.Database.Core.ValueObjects
 
                 x.OrderBy = x.OrderBy.ToCamelCase();
             });
-        }
     }
 }

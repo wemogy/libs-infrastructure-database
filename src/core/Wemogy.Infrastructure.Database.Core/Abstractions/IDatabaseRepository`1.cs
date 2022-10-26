@@ -1,9 +1,9 @@
-using System;
+using Wemogy.Core.ValueObjects.Abstractions;
 
-namespace Wemogy.Infrastructure.Database.Core.Abstractions
+namespace Wemogy.Infrastructure.Database.Core.Abstractions;
+
+public partial interface IDatabaseRepository<TEntity> : IDatabaseRepository
+    where TEntity : IEntityBase
 {
-    public interface IDatabaseRepository<TEntity> : IDatabaseRepository<TEntity, Guid, Guid>
-        where TEntity : IEntityBase<Guid>
-    {
-    }
+    IEnabledState SoftDelete { get; }
 }

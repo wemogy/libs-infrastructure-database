@@ -17,6 +17,9 @@ public partial class RepositoryTestBase
         await UserRepository.CreateAsync(user);
 
         // Act & Assert
-        await Assert.ThrowsAsync<NotFoundErrorException>(() => UserRepository.GetAsync(user.Id, user.TenantId));
+        await Assert.ThrowsAsync<NotFoundErrorException>(
+            () => UserRepository.GetAsync(
+                user.Id,
+                user.TenantId));
     }
 }

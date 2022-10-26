@@ -14,22 +14,22 @@ public partial class ComposedPrimaryKeyDatabaseRepository<TEntity, TPartitionKey
     where TInternalEntity : IEntityBase<string>
     where TComposedPrimaryKeyBuilder : IComposedPrimaryKeyBuilder<TId>
 {
-    public Task<bool> ExistsAsync(TId id, TPartitionKey partitionKey, CancellationToken cancellationToken = default)
+    public Task EnsureExistsAsync(TId id, TPartitionKey partitionKey, CancellationToken cancellationToken = default)
     {
-        return _databaseRepository.ExistsAsync(
+        return _databaseRepository.EnsureExistsAsync(
             BuildComposedPrimaryKey(id),
             partitionKey,
             cancellationToken);
     }
 
-    public Task<bool> ExistsAsync(TId id, CancellationToken cancellationToken = default)
+    public Task EnsureExistsAsync(TId id, CancellationToken cancellationToken = default)
     {
-        return _databaseRepository.ExistsAsync(
+        return _databaseRepository.EnsureExistsAsync(
             BuildComposedPrimaryKey(id),
             cancellationToken);
     }
 
-    public Task<bool> ExistsAsync(Expression<Func<TEntity, bool>> predicate, CancellationToken cancellationToken = default)
+    public Task EnsureExistsAsync(Expression<Func<TEntity, bool>> predicate, CancellationToken cancellationToken = default)
     {
         throw new NotImplementedException();
     }

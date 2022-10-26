@@ -1,4 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Wemogy.Infrastructure.Database.Core.UnitTests.DatabaseRepositories;
 using Wemogy.Infrastructure.Database.Core.UnitTests.Plugins.ComposedPrimaryKey.TestingData.Models;
 using Wemogy.Infrastructure.Database.Core.UnitTests.Repositories;
@@ -19,11 +20,12 @@ public class FixedComposedPrimaryKeyRepositoryTests : RepositoryTestBase
             serviceCollection.AddScoped<PrefixComposedPrimaryKeyBuilder>();
             serviceCollection.AddSingleton(new PrefixContext("tenantA"));
 
-            serviceCollection
-                .AddCosmosDatabase(TestingConstants.ConnectionString, TestingConstants.DatabaseName, true)
-                .AddRepository<IUserRepository, PrefixComposedPrimaryKeyBuilder>();
-
             var serviceProvider = serviceCollection.BuildServiceProvider();
+            var logger = serviceProvider.GetRequiredService<ILogger>();
+
+            serviceCollection
+                .AddCosmosDatabase(TestingConstants.ConnectionString, TestingConstants.DatabaseName, logger, true)
+                .AddRepository<IUserRepository, PrefixComposedPrimaryKeyBuilder>();
 
             return serviceProvider.GetRequiredService<IUserRepository>();
         })

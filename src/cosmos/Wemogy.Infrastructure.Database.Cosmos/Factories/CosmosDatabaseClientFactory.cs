@@ -4,6 +4,7 @@ using Microsoft.Extensions.Logging;
 using Wemogy.Infrastructure.Database.Core.Abstractions;
 using Wemogy.Infrastructure.Database.Core.Models;
 using Wemogy.Infrastructure.Database.Cosmos.Client;
+using Wemogy.Infrastructure.Database.Cosmos.Extensions;
 
 namespace Wemogy.Infrastructure.Database.Cosmos.Factories
 {
@@ -11,17 +12,22 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Factories
     {
         private readonly CosmosClient _cosmosClient;
         private readonly string _databaseName;
-        private readonly ILogger _logger;
+        private readonly ILogger? _logger;
 
         public CosmosDatabaseClientFactory(
             string connectionString,
             string databaseName,
-            ILogger logger,
-            bool insecureDevelopmentMode = false)
+            bool insecureDevelopmentMode = false,
+            bool enableLogging = false)
         {
             _cosmosClient = CosmosClientFactory.FromConnectionString(connectionString, insecureDevelopmentMode);
             _databaseName = databaseName;
-            _logger = logger;
+
+            var loggerFactory = LoggerFactory.Create(builder =>
+            {
+                builder.AddConsole();
+            });
+            _logger = loggerFactory.CreateLogger(nameof(QueryParametersExtensions));
         }
 
         public IDatabaseClient<TEntity, TPartitionKey, TId> CreateClient<TEntity, TPartitionKey, TId>(DatabaseRepositoryOptions databaseRepositoryOptions)

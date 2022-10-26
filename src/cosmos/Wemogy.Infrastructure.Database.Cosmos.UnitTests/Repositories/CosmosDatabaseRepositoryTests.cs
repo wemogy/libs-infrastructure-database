@@ -13,6 +13,7 @@ public class CosmosDatabaseRepositoryTests : RepositoryTestBase
         : base(() => CosmosDatabaseRepositoryFactory.CreateInstance<IUserRepository>(
             TestingConstants.ConnectionString,
             TestingConstants.DatabaseName,
+            true,
             true))
     {
     }

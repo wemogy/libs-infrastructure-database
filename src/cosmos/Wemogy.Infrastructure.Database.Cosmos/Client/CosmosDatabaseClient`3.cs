@@ -22,10 +22,10 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Client
         where TPartitionKey : IEquatable<TPartitionKey>
         where TId : IEquatable<TId>
     {
-        private readonly ILogger _logger;
+        private readonly ILogger? _logger;
         private readonly Container _container;
 
-        public CosmosDatabaseClient(CosmosClient cosmosClient, CosmosDatabaseClientOptions options, ILogger logger)
+        public CosmosDatabaseClient(CosmosClient cosmosClient, CosmosDatabaseClientOptions options, ILogger? logger)
         {
             var database = cosmosClient.GetDatabase(options.DatabaseName);
             var containerName = options.ContainerName;
@@ -115,8 +115,6 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Client
                     entity,
                     entity.Id.ToString(),
                     partitionKey.CosmosPartitionKey);
-
-
 
                 return replaceResponse.Resource;
             }

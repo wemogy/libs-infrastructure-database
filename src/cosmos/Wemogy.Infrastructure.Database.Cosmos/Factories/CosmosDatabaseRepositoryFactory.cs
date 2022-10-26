@@ -1,5 +1,4 @@
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 using Wemogy.Infrastructure.Database.Core.Abstractions;
 using Wemogy.Infrastructure.Database.Cosmos.Setup;
 
@@ -10,16 +9,15 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Factories
         public static TDatabaseRepository CreateInstance<TDatabaseRepository>(
             string connectionString,
             string databaseName,
-            bool insecureDevelopmentMode = false)
+            bool insecureDevelopmentMode = false,
+            bool enableLogging = false)
             where TDatabaseRepository : class, IDatabaseRepository
         {
             var serviceCollection = new ServiceCollection();
-            var serviceProvider = serviceCollection.BuildServiceProvider();
-            var logger = serviceProvider.GetRequiredService<ILogger>();
-
             serviceCollection
-                .AddCosmosDatabase(connectionString, databaseName, logger, insecureDevelopmentMode)
+                .AddCosmosDatabase(connectionString, databaseName, insecureDevelopmentMode, enableLogging)
                 .AddRepository<TDatabaseRepository>();
+            var serviceProvider = serviceCollection.BuildServiceProvider();
 
             return serviceProvider.GetRequiredService<TDatabaseRepository>();
         }

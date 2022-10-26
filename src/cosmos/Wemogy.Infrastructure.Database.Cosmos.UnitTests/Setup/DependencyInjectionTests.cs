@@ -1,5 +1,4 @@
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 using Wemogy.Infrastructure.Database.Core.Setup;
 using Wemogy.Infrastructure.Database.Core.UnitTests.DatabaseRepositories;
 using Wemogy.Infrastructure.Database.Cosmos.Factories;
@@ -14,12 +13,9 @@ public class DependencyInjectionTests : CosmosUnitTestBase
     public void AddRepository_ShouldWork()
     {
         // Arrange
-        var serviceProvider = new ServiceCollection().BuildServiceProvider();
-        var logger = serviceProvider.GetRequiredService<ILogger>();
         var cosmosDatabaseClientFactory = new CosmosDatabaseClientFactory(
             ConnectionString,
-            DatabaseName,
-            logger);
+            DatabaseName);
         ServiceCollection
             .AddDatabase(cosmosDatabaseClientFactory)
             .AddRepository<IUserRepository>();

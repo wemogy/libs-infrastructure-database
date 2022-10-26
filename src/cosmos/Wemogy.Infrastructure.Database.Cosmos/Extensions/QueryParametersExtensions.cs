@@ -61,8 +61,8 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Extensions
                 // convert the IQueryable LINQ expression to a SQL query
                 var generalFilterSql = generalFilter.ToString();
 
-                logger.LogTrace("generalFilterSql");
-                logger.LogTrace(generalFilterSql);
+                logger?.LogTrace("generalFilterSql");
+                logger?.LogTrace(generalFilterSql);
 
                 // check if the stringified IQueryable LINQ expression equals the container link, which happens, if the query is empty
                 var containerLink = $"dbs/{container.Database.Id}/colls/{container.Id}";
@@ -86,10 +86,10 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Extensions
                     "\"");
                 if (!string.IsNullOrWhiteSpace(join))
                 {
-                    logger.LogTrace("JOIN");
-                    logger.LogTrace(join);
+                    logger?.LogTrace("JOIN");
+                    logger?.LogTrace(join);
                     joinStatement = join;
-                    logger.LogTrace($"Join statement: {joinStatement}");
+                    logger?.LogTrace($"Join statement: {joinStatement}");
                 }
 
                 if (!string.IsNullOrWhiteSpace(generalFilterSql))
@@ -145,9 +145,9 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Extensions
                     parameter.Value);
             }
 
-            logger.LogTrace("Query:");
-            logger.LogTrace(queryText);
-            logger.LogTrace(JsonConvert.SerializeObject(queryDefinition.GetQueryParameters()));
+            logger?.LogTrace("Query:");
+            logger?.LogTrace(queryText);
+            logger?.LogTrace(JsonConvert.SerializeObject(queryDefinition.GetQueryParameters()));
 
             return queryDefinition;
         }
@@ -157,7 +157,7 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Extensions
             QueryParameters queryParameters,
             MappingMetadata mappingMetadata,
             IQueryable<T> generalFilter,
-            ILogger logger)
+            ILogger? logger)
             where T : class, IEntityBase<TId>
             where TId : IEquatable<TId>
         {
@@ -172,7 +172,7 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Extensions
         }
 
         public static FeedIterator<JObject> GetCount(this Container container, QueryParameters queryParameters,
-            MappingMetadata mappingMetadata, bool softDeleteEnabled, IQueryable generalFilter, ILogger logger)
+            MappingMetadata mappingMetadata, bool softDeleteEnabled, IQueryable generalFilter, ILogger? logger)
         {
             var queryDefinition = container.GetQueryDefinition(
                 "SELECT COUNT(1)",
@@ -187,7 +187,7 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Extensions
         private static QueryDefinitionFilterCondition GetQueryDefinitionFilterCondition(
             this QueryParameters queryParameters,
             MappingMetadata mappingMetadata,
-            ILogger logger)
+            ILogger? logger)
         {
             var result = new QueryDefinitionFilterCondition();
 
@@ -241,7 +241,7 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Extensions
                             filter.Value) as JArray;
                         if (arr == null)
                         {
-                            logger.LogTrace(
+                            logger?.LogTrace(
                                 $"Comparator.IsOneOf failed for filter: {JsonConvert.SerializeObject(filter)}");
                             continue;
                         }
@@ -274,7 +274,7 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Extensions
                             true);
                         continue;
                     default:
-                        logger.LogTrace(
+                        logger?.LogTrace(
                             $"GetQueryDefinitionFilterCondition failed for filter: {JsonConvert.SerializeObject(filter)}");
                         continue;
                 }

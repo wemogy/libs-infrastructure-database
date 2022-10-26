@@ -24,4 +24,8 @@
     <ProjectReference Include="../Wemogy.Infrastructure.Database.InMemory/Wemogy.Infrastructure.Database.InMemory.csproj" />
     <ProjectReference Include="..\..\core\Wemogy.Infrastructure.Database.Core.UnitTests\Wemogy.Infrastructure.Database.Core.UnitTests.csproj" />
   </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Plugins" />
+  </ItemGroup>
 </Project>

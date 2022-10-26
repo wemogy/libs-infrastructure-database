@@ -23,11 +23,14 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Factories
             _cosmosClient = CosmosClientFactory.FromConnectionString(connectionString, insecureDevelopmentMode);
             _databaseName = databaseName;
 
-            var loggerFactory = LoggerFactory.Create(builder =>
+            if (enableLogging)
             {
-                builder.AddConsole();
-            });
-            _logger = loggerFactory.CreateLogger(nameof(QueryParametersExtensions));
+                var loggerFactory = LoggerFactory.Create(builder =>
+                {
+                    builder.AddConsole();
+                });
+                _logger = loggerFactory.CreateLogger(nameof(QueryParametersExtensions));
+            }
         }
 
         public IDatabaseClient<TEntity, TPartitionKey, TId> CreateClient<TEntity, TPartitionKey, TId>(DatabaseRepositoryOptions databaseRepositoryOptions)

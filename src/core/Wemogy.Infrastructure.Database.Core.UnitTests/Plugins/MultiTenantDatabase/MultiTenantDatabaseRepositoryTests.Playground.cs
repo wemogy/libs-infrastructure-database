@@ -9,7 +9,7 @@ namespace Wemogy.Infrastructure.Database.Core.UnitTests.Plugins.MultiTenantDatab
 public partial class MultiTenantDatabaseRepositoryTests
 {
     [Fact]
-    public async Task TestCreateAsync()
+    public async Task TestCreateAsyncShouldReturnEntityWithoutTheComposedPartInThePartitionKey()
     {
         // Arrange
         var user = User.Faker.Generate();

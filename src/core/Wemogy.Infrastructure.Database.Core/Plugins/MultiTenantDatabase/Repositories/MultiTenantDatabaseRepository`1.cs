@@ -32,21 +32,16 @@ public partial class MultiTenantDatabaseRepository<TEntity>
 
     private string GetPartitionKeyPrefix() => _databaseTenantProvider.GetTenantId();
 
-    private void SetPartitionKeyValueInEntity(TEntity entity, string partitionKeyValue)
+    private void AddPartitionKeyPrefix(TEntity entity)
     {
+        var partitionKeyValue = (string)_partitionKeyProperty.GetValue(entity);
+
         _partitionKeyProperty.SetValue(
             entity,
             BuildComposedPartitionKey(partitionKeyValue));
     }
 
-    private void RevertPartitionKeyValueInEntity(TEntity entity, string partitionKeyValue)
-    {
-        _partitionKeyProperty.SetValue(
-            entity,
-            partitionKeyValue);
-    }
-
-    private void RemovePartitionKeyPrefixInEntity(TEntity entity)
+    private void RemovePartiotionKeyPrefix(TEntity entity)
     {
         var prefixedPartitionKeyValue = (string)_partitionKeyProperty.GetValue(entity);
         var valueToTrimOut = BuildComposedPartitionKey(null);

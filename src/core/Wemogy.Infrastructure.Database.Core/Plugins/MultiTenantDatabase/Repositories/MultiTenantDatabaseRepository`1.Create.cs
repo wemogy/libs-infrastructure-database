@@ -6,16 +6,11 @@ public partial class MultiTenantDatabaseRepository<TEntity>
 {
     public async Task<TEntity> CreateAsync(TEntity entity)
     {
-        var partitionKeyValue = (string)_partitionKeyProperty.GetValue(entity);
-        SetPartitionKeyValueInEntity(
-            entity,
-            partitionKeyValue);
+        AddPartitionKeyPrefix(entity);
 
         await _databaseRepository.CreateAsync(entity);
 
-        RevertPartitionKeyValueInEntity(
-            entity,
-            partitionKeyValue);
+        RemovePartiotionKeyPrefix(entity);
         return entity;
     }
 }

@@ -15,7 +15,7 @@ public partial class MultiTenantDatabaseRepository<TEntity>
             BuildComposedPartitionKey(partitionKey),
             cancellationToken);
 
-        RemovePartitionKeyPrefixInEntity(entity);
+        RemovePartiotionKeyPrefix(entity);
         return entity;
     }
 

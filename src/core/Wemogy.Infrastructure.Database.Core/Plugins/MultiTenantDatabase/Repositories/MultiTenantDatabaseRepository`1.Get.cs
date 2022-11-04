@@ -1,3 +1,5 @@
+using System;
+using System.Linq.Expressions;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -15,7 +17,7 @@ public partial class MultiTenantDatabaseRepository<TEntity>
             BuildComposedPartitionKey(partitionKey),
             cancellationToken);
 
-        RemovePartiotionKeyPrefix(entity);
+        RemovePartitionKeyPrefix(entity);
         return entity;
     }
 
@@ -32,4 +34,15 @@ public partial class MultiTenantDatabaseRepository<TEntity>
     //         x => x.Id == id,
     //         cancellationToken);
     // }
+
+    public Task<TEntity> GetAsync(string id, CancellationToken cancellationToken = default)
+    {
+        throw new NotImplementedException();
+    }
+
+    public Task<TEntity> GetAsync(Expression<Func<TEntity, bool>> predicate,
+        CancellationToken cancellationToken = default)
+    {
+        throw new NotImplementedException();
+    }
 }

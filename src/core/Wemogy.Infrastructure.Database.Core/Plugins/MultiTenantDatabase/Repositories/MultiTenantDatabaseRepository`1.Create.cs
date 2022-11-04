@@ -10,7 +10,8 @@ public partial class MultiTenantDatabaseRepository<TEntity>
 
         await _databaseRepository.CreateAsync(entity);
 
-        RemovePartiotionKeyPrefix(entity);
+        RemovePartitionKeyPrefix(entity);
+
         return entity;
     }
 }

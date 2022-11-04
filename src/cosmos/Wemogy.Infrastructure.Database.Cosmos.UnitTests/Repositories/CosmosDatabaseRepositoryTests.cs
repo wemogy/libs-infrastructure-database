@@ -11,7 +11,7 @@ public class CosmosDatabaseRepositoryTests : RepositoryTestBase
 {
     public CosmosDatabaseRepositoryTests()
         : base(
-            () => CosmosDatabaseRepositoryFactory.CreateInstance<IUserRepository>(
+            () => CosmosDatabaseRepositoryFactory.CreateInstance<IMultiTenantUserRepository>(
                 TestingConstants.ConnectionString,
                 TestingConstants.DatabaseName,
                 true))

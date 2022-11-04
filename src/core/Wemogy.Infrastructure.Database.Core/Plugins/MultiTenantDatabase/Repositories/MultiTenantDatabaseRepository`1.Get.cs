@@ -12,6 +12,10 @@ public partial class MultiTenantDatabaseRepository<TEntity>
     {
         return _databaseRepository.GetAsync(
             id,
+            partitionKey,
+            cancellationToken);
+        return _databaseRepository.GetAsync(
+            id,
             BuildComposedPartitionKey(partitionKey),
             cancellationToken);
     }
@@ -23,9 +27,9 @@ public partial class MultiTenantDatabaseRepository<TEntity>
 
         var partitionKeyPrefix = GetPartitionKeyPrefix();
         // ToDo: Create lamba expression by using the PartitionKeyProperty
-        // ToDo: We need to do: x.Id == id && paritionKeyProperty<x>.StartsWith(partitionKeyPrefix)
+        // ToDo: We need to do: x.Id == id && paritionKeyProperty(x).StartsWith(partitionKeyPrefix)
         // Tipp: Take a look at DatabaseRepository line 65-85
-        return _databaseRepository.GetAsync(x => x.Id == id && )
+        return _databaseRepository.GetAsync(x => x.Id == id,
             cancellationToken);
     }
 }

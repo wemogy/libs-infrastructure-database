@@ -1,9 +1,7 @@
-using System;
 using Wemogy.Infrastructure.Database.Core.UnitTests.DatabaseRepositories;
 using Wemogy.Infrastructure.Database.Core.UnitTests.Plugins.MultiTenantDatabase;
 using Wemogy.Infrastructure.Database.Cosmos.Factories;
 using Wemogy.Infrastructure.Database.Cosmos.UnitTests.Constants;
-using MultiTenantDatabaseRepositoryTests = Wemogy.Infrastructure.Database.Core.UnitTests.Attributes.MultiTenantDatabaseRepositoryTests;
 
 namespace Wemogy.Infrastructure.Database.Cosmos.UnitTests.Plugins.MultiTenantDatabase;
 
@@ -11,10 +9,10 @@ public class CosmosMultiTenantDatabaseRepositoryTests : MultiTenantDatabaseRepos
 {
     public CosmosMultiTenantDatabaseRepositoryTests()
         : base(
-    () => CosmosDatabaseRepositoryFactory.CreateInstance<IUserRepository>(
-        TestingConstants.ConnectionString,
-        TestingConstants.DatabaseName,
-        true))
+            () => CosmosDatabaseRepositoryFactory.CreateInstance<IUserRepository>(
+                TestingConstants.ConnectionString,
+                TestingConstants.DatabaseName,
+                true))
     {
     }
 }

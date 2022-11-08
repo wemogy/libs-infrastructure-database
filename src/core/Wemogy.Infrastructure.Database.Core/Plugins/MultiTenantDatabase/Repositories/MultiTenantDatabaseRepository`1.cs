@@ -95,7 +95,7 @@ public partial class MultiTenantDatabaseRepository<TEntity> : IDatabaseRepositor
 
         // 4. Define the method to use
         var methodInfo = typeof(string).GetMethod(
-            "StartsWith",
+            nameof(string.StartsWith),
             new[] { typeof(string) })!;
 
         // 5. Call the expression builder

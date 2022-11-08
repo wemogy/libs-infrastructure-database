@@ -7,20 +7,11 @@ public partial class MultiTenantDatabaseRepository<TEntity>
 {
     public async Task<TEntity> UpdateAsync(string id, string partitionKey, Action<TEntity> updateAction)
     {
-        Task UpdatedAction(TEntity entity)
-        {
-            RemovePartitionKeyPrefix(entity);
-            updateAction(entity);
-            AddPartitionKeyPrefix(entity);
-            return Task.CompletedTask;
-        }
-
-        var updatedEntity = await _databaseRepository.UpdateAsync(
+        var entity = await GetAsync(
             id,
-            BuildComposedPartitionKey(partitionKey),
-            UpdatedAction);
-
-        RemovePartitionKeyPrefix(updatedEntity);
+            partitionKey);
+        updateAction(entity);
+        var updatedEntity = await _databaseRepository.ReplaceAsync(entity);
         return updatedEntity;
     }
 
@@ -34,19 +25,11 @@ public partial class MultiTenantDatabaseRepository<TEntity>
 
     public async Task<TEntity> UpdateAsync(string id, string partitionKey, Func<TEntity, Task> updateAction)
     {
-        async Task UpdatedAction(TEntity entity)
-        {
-            RemovePartitionKeyPrefix(entity);
-            await updateAction(entity);
-            AddPartitionKeyPrefix(entity);
-        }
-
-        var updatedEntity = await _databaseRepository.UpdateAsync(
+        var entity = await GetAsync(
             id,
-            BuildComposedPartitionKey(partitionKey),
-            UpdatedAction);
-
-        RemovePartitionKeyPrefix(updatedEntity);
+            partitionKey);
+        await updateAction(entity);
+        var updatedEntity = await _databaseRepository.ReplaceAsync(entity);
         return updatedEntity;
     }
 

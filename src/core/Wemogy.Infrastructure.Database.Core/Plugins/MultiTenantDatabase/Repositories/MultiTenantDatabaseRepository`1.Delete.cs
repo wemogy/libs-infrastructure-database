@@ -1,6 +1,7 @@
 using System;
 using System.Linq.Expressions;
 using System.Threading.Tasks;
+using Wemogy.Infrastructure.Database.Core.Repositories;
 
 namespace Wemogy.Infrastructure.Database.Core.Plugins.MultiTenantDatabase.Repositories;
 
@@ -8,7 +9,7 @@ public partial class MultiTenantDatabaseRepository<TEntity>
 {
     public Task DeleteAsync(string id)
     {
-        throw new NotImplementedException();
+        return _databaseRepository.DeleteAsync(IdAndPartitionKeyPrefixedPredicate(id));
     }
 
     public Task DeleteAsync(string id, string partitionKey)
@@ -20,7 +21,6 @@ public partial class MultiTenantDatabaseRepository<TEntity>
 
     public Task DeleteAsync(Expression<Func<TEntity, bool>> predicate)
     {
-        // TODO: filter by composite partition key
-        return _databaseRepository.DeleteAsync(predicate);
+        return _databaseRepository.DeleteAsync(predicate.And(GetPartitionKeyPrefixCondition()));
     }
 }

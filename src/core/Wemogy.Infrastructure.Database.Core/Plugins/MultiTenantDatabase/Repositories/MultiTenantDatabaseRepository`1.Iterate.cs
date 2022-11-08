@@ -28,18 +28,18 @@ public partial class MultiTenantDatabaseRepository<TEntity>
     public Task IterateAsync(QueryParameters queryParameters, Func<TEntity, Task> callback,
         CancellationToken cancellationToken = default)
     {
-        throw new NotImplementedException();
+        async Task UpdatedCallback(TEntity entity)
+        {
+            await callback(entity);
+            RemovePartitionKeyPrefix(entity);
+        }
 
-        // async Task UpdatedCallback(TEntity entity)
-        // {
-        //     await callback(entity);
-        //     RemovePartitionKeyPrefix(entity);
-        // }
-        //
-        // return _databaseRepository.IterateAsync(
-        //     queryParameters, // TODO: implement filter by composite partition key
-        //     UpdatedCallback,
-        //     cancellationToken);
+        var queryParametersInternal = GetQueryParametersWithPartitionKeyFilter(queryParameters);
+
+        return _databaseRepository.IterateAsync(
+            queryParametersInternal,
+            UpdatedCallback,
+            cancellationToken);
     }
 
     public Task IterateAsync(Expression<Func<TEntity, bool>> predicate, Action<TEntity> callback,
@@ -62,18 +62,18 @@ public partial class MultiTenantDatabaseRepository<TEntity>
     public Task IterateAsync(QueryParameters queryParameters, Action<TEntity> callback,
         CancellationToken cancellationToken = default)
     {
-        throw new NotImplementedException();
+        Task UpdatedCallback(TEntity entity)
+        {
+            callback(entity);
+            RemovePartitionKeyPrefix(entity);
+            return Task.CompletedTask;
+        }
 
-        // Task UpdatedCallback(TEntity entity)
-        // {
-        //     callback(entity);
-        //     RemovePartitionKeyPrefix(entity);
-        //     return Task.CompletedTask;
-        // }
-        //
-        // return _databaseRepository.IterateAsync(
-        //     queryParameters, // TODO: implement filter by composite partition key
-        //     UpdatedCallback,
-        //     cancellationToken);
+        var queryParametersInternal = GetQueryParametersWithPartitionKeyFilter(queryParameters);
+
+        return _databaseRepository.IterateAsync(
+            queryParametersInternal,
+            UpdatedCallback,
+            cancellationToken);
     }
 }

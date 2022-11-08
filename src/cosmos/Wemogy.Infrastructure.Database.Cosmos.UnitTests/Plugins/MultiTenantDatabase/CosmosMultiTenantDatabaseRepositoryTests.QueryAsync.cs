@@ -22,14 +22,13 @@ public partial class CosmosMultiTenantDatabaseRepositoryTests
         var user1 = User.Faker.Generate();
         var user2 = User.Faker.Generate();
         await MicrosoftUserRepository.CreateAsync(user1);
-        await AppleUserRepository.CreateAsync(user1);
         await MicrosoftUserRepository.CreateAsync(user2);
+        await AppleUserRepository.CreateAsync(user1);
 
         // Act
         var msQueriedUsers = await MicrosoftUserRepository.QueryAsync(queryParameters);
         var appleQueriedUsers = await AppleUserRepository.QueryAsync(queryParameters);
 
-        // Assert - This fails for now as the QueryAsync is not correctly implemented
         msQueriedUsers.Should().HaveCount(2);
         msQueriedUsers.Should().ContainSingle(u => u.TenantId == user1.TenantId);
         msQueriedUsers.Should().ContainSingle(u => u.TenantId == user2.TenantId);

@@ -24,10 +24,8 @@ public partial class MultiTenantDatabaseRepository<TEntity>
 
     public async Task<TEntity> GetAsync(string id, CancellationToken cancellationToken = default)
     {
-        Expression<Func<TEntity, bool>> idFilterPredicate = x => x.Id == id;
-
         var entity = await _databaseRepository.GetAsync(
-            PartitionKeyPredicate.And(idFilterPredicate),
+            IdAndPartitionKeyPrefixedPredicate(id),
             cancellationToken);
 
         RemovePartitionKeyPrefix(entity);

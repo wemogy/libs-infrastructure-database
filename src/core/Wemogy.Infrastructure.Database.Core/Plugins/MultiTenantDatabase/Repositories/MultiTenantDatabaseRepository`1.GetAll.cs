@@ -6,10 +6,17 @@ namespace Wemogy.Infrastructure.Database.Core.Plugins.MultiTenantDatabase.Reposi
 
 public partial class MultiTenantDatabaseRepository<TEntity>
 {
-    public Task<List<TEntity>> GetAllAsync(CancellationToken cancellationToken = default)
+    public async Task<List<TEntity>> GetAllAsync(CancellationToken cancellationToken = default)
     {
-        return _databaseRepository.QueryAsync(
+        var entities = await _databaseRepository.QueryAsync(
             GetPartitionKeyPrefixCondition(),
             cancellationToken);
+
+        foreach (var entity in entities)
+        {
+            RemovePartitionKeyPrefix(entity);
+        }
+
+        return entities;
     }
 }

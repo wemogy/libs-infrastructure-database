@@ -17,16 +17,11 @@ public partial class MultiTenantDatabaseRepository<TEntity>
             cancellationToken);
     }
 
-    public async Task EnsureExistsAsync(string id, CancellationToken cancellationToken = default)
+    public Task EnsureExistsAsync(string id, CancellationToken cancellationToken = default)
     {
-        var isExisting = await ExistsAsync(
-            id,
+        return _databaseRepository.EnsureExistsAsync(
+            IdAndPartitionKeyPrefixedPredicate(id),
             cancellationToken);
-
-        if (!isExisting)
-        {
-            throw DatabaseError.EntityNotFound();
-        }
     }
 
     public Task EnsureExistsAsync(Expression<Func<TEntity, bool>> predicate,

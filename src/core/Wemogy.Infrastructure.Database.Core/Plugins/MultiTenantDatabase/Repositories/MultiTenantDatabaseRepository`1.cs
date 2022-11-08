@@ -6,7 +6,10 @@ using Wemogy.Core.Extensions;
 using Wemogy.Core.ValueObjects.Abstractions;
 using Wemogy.Infrastructure.Database.Core.Abstractions;
 using Wemogy.Infrastructure.Database.Core.Attributes;
+using Wemogy.Infrastructure.Database.Core.Enums;
 using Wemogy.Infrastructure.Database.Core.Plugins.MultiTenantDatabase.Abstractions;
+using Wemogy.Infrastructure.Database.Core.Repositories;
+using Wemogy.Infrastructure.Database.Core.ValueObjects;
 
 namespace Wemogy.Infrastructure.Database.Core.Plugins.MultiTenantDatabase.Repositories;
 
@@ -105,5 +108,31 @@ public partial class MultiTenantDatabaseRepository<TEntity> : IDatabaseRepositor
         return Expression.Lambda<Func<TEntity, bool>>(
             call,
             parameterExpression);
+    }
+
+    private Expression<Func<TEntity, bool>> IdAndPartitionKeyPrefixedPredicate(string id)
+    {
+        return GetPartitionKeyPrefixCondition().And(x => x.Id == id);
+    }
+
+    private QueryParameters GetQueryParametersWithPartitionKeyFilter(QueryParameters queryParameters)
+    {
+        var queryParametersInternal = queryParameters.Clone(); // leave the incoming reference intact!
+
+        // TODO: Check if there is already a filter defined that is related to the partition key and prefix accordingly
+
+        var partitionKeyPrefixFilter = GetPartitionKeyPrefixFilter();
+        queryParametersInternal.Filters.Add(partitionKeyPrefixFilter);
+        return queryParametersInternal;
+    }
+
+    private QueryFilter GetPartitionKeyPrefixFilter()
+    {
+        return new QueryFilter
+        {
+            Comparator = Comparator.StartsWithIgnoreCase,
+            Value = _databaseTenantProvider.GetTenantId(),
+            Property = _partitionKeyProperty.Name
+        };
     }
 }

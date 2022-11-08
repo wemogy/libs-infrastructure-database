@@ -9,12 +9,19 @@ namespace Wemogy.Infrastructure.Database.Core.Plugins.MultiTenantDatabase.Reposi
 
 public partial class MultiTenantDatabaseRepository<TEntity>
 {
-    public Task<List<TEntity>> GetByIdsAsync(List<string> ids, CancellationToken cancellationToken = default)
+    public async Task<List<TEntity>> GetByIdsAsync(List<string> ids, CancellationToken cancellationToken = default)
     {
         Expression<Func<TEntity, bool>> idIsContainedPredicate = x => ids.Contains(x.Id);
 
-        return _databaseRepository.QueryAsync(
+        var entities = await _databaseRepository.QueryAsync(
             GetPartitionKeyPrefixCondition().And(idIsContainedPredicate),
             cancellationToken);
+
+        foreach (var entity in entities)
+        {
+            RemovePartitionKeyPrefix(entity);
+        }
+
+        return entities;
     }
 }

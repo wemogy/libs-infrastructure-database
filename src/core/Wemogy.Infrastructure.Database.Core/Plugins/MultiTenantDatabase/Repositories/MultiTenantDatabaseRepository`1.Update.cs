@@ -24,9 +24,12 @@ public partial class MultiTenantDatabaseRepository<TEntity>
         return updatedEntity;
     }
 
-    public Task<TEntity> UpdateAsync(string id, Action<TEntity> updateAction)
+    public async Task<TEntity> UpdateAsync(string id, Action<TEntity> updateAction)
     {
-        throw new NotImplementedException();
+        var entity = await GetAsync(id);
+        updateAction(entity);
+        var updatedEntity = await _databaseRepository.ReplaceAsync(entity);
+        return updatedEntity;
     }
 
     public async Task<TEntity> UpdateAsync(string id, string partitionKey, Func<TEntity, Task> updateAction)
@@ -49,6 +52,9 @@ public partial class MultiTenantDatabaseRepository<TEntity>
 
     public async Task<TEntity> UpdateAsync(string id, Func<TEntity, Task> updateAction)
     {
-        throw new NotImplementedException();
+        var entity = await GetAsync(id);
+        await updateAction(entity);
+        var updatedEntity = await _databaseRepository.ReplaceAsync(entity);
+        return updatedEntity;
     }
 }

@@ -99,8 +99,7 @@ public partial class CosmosMultiTenantDatabaseRepositoryTests : MultiTenantDatab
 
         // Act
         await MicrosoftUserRepository.DeleteAsync(u => u.Firstname == user1.Firstname);
-        await AppleUserRepository.DeleteAsync(
-            u => u.TenantId == user2.TenantId); // TODO: tenant does not work, must be prefixed!
+        await AppleUserRepository.DeleteAsync(u => u.Lastname == user2.Lastname);
 
         // Assert
         msEntities = await MicrosoftUserRepository.GetAllAsync();
@@ -110,5 +109,22 @@ public partial class CosmosMultiTenantDatabaseRepositoryTests : MultiTenantDatab
         msEntities.Should().ContainSingle(u => u.Id == user2.Id);
         appleEntities.Count.Should().Be(1);
         appleEntities.Should().ContainSingle(u => u.Id == user1.Id);
+    }
+
+    [Fact]
+    public async Task DeleteByPredicateForPartitionKeyAsync_ShouldDeleteFromCorrectTenant()
+    {
+        // Arrange
+        await ResetAsync();
+        var user1 = User.Faker.Generate();
+        await MicrosoftUserRepository.CreateAsync(user1);
+
+        // Act - TODO: tenant does not work, must be prefixed!
+        await MicrosoftUserRepository.DeleteAsync(u => u.TenantId == user1.TenantId);
+
+        // Assert
+        var msEntities = await MicrosoftUserRepository.GetAllAsync();
+
+        msEntities.Count.Should().Be(0);
     }
 }

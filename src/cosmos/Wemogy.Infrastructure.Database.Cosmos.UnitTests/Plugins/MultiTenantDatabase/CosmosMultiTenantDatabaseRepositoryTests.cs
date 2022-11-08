@@ -1,4 +1,7 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
+using FluentAssertions;
 using Wemogy.Infrastructure.Database.Core.Abstractions;
 using Wemogy.Infrastructure.Database.Core.Plugins.MultiTenantDatabase.Abstractions;
 using Wemogy.Infrastructure.Database.Core.Plugins.MultiTenantDatabase.Repositories;
@@ -36,5 +39,20 @@ public partial class CosmosMultiTenantDatabaseRepositoryTests : MultiTenantDatab
             provider);
 
         return () => multiTenantRepository;
+    }
+
+    private void AssertPartitionKeyPrefixIsRemoved(User user)
+    {
+        user.TenantId.Should().NotStartWith(new MicrosoftTenantProvider().GetTenantId());
+        user.TenantId.Should().NotStartWith(new AppleTenantProvider().GetTenantId());
+    }
+
+    private void AssertPartitionKeyPrefixIsRemoved(IEnumerable<User> actualUsers)
+    {
+        var users = actualUsers.ToList();
+        users.Should()
+            .AllSatisfy(u => u.TenantId.Should().NotStartWith(new MicrosoftTenantProvider().GetTenantId()));
+        users.Should()
+            .AllSatisfy(u => u.TenantId.Should().NotStartWith(new AppleTenantProvider().GetTenantId()));
     }
 }

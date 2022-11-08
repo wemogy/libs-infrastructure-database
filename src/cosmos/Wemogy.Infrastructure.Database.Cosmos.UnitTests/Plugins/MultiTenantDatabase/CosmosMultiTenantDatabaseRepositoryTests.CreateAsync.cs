@@ -23,5 +23,7 @@ public partial class CosmosMultiTenantDatabaseRepositoryTests : MultiTenantDatab
         // Act & Assert
         msEntity.Should().BeEquivalentTo(msUser);
         appleEntity.Should().BeEquivalentTo(appleUser);
+        AssertPartitionKeyPrefixIsRemoved(msEntity);
+        AssertPartitionKeyPrefixIsRemoved(appleEntity);
     }
 }

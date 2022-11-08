@@ -7,7 +7,7 @@ using Wemogy.Infrastructure.Database.Core.UnitTests.Fakes.Entities;
 
 namespace Wemogy.Infrastructure.Database.Core.UnitTests.Repositories;
 
-public abstract partial class RepositoryTestBase : IDisposable
+public abstract partial class RepositoryTestBase
 {
     protected RepositoryTestBase(Func<IDatabaseRepository<User>> userRepositoryFactory)
     {
@@ -18,12 +18,6 @@ public abstract partial class RepositoryTestBase : IDisposable
 
     protected IDatabaseRepository<User> MicrosoftUserRepository { get; set; }
     private Func<IDatabaseRepository<User>> UserRepositoryFactory { get; }
-
-    public virtual void Dispose()
-    {
-        // Cleanup
-        MicrosoftUserRepository.DeleteAsync(x => true).Wait();
-    }
 
     protected virtual async Task ResetAsync()
     {

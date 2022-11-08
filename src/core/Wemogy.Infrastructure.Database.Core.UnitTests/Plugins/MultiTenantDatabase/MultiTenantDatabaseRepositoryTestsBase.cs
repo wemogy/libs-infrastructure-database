@@ -1,8 +1,6 @@
 using System;
 using System.Threading.Tasks;
 using Wemogy.Infrastructure.Database.Core.Abstractions;
-using Wemogy.Infrastructure.Database.Core.Factories;
-using Wemogy.Infrastructure.Database.Core.UnitTests.DatabaseRepositories;
 using Wemogy.Infrastructure.Database.Core.UnitTests.Fakes.Entities;
 using Wemogy.Infrastructure.Database.Core.UnitTests.Repositories;
 
@@ -20,13 +18,6 @@ public abstract class MultiTenantDatabaseRepositoryTestsBase : RepositoryTestBas
 
     protected IDatabaseRepository<User> AppleUserRepository { get; }
     private Func<IDatabaseRepository<User>> MultiTenantUserRepository2Factory { get; }
-
-    public override void Dispose()
-    {
-        // Cleanup
-        AppleUserRepository.DeleteAsync(x => true).Wait();
-        base.Dispose();
-    }
 
     protected override async Task ResetAsync()
     {

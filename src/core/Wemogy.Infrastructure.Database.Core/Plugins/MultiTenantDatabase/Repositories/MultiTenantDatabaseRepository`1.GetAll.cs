@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
@@ -9,6 +8,8 @@ public partial class MultiTenantDatabaseRepository<TEntity>
 {
     public Task<List<TEntity>> GetAllAsync(CancellationToken cancellationToken = default)
     {
-        throw new NotImplementedException();
+        return _databaseRepository.QueryAsync(
+            GetPartitionKeyPrefixCondition(),
+            cancellationToken);
     }
 }

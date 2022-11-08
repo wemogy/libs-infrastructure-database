@@ -18,12 +18,33 @@ public partial class MultiTenantDatabaseRepository<TEntity>
 
     public async Task<bool> ExistsAsync(string id, CancellationToken cancellationToken = default)
     {
-        throw new NotImplementedException();
+        try
+        {
+            await GetAsync(
+                id,
+                cancellationToken);
+            return true;
+        }
+        catch (NotFoundErrorException)
+        {
+            return false;
+        }
     }
 
-    public async Task<bool> ExistsAsync(Expression<Func<TEntity, bool>> predicate,
+    public async Task<bool> ExistsAsync(
+        Expression<Func<TEntity, bool>> predicate,
         CancellationToken cancellationToken = default)
     {
-        throw new NotImplementedException();
+        try
+        {
+            await GetAsync(
+                predicate,
+                cancellationToken);
+            return true;
+        }
+        catch (NotFoundErrorException)
+        {
+            return false;
+        }
     }
 }

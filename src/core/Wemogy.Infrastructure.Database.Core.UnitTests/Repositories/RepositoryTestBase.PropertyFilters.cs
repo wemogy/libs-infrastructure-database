@@ -14,10 +14,10 @@ public partial class RepositoryTestBase
         await ResetAsync();
         var user = User.Faker.Generate();
         user.PrivateNote = "private note";
-        await UserRepository.CreateAsync(user);
+        await MicrosoftUserRepository.CreateAsync(user);
 
         // Act
-        var result = await UserRepository.GetAsync(user.Id);
+        var result = await MicrosoftUserRepository.GetAsync(user.Id);
 
         // Assert
         result.PrivateNote.Should().BeEmpty();
@@ -30,10 +30,10 @@ public partial class RepositoryTestBase
         await ResetAsync();
         var user = User.Faker.Generate();
         user.PrivateNote = "private note";
-        await UserRepository.CreateAsync(user);
+        await MicrosoftUserRepository.CreateAsync(user);
 
         // Act
-        var result = await UserRepository.QueryAsync(x => x.Id == user.Id);
+        var result = await MicrosoftUserRepository.QueryAsync(x => x.Id == user.Id);
 
         // Assert
         result.Should().AllSatisfy(x => x.PrivateNote.Should().BeEmpty());

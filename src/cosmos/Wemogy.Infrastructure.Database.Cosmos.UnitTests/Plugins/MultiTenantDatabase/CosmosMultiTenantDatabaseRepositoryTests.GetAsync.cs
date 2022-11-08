@@ -1,4 +1,6 @@
 using System;
+using System.Threading.Tasks;
+using FluentAssertions;
 using Wemogy.Infrastructure.Database.Core.Abstractions;
 using Wemogy.Infrastructure.Database.Core.Plugins.MultiTenantDatabase.Abstractions;
 using Wemogy.Infrastructure.Database.Core.Plugins.MultiTenantDatabase.Repositories;
@@ -12,29 +14,27 @@ using Xunit;
 
 namespace Wemogy.Infrastructure.Database.Cosmos.UnitTests.Plugins.MultiTenantDatabase;
 
-[Collection("Sequential")]
 public partial class CosmosMultiTenantDatabaseRepositoryTests : MultiTenantDatabaseRepositoryTestsBase
 {
-    // TODO: Implement the wrapped methods with multi-tenant support and fix all tests.
-    // TODO: Add more tests that cover edge cases for Multi-Tenancy
-    public CosmosMultiTenantDatabaseRepositoryTests()
-        : base(
-            GetFactory(new MicrosoftTenantProvider()),
-            GetFactory(new AppleTenantProvider()))
+    [Fact]
+    public async Task GetAsyncMultiple_ShouldGetExistingItemsByIdAndPartitionKey()
     {
-    }
+        // Arrange
+        await ResetAsync();
+        var user = User.Faker.Generate();
+        await MicrosoftUserRepository.CreateAsync(user);
+        await AppleUserRepository.CreateAsync(user);
 
-    private static Func<IDatabaseRepository<User>> GetFactory(IDatabaseTenantProvider provider)
-    {
-        var databaseRepository = CosmosDatabaseRepositoryFactory.CreateInstance<IUserRepository>(
-            TestingConstants.ConnectionString,
-            TestingConstants.DatabaseName,
-            true);
+        // Act
+        var msUserFromDb = await MicrosoftUserRepository.GetAsync(
+            user.Id,
+            user.TenantId);
+        var appleUserFromDb = await AppleUserRepository.GetAsync(
+            user.Id,
+            user.TenantId);
 
-        var multiTenantRepository = new MultiTenantDatabaseRepository<User>(
-            databaseRepository,
-            provider);
-
-        return () => multiTenantRepository;
+        // Assert
+        msUserFromDb.Should().BeEquivalentTo(user);
+        appleUserFromDb.Should().BeEquivalentTo(user);
     }
 }

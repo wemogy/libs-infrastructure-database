@@ -9,15 +9,18 @@ public partial class MultiTenantDatabaseRepository<TEntity>
 {
     public Task EnsureExistsAsync(string id, string partitionKey, CancellationToken cancellationToken = default)
     {
-        throw new NotImplementedException();
+        return _databaseRepository.EnsureExistsAsync(
+            id,
+            BuildComposedPartitionKey(partitionKey),
+            cancellationToken);
     }
 
-    public Task EnsureExistsAsync(string id, CancellationToken cancellationToken = default)
+    public async Task EnsureExistsAsync(string id, CancellationToken cancellationToken = default)
     {
         throw new NotImplementedException();
     }
 
-    public Task EnsureExistsAsync(Expression<Func<TEntity, bool>> predicate,
+    public async Task EnsureExistsAsync(Expression<Func<TEntity, bool>> predicate,
         CancellationToken cancellationToken = default)
     {
         throw new NotImplementedException();

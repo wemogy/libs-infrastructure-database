@@ -14,10 +14,10 @@ public partial class RepositoryTestBase
         // Arrange
         await ResetAsync();
         var user = User.Faker.Generate();
-        await UserRepository.CreateAsync(user);
+        await MicrosoftUserRepository.CreateAsync(user);
 
         // Act
-        var result = await UserRepository.ExistsAsync(user.Id);
+        var result = await MicrosoftUserRepository.ExistsAsync(user.Id);
 
         // Assert
         result.Should().BeTrue();
@@ -30,7 +30,7 @@ public partial class RepositoryTestBase
         await ResetAsync();
 
         // Act
-        var result = await UserRepository.ExistsAsync(Guid.NewGuid().ToString());
+        var result = await MicrosoftUserRepository.ExistsAsync(Guid.NewGuid().ToString());
 
         // Assert
         result.Should().BeFalse();
@@ -42,10 +42,10 @@ public partial class RepositoryTestBase
         // Arrange
         await ResetAsync();
         var user = User.Faker.Generate();
-        await UserRepository.CreateAsync(user);
+        await MicrosoftUserRepository.CreateAsync(user);
 
         // Act
-        var result = await UserRepository.ExistsAsync(
+        var result = await MicrosoftUserRepository.ExistsAsync(
             user.Id,
             user.TenantId);
 
@@ -60,7 +60,7 @@ public partial class RepositoryTestBase
         await ResetAsync();
 
         // Act
-        var result = await UserRepository.ExistsAsync(
+        var result = await MicrosoftUserRepository.ExistsAsync(
             Guid.NewGuid().ToString(),
             Guid.NewGuid().ToString());
 
@@ -74,10 +74,10 @@ public partial class RepositoryTestBase
         // Arrange
         await ResetAsync();
         var user = User.Faker.Generate();
-        await UserRepository.CreateAsync(user);
+        await MicrosoftUserRepository.CreateAsync(user);
 
         // Act
-        var result = await UserRepository.ExistsAsync(
+        var result = await MicrosoftUserRepository.ExistsAsync(
             user.Id,
             Guid.NewGuid().ToString());
 

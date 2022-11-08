@@ -1,4 +1,6 @@
 using System;
+using System.Threading.Tasks;
+using FluentAssertions;
 using Wemogy.Infrastructure.Database.Core.Abstractions;
 using Wemogy.Infrastructure.Database.Core.Plugins.MultiTenantDatabase.Abstractions;
 using Wemogy.Infrastructure.Database.Core.Plugins.MultiTenantDatabase.Repositories;
@@ -12,29 +14,22 @@ using Xunit;
 
 namespace Wemogy.Infrastructure.Database.Cosmos.UnitTests.Plugins.MultiTenantDatabase;
 
-[Collection("Sequential")]
 public partial class CosmosMultiTenantDatabaseRepositoryTests : MultiTenantDatabaseRepositoryTestsBase
 {
-    // TODO: Implement the wrapped methods with multi-tenant support and fix all tests.
-    // TODO: Add more tests that cover edge cases for Multi-Tenancy
-    public CosmosMultiTenantDatabaseRepositoryTests()
-        : base(
-            GetFactory(new MicrosoftTenantProvider()),
-            GetFactory(new AppleTenantProvider()))
+    [Fact]
+    public async Task CreateAsync_ShouldReturnTwoDifferentCreatedEntities()
     {
-    }
+        // Arrange
+        await ResetAsync();
+        var msUser = User.Faker.Generate();
+        var appleUser = User.Faker.Generate();
 
-    private static Func<IDatabaseRepository<User>> GetFactory(IDatabaseTenantProvider provider)
-    {
-        var databaseRepository = CosmosDatabaseRepositoryFactory.CreateInstance<IUserRepository>(
-            TestingConstants.ConnectionString,
-            TestingConstants.DatabaseName,
-            true);
+        // Act
+        var msEntity = await MicrosoftUserRepository.CreateAsync(msUser);
+        var appleEntity = await AppleUserRepository.CreateAsync(appleUser);
 
-        var multiTenantRepository = new MultiTenantDatabaseRepository<User>(
-            databaseRepository,
-            provider);
-
-        return () => multiTenantRepository;
+        // Act & Assert
+        msEntity.Should().BeEquivalentTo(msUser);
+        appleEntity.Should().BeEquivalentTo(appleUser);
     }
 }

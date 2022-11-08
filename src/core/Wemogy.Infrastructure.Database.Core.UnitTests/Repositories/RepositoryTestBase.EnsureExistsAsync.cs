@@ -15,10 +15,10 @@ public partial class RepositoryTestBase
         // Arrange
         await ResetAsync();
         var user = User.Faker.Generate();
-        await UserRepository.CreateAsync(user);
+        await MicrosoftUserRepository.CreateAsync(user);
 
         // Act
-        var exception = await Record.ExceptionAsync(() => UserRepository.EnsureExistsAsync(user.Id));
+        var exception = await Record.ExceptionAsync(() => MicrosoftUserRepository.EnsureExistsAsync(user.Id));
 
         // Assert
         exception.Should().BeNull();
@@ -31,7 +31,7 @@ public partial class RepositoryTestBase
         await ResetAsync();
 
         // Act
-        var exception = await Record.ExceptionAsync(() => UserRepository.EnsureExistsAsync(Guid.NewGuid().ToString()));
+        var exception = await Record.ExceptionAsync(() => MicrosoftUserRepository.EnsureExistsAsync(Guid.NewGuid().ToString()));
 
         // Assert
         exception.Should().BeOfType<NotFoundErrorException>();
@@ -43,11 +43,11 @@ public partial class RepositoryTestBase
         // Arrange
         await ResetAsync();
         var user = User.Faker.Generate();
-        await UserRepository.CreateAsync(user);
+        await MicrosoftUserRepository.CreateAsync(user);
 
         // Act
         var exception = await Record.ExceptionAsync(
-            () => UserRepository.EnsureExistsAsync(
+            () => MicrosoftUserRepository.EnsureExistsAsync(
                 user.Id,
                 user.TenantId));
 
@@ -63,7 +63,7 @@ public partial class RepositoryTestBase
 
         // Act
         var exception = await Record.ExceptionAsync(
-            () => UserRepository.EnsureExistsAsync(
+            () => MicrosoftUserRepository.EnsureExistsAsync(
                 Guid.NewGuid().ToString(),
                 Guid.NewGuid().ToString()));
 
@@ -77,11 +77,11 @@ public partial class RepositoryTestBase
         // Arrange
         await ResetAsync();
         var user = User.Faker.Generate();
-        await UserRepository.CreateAsync(user);
+        await MicrosoftUserRepository.CreateAsync(user);
 
         // Act
         var exception = await Record.ExceptionAsync(
-            () => UserRepository.EnsureExistsAsync(
+            () => MicrosoftUserRepository.EnsureExistsAsync(
                 user.Id,
                 Guid.NewGuid().ToString()));
 

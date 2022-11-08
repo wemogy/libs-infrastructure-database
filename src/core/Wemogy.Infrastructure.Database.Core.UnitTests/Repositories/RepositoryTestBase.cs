@@ -11,22 +11,22 @@ public abstract partial class RepositoryTestBase : IDisposable
 {
     protected RepositoryTestBase(Func<IDatabaseRepository<User>> userRepositoryFactory)
     {
-        UserRepository = userRepositoryFactory();
+        MicrosoftUserRepository = userRepositoryFactory();
         UserRepositoryFactory = userRepositoryFactory;
         DatabaseRepositoryFactoryFactory.DatabaseClientProxy = null;
     }
 
-    protected IDatabaseRepository<User> UserRepository { get; set; }
+    protected IDatabaseRepository<User> MicrosoftUserRepository { get; set; }
     private Func<IDatabaseRepository<User>> UserRepositoryFactory { get; }
 
-    public void Dispose()
+    public virtual void Dispose()
     {
         // Cleanup
-        UserRepository.DeleteAsync(x => true).Wait();
+        MicrosoftUserRepository.DeleteAsync(x => true).Wait();
     }
 
-    private async Task ResetAsync()
+    protected virtual async Task ResetAsync()
     {
-        await UserRepository.DeleteAsync(x => true);
+        await MicrosoftUserRepository.DeleteAsync(x => true);
     }
 }

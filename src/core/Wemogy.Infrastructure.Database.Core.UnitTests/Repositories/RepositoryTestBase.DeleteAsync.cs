@@ -14,16 +14,16 @@ public partial class RepositoryTestBase
     {
         // Arrange
         var user = User.Faker.Generate();
-        await UserRepository.CreateAsync(user);
+        await MicrosoftUserRepository.CreateAsync(user);
 
         // Act
-        var userExistsBeforeDeletion = await UserRepository.ExistsAsync(
+        var userExistsBeforeDeletion = await MicrosoftUserRepository.ExistsAsync(
             user.Id,
             user.TenantId);
-        await UserRepository.DeleteAsync(
+        await MicrosoftUserRepository.DeleteAsync(
             user.Id,
             user.TenantId);
-        var userExistsAfterDeletion = await UserRepository.ExistsAsync(
+        var userExistsAfterDeletion = await MicrosoftUserRepository.ExistsAsync(
             user.Id,
             user.TenantId);
 
@@ -41,7 +41,7 @@ public partial class RepositoryTestBase
 
         // Act
         var exception = await Record.ExceptionAsync(
-            () => UserRepository.DeleteAsync(
+            () => MicrosoftUserRepository.DeleteAsync(
                 notExistingUserId,
                 notExistingTenantId));
 
@@ -54,13 +54,13 @@ public partial class RepositoryTestBase
     {
         // Arrange
         await ResetAsync();
-        await UserRepository.CreateAsync(User.Faker.Generate());
+        await MicrosoftUserRepository.CreateAsync(User.Faker.Generate());
 
         // Act
-        await UserRepository.DeleteAsync(x => true);
+        await MicrosoftUserRepository.DeleteAsync(x => true);
 
         // Assert
-        var entities = await UserRepository.QueryAsync(x => true);
+        var entities = await MicrosoftUserRepository.QueryAsync(x => true);
         entities.Should().BeEmpty();
     }
 }

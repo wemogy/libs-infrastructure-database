@@ -2,7 +2,7 @@ using Wemogy.Infrastructure.Database.Core.Plugins.MultiTenantDatabase.Abstractio
 
 namespace Wemogy.Infrastructure.Database.Core.UnitTests.Providers;
 
-public class TestDatabaseTenantProvider : IDatabaseTenantProvider
+public class MicrosoftTenantProvider : IDatabaseTenantProvider
 {
-    public string GetTenantId() => "snaatch_staging";
+    public string GetTenantId() => "microsoft-staging";
 }

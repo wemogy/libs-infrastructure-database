@@ -15,7 +15,7 @@ public partial class RepositoryTestBase
         // Arrange
         await ResetAsync();
         var user = User.Faker.Generate();
-        await UserRepository.CreateAsync(user);
+        await MicrosoftUserRepository.CreateAsync(user);
 
         void UpdateAction(User u)
         {
@@ -23,13 +23,14 @@ public partial class RepositoryTestBase
         }
 
         // Act
-        var updatedUser = await UserRepository.UpdateAsync(
+        var updatedUser = await MicrosoftUserRepository.UpdateAsync(
             user.Id,
             user.TenantId,
             UpdateAction);
 
         // Assert
         updatedUser.Firstname.Should().Be("Updated");
+        updatedUser.TenantId.Should().Be(user.TenantId);
     }
 
     [Fact]
@@ -45,7 +46,7 @@ public partial class RepositoryTestBase
 
         // Act & Assert
         await Assert.ThrowsAsync<NotFoundErrorException>(
-            () => UserRepository.UpdateAsync(
+            () => MicrosoftUserRepository.UpdateAsync(
                 Guid.NewGuid().ToString(),
                 Guid.NewGuid().ToString(),
                 UpdateAction));

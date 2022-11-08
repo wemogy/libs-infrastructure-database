@@ -15,10 +15,10 @@ public partial class RepositoryTestBase
         // Arrange
         await ResetAsync();
         var user = User.Faker.Generate();
-        await UserRepository.CreateAsync(user);
+        await MicrosoftUserRepository.CreateAsync(user);
 
         // Act
-        var userFromDb = await UserRepository.GetAsync(user.Id);
+        var userFromDb = await MicrosoftUserRepository.GetAsync(user.Id);
 
         // Assert
         userFromDb.Should().BeEquivalentTo(user);
@@ -32,7 +32,7 @@ public partial class RepositoryTestBase
 
         // Act & Assert
         await Assert.ThrowsAsync<NotFoundErrorException>(
-            () => UserRepository.GetAsync(Guid.NewGuid().ToString()));
+            () => MicrosoftUserRepository.GetAsync(Guid.NewGuid().ToString()));
     }
 
     [Fact]
@@ -41,10 +41,10 @@ public partial class RepositoryTestBase
         // Arrange
         await ResetAsync();
         var user = User.Faker.Generate();
-        await UserRepository.CreateAsync(user);
+        await MicrosoftUserRepository.CreateAsync(user);
 
         // Act
-        var userFromDb = await UserRepository.GetAsync(
+        var userFromDb = await MicrosoftUserRepository.GetAsync(
             user.Id,
             user.TenantId);
 
@@ -60,7 +60,7 @@ public partial class RepositoryTestBase
 
         // Act & Assert
         await Assert.ThrowsAsync<NotFoundErrorException>(
-            () => UserRepository.GetAsync(
+            () => MicrosoftUserRepository.GetAsync(
                 Guid.NewGuid().ToString(),
                 Guid.NewGuid().ToString()));
     }

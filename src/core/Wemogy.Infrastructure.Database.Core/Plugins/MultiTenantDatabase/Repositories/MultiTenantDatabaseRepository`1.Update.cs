@@ -11,7 +11,7 @@ public partial class MultiTenantDatabaseRepository<TEntity>
             id,
             partitionKey);
         updateAction(entity);
-        var updatedEntity = await _databaseRepository.ReplaceAsync(entity);
+        var updatedEntity = await ReplaceAsync(entity);
         return updatedEntity;
     }
 
@@ -19,7 +19,7 @@ public partial class MultiTenantDatabaseRepository<TEntity>
     {
         var entity = await GetAsync(id);
         updateAction(entity);
-        var updatedEntity = await _databaseRepository.ReplaceAsync(entity);
+        var updatedEntity = await ReplaceAsync(entity);
         return updatedEntity;
     }
 
@@ -29,7 +29,7 @@ public partial class MultiTenantDatabaseRepository<TEntity>
             id,
             partitionKey);
         await updateAction(entity);
-        var updatedEntity = await _databaseRepository.ReplaceAsync(entity);
+        var updatedEntity = await ReplaceAsync(entity);
         return updatedEntity;
     }
 
@@ -37,7 +37,7 @@ public partial class MultiTenantDatabaseRepository<TEntity>
     {
         var entity = await GetAsync(id);
         await updateAction(entity);
-        var updatedEntity = await _databaseRepository.ReplaceAsync(entity);
+        var updatedEntity = await ReplaceAsync(entity);
         return updatedEntity;
     }
 }

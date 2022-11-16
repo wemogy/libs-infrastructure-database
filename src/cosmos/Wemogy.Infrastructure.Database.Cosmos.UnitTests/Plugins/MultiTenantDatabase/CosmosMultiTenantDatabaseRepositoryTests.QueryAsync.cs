@@ -49,12 +49,56 @@ public partial class CosmosMultiTenantDatabaseRepositoryTests
         await MicrosoftUserRepository.CreateAsync(user2);
         await AppleUserRepository.CreateAsync(user1);
 
-        queryParameters.Filters.Add(new QueryFilter
-        {
-            Comparator = Comparator.Equals,
-            Property = nameof(User.Firstname),
-            Value = user1.Firstname
-        });
+        queryParameters.Filters.Add(
+            new QueryFilter
+            {
+                Comparator = Comparator.Equals,
+                Property = nameof(User.Firstname),
+                Value = user1.Firstname
+            });
+
+        // Act
+        var msQueriedUsers = await MicrosoftUserRepository.QueryAsync(queryParameters);
+        var appleQueriedUsers = await AppleUserRepository.QueryAsync(queryParameters);
+
+        // Assert
+        msQueriedUsers.Should().HaveCount(1);
+        msQueriedUsers.Should().ContainSingle(u => u.Firstname == user1.Firstname);
+        AssertPartitionKeyPrefixIsRemoved(msQueriedUsers);
+
+        appleQueriedUsers.Should().HaveCount(1);
+        appleQueriedUsers.Should().ContainSingle(u => u.Firstname == user1.Firstname);
+        AssertPartitionKeyPrefixIsRemoved(appleQueriedUsers);
+    }
+
+    [Fact]
+    public async Task QueryAsync_ShouldIncludeFiltersInQueryParametersAlsoForPartitionKeys()
+    {
+        // Arrange
+        await ResetAsync();
+        var queryParameters = new QueryParameters();
+        var user1 = User.Faker.Generate();
+        var user2 = User.Faker.Generate();
+        await MicrosoftUserRepository.CreateAsync(user1);
+        await MicrosoftUserRepository.CreateAsync(user2);
+        await AppleUserRepository.CreateAsync(user1);
+
+        queryParameters.Filters.Add(
+            new QueryFilter
+            {
+                Comparator = Comparator.Equals,
+                Property = nameof(User.Firstname),
+                Value = user1.Firstname
+            });
+
+        // TODO: This does not work with partitionKey filters yet
+        queryParameters.Filters.Add(
+            new QueryFilter
+            {
+                Comparator = Comparator.Equals,
+                Property = nameof(User.TenantId),
+                Value = user1.TenantId
+            });
 
         // Act
         var msQueriedUsers = await MicrosoftUserRepository.QueryAsync(queryParameters);

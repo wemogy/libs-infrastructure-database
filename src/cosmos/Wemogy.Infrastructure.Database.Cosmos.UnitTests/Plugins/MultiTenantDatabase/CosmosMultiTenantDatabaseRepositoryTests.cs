@@ -29,16 +29,19 @@ public partial class CosmosMultiTenantDatabaseRepositoryTests : MultiTenantDatab
 
     private static Func<IDatabaseRepository<User>> GetFactory(IDatabaseTenantProvider provider)
     {
-        var databaseRepository = CosmosDatabaseRepositoryFactory.CreateInstance<IUserRepository>(
-            TestingConstants.ConnectionString,
-            TestingConstants.DatabaseName,
-            true);
+        return () =>
+        {
+            var databaseRepository = CosmosDatabaseRepositoryFactory.CreateInstance<IUserRepository>(
+                TestingConstants.ConnectionString,
+                TestingConstants.DatabaseName,
+                true);
 
-        var multiTenantRepository = new MultiTenantDatabaseRepository<User>(
-            databaseRepository,
-            provider);
+            var multiTenantRepository = new MultiTenantDatabaseRepository<User>(
+                databaseRepository,
+                provider);
 
-        return () => multiTenantRepository;
+            return multiTenantRepository;
+        };
     }
 
     private void AssertPartitionKeyPrefixIsRemoved(User user)

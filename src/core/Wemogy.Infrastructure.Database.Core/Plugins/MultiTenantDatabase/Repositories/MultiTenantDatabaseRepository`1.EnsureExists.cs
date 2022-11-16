@@ -28,7 +28,7 @@ public partial class MultiTenantDatabaseRepository<TEntity>
         CancellationToken cancellationToken = default)
     {
         return _databaseRepository.EnsureExistsAsync(
-            GetPartitionKeyPrefixCondition().And(predicate),
+            PartitionKeyPredicate.And(predicate),
             cancellationToken);
     }
 }

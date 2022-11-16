@@ -40,7 +40,9 @@ public partial class MultiTenantDatabaseRepository<TEntity>
                 AddPartitionKeyPrefix(entity);
             });
 
-        RemovePartitionKeyPrefix(updated);
+        ReplacePartitionKey(
+            updated,
+            partitionKey);
         return updated;
     }
 

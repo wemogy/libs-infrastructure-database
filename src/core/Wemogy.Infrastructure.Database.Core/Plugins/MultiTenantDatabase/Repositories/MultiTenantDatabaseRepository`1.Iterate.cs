@@ -20,7 +20,7 @@ public partial class MultiTenantDatabaseRepository<TEntity>
 
         return _databaseRepository.IterateAsync(
             predicate.And(
-                GetPartitionKeyPrefixCondition()),
+                PartitionKeyPredicate),
             UpdatedCallback,
             cancellationToken);
     }
@@ -54,7 +54,7 @@ public partial class MultiTenantDatabaseRepository<TEntity>
 
         return _databaseRepository.IterateAsync(
             predicate.And(
-                GetPartitionKeyPrefixCondition()),
+                PartitionKeyPredicate),
             UpdatedCallback,
             cancellationToken);
     }

@@ -9,7 +9,7 @@ public partial class MultiTenantDatabaseRepository<TEntity>
     public async Task<List<TEntity>> GetAllAsync(CancellationToken cancellationToken = default)
     {
         var entities = await _databaseRepository.QueryAsync(
-            GetPartitionKeyPrefixCondition(),
+            PartitionKeyPredicate,
             cancellationToken);
 
         foreach (var entity in entities)

@@ -24,5 +24,4 @@ public abstract class MultiTenantDatabaseRepositoryTestsBase : RepositoryTestBas
         await AppleUserRepository.DeleteAsync(x => true);
         await base.ResetAsync();
     }
-
 }

@@ -61,7 +61,7 @@ public partial class MultiTenantDatabaseRepository<TEntity> : IDatabaseRepositor
 
         return () =>
         {
-            _partitionKeyProperty.SetValue(
+            ReplacePartitionKey(
                 entity,
                 partitionKeyValue);
         };
@@ -69,16 +69,22 @@ public partial class MultiTenantDatabaseRepository<TEntity> : IDatabaseRepositor
 
     private void RemovePartitionKeyPrefix(TEntity entity)
     {
+        var partitionKeyValue = GetPartitionKeyValue(entity);
+
+        ReplacePartitionKey(
+            entity,
+            partitionKeyValue);
+    }
+
+    private string GetPartitionKeyValue(TEntity entity)
+    {
         var prefixedPartitionKeyValue = (string)_partitionKeyProperty.GetValue(entity);
         var valueToTrimOut = BuildComposedPartitionKey(null);
 
         var partitionKeyValue = prefixedPartitionKeyValue.Replace(
             valueToTrimOut,
             null);
-
-        _partitionKeyProperty.SetValue(
-            entity,
-            partitionKeyValue);
+        return partitionKeyValue;
     }
 
     private Expression<Func<TEntity, bool>> GetPartitionKeyPrefixCondition()
@@ -119,7 +125,7 @@ public partial class MultiTenantDatabaseRepository<TEntity> : IDatabaseRepositor
 
     private Expression<Func<TEntity, bool>> IdAndPartitionKeyPrefixedPredicate(string id)
     {
-        return GetPartitionKeyPrefixCondition().And(x => x.Id == id);
+        return PartitionKeyPredicate.And(x => x.Id == id);
     }
 
     private QueryParameters GetQueryParametersWithPartitionKeyFilter(QueryParameters queryParameters)
@@ -141,5 +147,12 @@ public partial class MultiTenantDatabaseRepository<TEntity> : IDatabaseRepositor
             Value = _databaseTenantProvider.GetTenantId(),
             Property = _partitionKeyProperty.Name
         };
+    }
+
+    private void ReplacePartitionKey(TEntity entity, string partitionKeyValue)
+    {
+        _partitionKeyProperty.SetValue(
+            entity,
+            partitionKeyValue);
     }
 }

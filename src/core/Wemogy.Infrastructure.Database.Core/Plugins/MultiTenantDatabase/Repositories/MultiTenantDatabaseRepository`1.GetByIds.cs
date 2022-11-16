@@ -14,7 +14,7 @@ public partial class MultiTenantDatabaseRepository<TEntity>
         Expression<Func<TEntity, bool>> idIsContainedPredicate = x => ids.Contains(x.Id);
 
         var entities = await _databaseRepository.QueryAsync(
-            GetPartitionKeyPrefixCondition().And(idIsContainedPredicate),
+            PartitionKeyPredicate.And(idIsContainedPredicate),
             cancellationToken);
 
         foreach (var entity in entities)

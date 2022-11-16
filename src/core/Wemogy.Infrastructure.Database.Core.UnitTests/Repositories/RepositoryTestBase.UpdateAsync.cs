@@ -34,6 +34,29 @@ public partial class RepositoryTestBase
     }
 
     [Fact]
+    public async Task UpdateAsyncWithoutPartitionKey_ShouldWork()
+    {
+        // Arrange
+        await ResetAsync();
+        var user = User.Faker.Generate();
+        await MicrosoftUserRepository.CreateAsync(user);
+
+        void UpdateAction(User u)
+        {
+            u.Firstname = "Updated";
+        }
+
+        // Act
+        var updatedUser = await MicrosoftUserRepository.UpdateAsync(
+            user.Id,
+            UpdateAction);
+
+        // Assert
+        updatedUser.Firstname.Should().Be("Updated");
+        updatedUser.TenantId.Should().Be(user.TenantId);
+    }
+
+    [Fact]
     public async Task UpdateAsync_ShouldThrowIfTheItemNotExists()
     {
         // Arrange

@@ -1,5 +1,4 @@
 using System.Threading.Tasks;
-using Wemogy.Core.Extensions;
 
 namespace Wemogy.Infrastructure.Database.Core.Plugins.MultiTenantDatabase.Repositories;
 

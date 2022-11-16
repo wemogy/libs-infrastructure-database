@@ -111,7 +111,7 @@ public partial class CosmosMultiTenantDatabaseRepositoryTests
 
         // Act - TODO: PartitionKey not supported
         var msUserFromDb = await MicrosoftUserRepository.GetAsync(u => u.TenantId == user1.TenantId);
-        var appleUserFromDb = await AppleUserRepository.GetAsync(u => u.TenantId == user2.TenantId);
+        var appleUserFromDb = await AppleUserRepository.GetAsync(u => u.TenantId == user2.TenantId && u.Id == user2.Id);
         AssertPartitionKeyPrefixIsRemoved(msUserFromDb);
         AssertPartitionKeyPrefixIsRemoved(appleUserFromDb);
 

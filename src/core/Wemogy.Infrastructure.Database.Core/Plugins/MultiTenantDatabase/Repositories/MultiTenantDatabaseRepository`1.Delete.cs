@@ -21,6 +21,6 @@ public partial class MultiTenantDatabaseRepository<TEntity>
 
     public Task DeleteAsync(Expression<Func<TEntity, bool>> predicate)
     {
-        return _databaseRepository.DeleteAsync(predicate.And(GetPartitionKeyPrefixCondition()));
+        return _databaseRepository.DeleteAsync(predicate.And(PartitionKeyPredicate));
     }
 }

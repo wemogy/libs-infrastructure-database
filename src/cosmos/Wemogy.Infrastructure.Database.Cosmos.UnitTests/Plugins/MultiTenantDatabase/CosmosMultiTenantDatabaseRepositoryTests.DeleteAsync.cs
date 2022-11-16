@@ -118,13 +118,16 @@ public partial class CosmosMultiTenantDatabaseRepositoryTests : MultiTenantDatab
         await ResetAsync();
         var user1 = User.Faker.Generate();
         await MicrosoftUserRepository.CreateAsync(user1);
+        var user2 = User.Faker.Generate();
+        await MicrosoftUserRepository.CreateAsync(user2);
 
-        // Act - TODO: tenant does not work, must be prefixed!
-        await MicrosoftUserRepository.DeleteAsync(u => u.TenantId == user1.TenantId);
+        // Act - TODO: tenantId does not work, must be prefixed!
+        await MicrosoftUserRepository.DeleteAsync(u => u.TenantId == user2.TenantId && u.Id == user2.Id);
 
         // Assert
         var msEntities = await MicrosoftUserRepository.GetAllAsync();
 
         msEntities.Count.Should().Be(0);
+        msEntities.Should().ContainSingle(u => u.Id == user1.Id);
     }
 }

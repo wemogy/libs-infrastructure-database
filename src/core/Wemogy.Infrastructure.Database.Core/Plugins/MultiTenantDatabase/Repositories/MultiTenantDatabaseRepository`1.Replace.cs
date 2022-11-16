@@ -7,10 +7,9 @@ public partial class MultiTenantDatabaseRepository<TEntity>
 {
     public async Task<TEntity> ReplaceAsync(TEntity entity)
     {
-        var entityToUpdate = entity.Clone();
-        var removePartitionKeyPrefixAction = AddPartitionKeyPrefix(entityToUpdate);
-        var updated = await _databaseRepository.ReplaceAsync(entityToUpdate);
+        var removePartitionKeyPrefixAction = AddPartitionKeyPrefix(entity);
+        await _databaseRepository.ReplaceAsync(entity);
         removePartitionKeyPrefixAction();
-        return updated;
+        return entity;
     }
 }

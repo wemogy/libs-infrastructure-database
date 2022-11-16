@@ -18,6 +18,7 @@ public partial class CosmosMultiTenantDatabaseRepositoryTests : MultiTenantDatab
 
         // Act
         var exception = await Record.ExceptionAsync(() => MicrosoftUserRepository.EnsureExistsAsync(user.Id));
+        AssertExceptionMessageDoesNotContainPrefix(exception);
 
         // Assert
         exception.Should().BeNull();
@@ -35,6 +36,7 @@ public partial class CosmosMultiTenantDatabaseRepositoryTests : MultiTenantDatab
         var exception =
             await Record.ExceptionAsync(
                 () => MicrosoftUserRepository.EnsureExistsAsync(u => u.Id == user.Id && u.Firstname == user.Firstname));
+        AssertExceptionMessageDoesNotContainPrefix(exception);
 
         // Assert
         exception.Should().BeNull();
@@ -54,6 +56,7 @@ public partial class CosmosMultiTenantDatabaseRepositoryTests : MultiTenantDatab
                 () => MicrosoftUserRepository.EnsureExistsAsync(
                     user.Id,
                     user.TenantId));
+        AssertExceptionMessageDoesNotContainPrefix(exception);
 
         // Assert
         exception.Should().BeNull();
@@ -71,6 +74,7 @@ public partial class CosmosMultiTenantDatabaseRepositoryTests : MultiTenantDatab
         var exception =
             await Record.ExceptionAsync(
                 () => MicrosoftUserRepository.EnsureExistsAsync(u => u.TenantId == user.TenantId));
+        AssertExceptionMessageDoesNotContainPrefix(exception);
 
         // Assert
         exception.Should().BeNull();

@@ -1,12 +1,15 @@
 using System;
 using System.Linq.Expressions;
 using System.Reflection;
+using System.Threading.Tasks;
 using Wemogy.Core.Errors;
+using Wemogy.Core.Errors.Exceptions;
 using Wemogy.Core.Extensions;
 using Wemogy.Core.ValueObjects.Abstractions;
 using Wemogy.Infrastructure.Database.Core.Abstractions;
 using Wemogy.Infrastructure.Database.Core.Attributes;
 using Wemogy.Infrastructure.Database.Core.Enums;
+using Wemogy.Infrastructure.Database.Core.Errors;
 using Wemogy.Infrastructure.Database.Core.Plugins.MultiTenantDatabase.Abstractions;
 using Wemogy.Infrastructure.Database.Core.Repositories;
 using Wemogy.Infrastructure.Database.Core.ValueObjects;
@@ -69,22 +72,16 @@ public partial class MultiTenantDatabaseRepository<TEntity> : IDatabaseRepositor
 
     private void RemovePartitionKeyPrefix(TEntity entity)
     {
-        var partitionKeyValue = GetPartitionKeyValue(entity);
-
-        ReplacePartitionKey(
-            entity,
-            partitionKeyValue);
-    }
-
-    private string GetPartitionKeyValue(TEntity entity)
-    {
         var prefixedPartitionKeyValue = (string)_partitionKeyProperty.GetValue(entity);
         var valueToTrimOut = BuildComposedPartitionKey(null);
 
         var partitionKeyValue = prefixedPartitionKeyValue.Replace(
             valueToTrimOut,
             null);
-        return partitionKeyValue;
+
+        ReplacePartitionKey(
+            entity,
+            partitionKeyValue);
     }
 
     private Expression<Func<TEntity, bool>> GetPartitionKeyPrefixCondition()
@@ -154,5 +151,58 @@ public partial class MultiTenantDatabaseRepository<TEntity> : IDatabaseRepositor
         _partitionKeyProperty.SetValue(
             entity,
             partitionKeyValue);
+    }
+
+    private async Task<TEntity> GetAndWrapAroundNotFoundExceptionIfNotExists(
+        string id,
+        string? partitionKey,
+        Func<Task<TEntity>> function)
+    {
+        try
+        {
+            return await function();
+        }
+        catch (NotFoundErrorException)
+        {
+            // rethrow the EntityNotFound exception but ensure that the composite partition key is not revealed.
+            throw WrappedEntityNotFoundException(
+                id,
+                partitionKey);
+        }
+    }
+
+    private Task GetAndWrapAroundNotFoundExceptionIfNotExists(
+        string? id,
+        string? partitionKey,
+        Func<Task> function)
+    {
+        try
+        {
+            return function();
+        }
+        catch (NotFoundErrorException)
+        {
+            // rethrow the EntityNotFound exception but ensure that the composite partition key is not revealed.
+            throw WrappedEntityNotFoundException(
+                id,
+                partitionKey);
+        }
+    }
+
+    private static Exception WrappedEntityNotFoundException(string? id, string? partitionKey)
+    {
+        if (!string.IsNullOrWhiteSpace(partitionKey) && !string.IsNullOrWhiteSpace(id))
+        {
+            return DatabaseError.EntityNotFound(
+                id,
+                partitionKey);
+        }
+
+        if (!string.IsNullOrWhiteSpace(id))
+        {
+            return DatabaseError.EntityNotFound(id);
+        }
+
+        return DatabaseError.EntityNotFound();
     }
 }

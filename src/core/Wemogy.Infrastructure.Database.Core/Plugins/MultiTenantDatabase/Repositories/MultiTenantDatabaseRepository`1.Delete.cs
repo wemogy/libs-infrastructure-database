@@ -9,18 +9,27 @@ public partial class MultiTenantDatabaseRepository<TEntity>
 {
     public Task DeleteAsync(string id)
     {
-        return _databaseRepository.DeleteAsync(IdAndPartitionKeyPrefixedPredicate(id));
+        return GetAndWrapAroundNotFoundExceptionIfNotExists(
+            id,
+            null,
+            () => _databaseRepository.DeleteAsync(IdAndPartitionKeyPrefixedPredicate(id)));
     }
 
     public Task DeleteAsync(string id, string partitionKey)
     {
-        return _databaseRepository.DeleteAsync(
+        return GetAndWrapAroundNotFoundExceptionIfNotExists(
             id,
-            BuildComposedPartitionKey(partitionKey));
+            partitionKey,
+            () => _databaseRepository.DeleteAsync(
+                id,
+                BuildComposedPartitionKey(partitionKey)));
     }
 
     public Task DeleteAsync(Expression<Func<TEntity, bool>> predicate)
     {
-        return _databaseRepository.DeleteAsync(predicate.And(PartitionKeyPredicate));
+        return GetAndWrapAroundNotFoundExceptionIfNotExists(
+            null,
+            null,
+            () => _databaseRepository.DeleteAsync(predicate.And(PartitionKeyPredicate)));
     }
 }

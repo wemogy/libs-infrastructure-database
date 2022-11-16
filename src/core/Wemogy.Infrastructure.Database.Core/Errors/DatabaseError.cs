@@ -9,7 +9,7 @@ public static class DatabaseError
     {
         return Error.NotFound(
             "EntityNotFound",
-            "Entity was requested not found");
+            "Requested entity was not found");
     }
 
     public static NotFoundErrorException EntityNotFound(string id)

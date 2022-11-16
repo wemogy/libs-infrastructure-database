@@ -22,7 +22,7 @@ public partial class DatabaseRepository<TEntity>
 
         if (!isExisting)
         {
-            throw DatabaseError.EntityNotFound();
+            throw DatabaseError.EntityNotFound(id, partitionKey);
         }
     }
 
@@ -34,7 +34,7 @@ public partial class DatabaseRepository<TEntity>
 
         if (!isExisting)
         {
-            throw DatabaseError.EntityNotFound();
+            throw DatabaseError.EntityNotFound(id);
         }
     }
 

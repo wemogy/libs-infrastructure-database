@@ -13,20 +13,28 @@ public partial class MultiTenantDatabaseRepository<TEntity>
         string partitionKey,
         CancellationToken cancellationToken = default)
     {
-        var entity = await _databaseRepository.GetAsync(
+        var entity = await GetAndWrapAroundNotFoundExceptionIfNotExists(
             id,
-            BuildComposedPartitionKey(partitionKey),
-            cancellationToken);
+            partitionKey,
+            () => _databaseRepository.GetAsync(
+                id,
+                BuildComposedPartitionKey(partitionKey),
+                cancellationToken));
 
-        ReplacePartitionKey(entity, partitionKey);
+        ReplacePartitionKey(
+            entity,
+            partitionKey);
         return entity;
     }
 
     public async Task<TEntity> GetAsync(string id, CancellationToken cancellationToken = default)
     {
-        var entity = await _databaseRepository.GetAsync(
-            IdAndPartitionKeyPrefixedPredicate(id),
-            cancellationToken);
+        var entity = await GetAndWrapAroundNotFoundExceptionIfNotExists(
+            id,
+            null,
+            () => _databaseRepository.GetAsync(
+                IdAndPartitionKeyPrefixedPredicate(id),
+                cancellationToken));
 
         RemovePartitionKeyPrefix(entity);
         return entity;

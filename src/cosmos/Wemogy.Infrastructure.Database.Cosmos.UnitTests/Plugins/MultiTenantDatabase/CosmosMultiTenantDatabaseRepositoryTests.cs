@@ -50,6 +50,13 @@ public partial class CosmosMultiTenantDatabaseRepositoryTests : MultiTenantDatab
         user.TenantId.Should().NotStartWith(new AppleTenantProvider().GetTenantId());
     }
 
+    private void AssertExceptionMessageDoesNotContainPrefix(Exception? exception)
+    {
+        exception?.Message.Should().NotContain(new MicrosoftTenantProvider().GetTenantId());
+        exception?.Message.Should().NotContain(new AppleTenantProvider().GetTenantId());
+
+    }
+
     private void AssertPartitionKeyPrefixIsRemoved(IEnumerable<User> actualUsers)
     {
         var users = actualUsers.ToList();

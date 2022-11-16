@@ -12,10 +12,12 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Extensions
         {
             // Asynchronous query execution
             while (feedIterator.HasMoreResults)
+            {
                 foreach (var item in await feedIterator.ReadNextAsync(cancellationToken))
                 {
                     await callback(item);
                 }
+            }
         }
     }
 }

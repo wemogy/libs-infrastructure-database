@@ -1,5 +1,7 @@
+using System;
 using System.Threading.Tasks;
 using FluentAssertions;
+using Wemogy.Core.Errors.Exceptions;
 using Wemogy.Infrastructure.Database.Core.UnitTests.Fakes.Entities;
 using Wemogy.Infrastructure.Database.Core.UnitTests.Plugins.MultiTenantDatabase;
 using Xunit;
@@ -129,5 +131,21 @@ public partial class CosmosMultiTenantDatabaseRepositoryTests : MultiTenantDatab
 
         msEntities.Count.Should().Be(0);
         msEntities.Should().ContainSingle(u => u.Id == user1.Id);
+    }
+
+    [Fact]
+    public async Task DeleteShouldThrowIfNotExists()
+    {
+        // TODO: This is inconsistent to the other DeleteAsync behaviours -> DeleteAsync(id) does not throw.
+
+        // Arrange
+        await ResetAsync();
+
+        var exception1 = await Record.ExceptionAsync(
+            () => MicrosoftUserRepository.DeleteAsync(
+                "123",
+                "tenantId"));
+        exception1.Should().BeOfType<NotFoundErrorException>();
+        AssertExceptionMessageDoesNotContainPrefix(exception1);
     }
 }

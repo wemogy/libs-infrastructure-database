@@ -1,7 +1,6 @@
 using System.Threading.Tasks;
 using FluentAssertions;
 using Wemogy.Core.Errors.Exceptions;
-using Wemogy.Core.Extensions;
 using Wemogy.Infrastructure.Database.Core.UnitTests.Fakes.Entities;
 using Xunit;
 
@@ -38,12 +37,13 @@ public partial class CosmosMultiTenantDatabaseRepositoryTests
                 user2.Id,
                 user2.TenantId));
         exception1.Should().BeOfType<NotFoundErrorException>();
-
+        AssertExceptionMessageDoesNotContainPrefix(exception1);
         var exception2 = await Record.ExceptionAsync(
             () => AppleUserRepository.GetAsync(
                 user1.Id,
                 user1.TenantId));
         exception2.Should().BeOfType<NotFoundErrorException>();
+        AssertExceptionMessageDoesNotContainPrefix(exception2);
     }
 
     [Fact]
@@ -68,9 +68,11 @@ public partial class CosmosMultiTenantDatabaseRepositoryTests
 
         var exception1 = await Record.ExceptionAsync(() => MicrosoftUserRepository.GetAsync(user2.Id));
         exception1.Should().BeOfType<NotFoundErrorException>();
+        AssertExceptionMessageDoesNotContainPrefix(exception1);
 
         var exception2 = await Record.ExceptionAsync(() => AppleUserRepository.GetAsync(user1.Id));
         exception2.Should().BeOfType<NotFoundErrorException>();
+        AssertExceptionMessageDoesNotContainPrefix(exception2);
     }
 
     [Fact]
@@ -95,9 +97,11 @@ public partial class CosmosMultiTenantDatabaseRepositoryTests
 
         var exception1 = await Record.ExceptionAsync(() => MicrosoftUserRepository.GetAsync(user2.Id));
         exception1.Should().BeOfType<NotFoundErrorException>();
+        AssertExceptionMessageDoesNotContainPrefix(exception1);
 
         var exception2 = await Record.ExceptionAsync(() => AppleUserRepository.GetAsync(user1.Id));
         exception2.Should().BeOfType<NotFoundErrorException>();
+        AssertExceptionMessageDoesNotContainPrefix(exception2);
     }
 
     [Fact]
@@ -120,7 +124,6 @@ public partial class CosmosMultiTenantDatabaseRepositoryTests
         msUserFromDb.Should().BeEquivalentTo(user1);
         appleUserFromDb.Should().BeEquivalentTo(user2);
     }
-
 
     [Fact]
     public async Task GetAsyncMultiple_ShouldGetExistingItemsByIdAndPartitionKeyForSamePartitionKey()
@@ -154,12 +157,14 @@ public partial class CosmosMultiTenantDatabaseRepositoryTests
                 user2.Id,
                 user2.TenantId));
         exception1.Should().BeOfType<NotFoundErrorException>();
+        AssertExceptionMessageDoesNotContainPrefix(exception1);
 
         var exception2 = await Record.ExceptionAsync(
             () => AppleUserRepository.GetAsync(
                 user1.Id,
                 user1.TenantId));
         exception2.Should().BeOfType<NotFoundErrorException>();
+        AssertExceptionMessageDoesNotContainPrefix(exception2);
     }
 
     [Fact]
@@ -187,9 +192,11 @@ public partial class CosmosMultiTenantDatabaseRepositoryTests
 
         var exception1 = await Record.ExceptionAsync(() => MicrosoftUserRepository.GetAsync(user2.Id));
         exception1.Should().BeOfType<NotFoundErrorException>();
+        AssertExceptionMessageDoesNotContainPrefix(exception1);
 
         var exception2 = await Record.ExceptionAsync(() => AppleUserRepository.GetAsync(user1.Id));
         exception2.Should().BeOfType<NotFoundErrorException>();
+        AssertExceptionMessageDoesNotContainPrefix(exception2);
     }
 
     [Fact]
@@ -217,9 +224,11 @@ public partial class CosmosMultiTenantDatabaseRepositoryTests
 
         var exception1 = await Record.ExceptionAsync(() => MicrosoftUserRepository.GetAsync(user2.Id));
         exception1.Should().BeOfType<NotFoundErrorException>();
+        AssertExceptionMessageDoesNotContainPrefix(exception1);
 
         var exception2 = await Record.ExceptionAsync(() => AppleUserRepository.GetAsync(user1.Id));
         exception2.Should().BeOfType<NotFoundErrorException>();
+        AssertExceptionMessageDoesNotContainPrefix(exception2);
     }
 
     [Fact]

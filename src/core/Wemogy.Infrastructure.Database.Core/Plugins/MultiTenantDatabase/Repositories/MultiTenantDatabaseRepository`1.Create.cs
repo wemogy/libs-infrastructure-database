@@ -6,11 +6,11 @@ public partial class MultiTenantDatabaseRepository<TEntity>
 {
     public async Task<TEntity> CreateAsync(TEntity entity)
     {
-        AddPartitionKeyPrefix(entity);
+        var removePartitionKeyPrefixAction = AddPartitionKeyPrefix(entity);
 
         await _databaseRepository.CreateAsync(entity);
 
-        RemovePartitionKeyPrefix(entity);
+        removePartitionKeyPrefixAction();
 
         return entity;
     }

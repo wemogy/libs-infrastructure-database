@@ -51,13 +51,20 @@ public partial class MultiTenantDatabaseRepository<TEntity> : IDatabaseRepositor
         return _databaseTenantProvider.GetTenantId();
     }
 
-    private void AddPartitionKeyPrefix(TEntity entity)
+    private Action AddPartitionKeyPrefix(TEntity entity)
     {
         var partitionKeyValue = (string)_partitionKeyProperty.GetValue(entity);
 
         _partitionKeyProperty.SetValue(
             entity,
             BuildComposedPartitionKey(partitionKeyValue));
+
+        return () =>
+        {
+            _partitionKeyProperty.SetValue(
+                entity,
+                partitionKeyValue);
+        };
     }
 
     private void RemovePartitionKeyPrefix(TEntity entity)

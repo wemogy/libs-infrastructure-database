@@ -1,15 +1,16 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
-using System.Threading.Tasks;
 using Wemogy.Core.Errors;
 using Wemogy.Core.Errors.Exceptions;
+using Wemogy.Core.Expressions;
 using Wemogy.Core.Extensions;
 using Wemogy.Core.ValueObjects.Abstractions;
 using Wemogy.Infrastructure.Database.Core.Abstractions;
 using Wemogy.Infrastructure.Database.Core.Attributes;
 using Wemogy.Infrastructure.Database.Core.Enums;
-using Wemogy.Infrastructure.Database.Core.Errors;
 using Wemogy.Infrastructure.Database.Core.Plugins.MultiTenantDatabase.Abstractions;
 using Wemogy.Infrastructure.Database.Core.Repositories;
 using Wemogy.Infrastructure.Database.Core.ValueObjects;
@@ -19,17 +20,23 @@ namespace Wemogy.Infrastructure.Database.Core.Plugins.MultiTenantDatabase.Reposi
 public partial class MultiTenantDatabaseRepository<TEntity> : IDatabaseRepository<TEntity>
     where TEntity : IEntityBase
 {
+    private const string PrefixSeparator = "__";
     private readonly IDatabaseRepository<TEntity> _databaseRepository;
     private readonly IDatabaseTenantProvider _databaseTenantProvider;
     private readonly PropertyInfo _partitionKeyProperty;
 
-    public MultiTenantDatabaseRepository(IDatabaseRepository<TEntity> databaseRepository,
+    private Expression<Func<TEntity, bool>> PartitionKeyPredicate { get; }
+
+    public IEnabledState SoftDelete { get; }
+
+    public MultiTenantDatabaseRepository(
+        IDatabaseRepository<TEntity> databaseRepository,
         IDatabaseTenantProvider databaseTenantProvider)
     {
         _databaseRepository = databaseRepository;
         _databaseTenantProvider = databaseTenantProvider;
         SoftDelete = databaseRepository.SoftDelete;
-        _partitionKeyProperty = typeof(TEntity).GetPropertyByCustomAttribute<PartitionKeyAttribute>()!;
+        _partitionKeyProperty = typeof(TEntity).GetPropertyByCustomAttribute<PartitionKeyAttribute>() !;
         if (_partitionKeyProperty == null)
         {
             throw Error.Unexpected(
@@ -40,13 +47,22 @@ public partial class MultiTenantDatabaseRepository<TEntity> : IDatabaseRepositor
         PartitionKeyPredicate = GetPartitionKeyPrefixCondition();
     }
 
-    private Expression<Func<TEntity, bool>> PartitionKeyPredicate { get; }
+    private static void SetMessage(Exception exception, string message)
+    {
+        if (exception == null)
+        {
+            throw new ArgumentNullException(nameof(exception));
+        }
 
-    public IEnabledState SoftDelete { get; }
+        var type = typeof(Exception);
+        var flags = BindingFlags.Instance | BindingFlags.NonPublic;
+        var fieldInfo = type.GetField("_message", flags);
+        fieldInfo?.SetValue(exception, message);
+    }
 
     private string BuildComposedPartitionKey(string? partitionKey)
     {
-        return $"{GetPartitionKeyPrefix()}_{partitionKey}";
+        return $"{GetPartitionKeyPrefix()}{PrefixSeparator}{partitionKey}";
     }
 
     private string GetPartitionKeyPrefix()
@@ -106,7 +122,7 @@ public partial class MultiTenantDatabaseRepository<TEntity> : IDatabaseRepositor
         // 4. Define the method to use
         var methodInfo = typeof(string).GetMethod(
             nameof(string.StartsWith),
-            new[] { typeof(string) })!;
+            new[] { typeof(string) }) !;
 
         // 5. Call the expression builder
         Expression call = Expression.Call(
@@ -127,22 +143,47 @@ public partial class MultiTenantDatabaseRepository<TEntity> : IDatabaseRepositor
 
     private QueryParameters GetQueryParametersWithPartitionKeyFilter(QueryParameters queryParameters)
     {
-        var queryParametersInternal = queryParameters.Clone(); // leave the incoming reference intact!
+        queryParameters = queryParameters.Clone(); // leave the incoming reference intact!
 
-        // TODO: Check if there is already a filter defined that is related to the partition key and prefix accordingly
+        // Check if there is already a filter defined that is related to the partition key and prefix accordingly
+        var partitionKeyPropertyName = _partitionKeyProperty.Name.ToCamelCase();
+        foreach (var partitionKeyFilter in queryParameters.Filters.Where(x => x.Property == partitionKeyPropertyName))
+        {
+            switch (partitionKeyFilter.Comparator)
+            {
+                case Comparator.Equals:
+                case Comparator.NotEquals:
+                case Comparator.StartsWith:
+                case Comparator.StartsWithIgnoreCase:
+                    var stringPartitionKeyValue = partitionKeyFilter.Value.FromJson<string>();
+                    partitionKeyFilter.Value = BuildComposedPartitionKey(stringPartitionKeyValue).ToJson();
+                    break;
+                case Comparator.IsOneOf:
+                    var stringListPartitionKeyValue = partitionKeyFilter.Value.FromJson<List<string>>() ?? new List<string>();
+                    partitionKeyFilter.Value = stringListPartitionKeyValue
+                        .Select(BuildComposedPartitionKey)
+                        .ToList()
+                        .ToJson();
+                    break;
+                default:
+                    throw Error.Failure(
+                        "ComparatorNotSupported",
+                        $"Comparator not supported for partition key filtering: {partitionKeyFilter.Comparator}");
+            }
+        }
 
-        var partitionKeyPrefixFilter = GetPartitionKeyPrefixFilter();
-        queryParametersInternal.Filters.Add(partitionKeyPrefixFilter);
-        return queryParametersInternal;
+        var partitionKeyPrefixFilter = GetPartitionKeyPrefixFilter(partitionKeyPropertyName);
+        queryParameters.Filters.Add(partitionKeyPrefixFilter);
+        return queryParameters;
     }
 
-    private QueryFilter GetPartitionKeyPrefixFilter()
+    private QueryFilter GetPartitionKeyPrefixFilter(string partitionKeyPropertyName)
     {
         return new QueryFilter
         {
             Comparator = Comparator.StartsWithIgnoreCase,
-            Value = _databaseTenantProvider.GetTenantId(),
-            Property = _partitionKeyProperty.Name
+            Value = _databaseTenantProvider.GetTenantId().ToJson(),
+            Property = partitionKeyPropertyName
         };
     }
 
@@ -153,56 +194,33 @@ public partial class MultiTenantDatabaseRepository<TEntity> : IDatabaseRepositor
             partitionKeyValue);
     }
 
-    private async Task<TEntity> GetAndWrapAroundNotFoundExceptionIfNotExists(
-        string id,
-        string? partitionKey,
-        Func<Task<TEntity>> function)
+    private Expression<Func<TEntity, bool>> BuildComposedPartitionKeyPredicate(
+        Expression<Func<TEntity, bool>> predicate)
     {
-        try
-        {
-            return await function();
-        }
-        catch (NotFoundErrorException)
-        {
-            // rethrow the EntityNotFound exception but ensure that the composite partition key is not revealed.
-            throw WrappedEntityNotFoundException(
-                id,
-                partitionKey);
-        }
+        return PartitionKeyPredicate.And(
+            predicate.ModifyPropertyValue(
+                _partitionKeyProperty.Name,
+                BuildComposedPartitionKey));
     }
 
-    private Task GetAndWrapAroundNotFoundExceptionIfNotExists(
-        string? id,
-        string? partitionKey,
-        Func<Task> function)
+    private void CleanupException(Exception exception)
     {
-        try
+        if (exception is ErrorException errorException)
         {
-            return function();
+            errorException.Code = RemovePartitionKeyPrefix(errorException.Code);
+            errorException.Description = RemovePartitionKeyPrefix(errorException.Description);
         }
-        catch (NotFoundErrorException)
-        {
-            // rethrow the EntityNotFound exception but ensure that the composite partition key is not revealed.
-            throw WrappedEntityNotFoundException(
-                id,
-                partitionKey);
-        }
+
+        SetMessage(
+            exception,
+            RemovePartitionKeyPrefix(exception.Message));
     }
 
-    private static Exception WrappedEntityNotFoundException(string? id, string? partitionKey)
+    private string RemovePartitionKeyPrefix(string partitionKey)
     {
-        if (!string.IsNullOrWhiteSpace(partitionKey) && !string.IsNullOrWhiteSpace(id))
-        {
-            return DatabaseError.EntityNotFound(
-                id,
-                partitionKey);
-        }
-
-        if (!string.IsNullOrWhiteSpace(id))
-        {
-            return DatabaseError.EntityNotFound(id);
-        }
-
-        return DatabaseError.EntityNotFound();
+        var prefixToTrimOut = BuildComposedPartitionKey(null);
+        return partitionKey.Replace(
+            prefixToTrimOut,
+            null);
     }
 }

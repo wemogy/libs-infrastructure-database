@@ -1,14 +1,12 @@
-using System;
 using System.Threading.Tasks;
 using FluentAssertions;
 using Wemogy.Core.Errors.Exceptions;
 using Wemogy.Infrastructure.Database.Core.UnitTests.Fakes.Entities;
-using Wemogy.Infrastructure.Database.Core.UnitTests.Plugins.MultiTenantDatabase;
 using Xunit;
 
-namespace Wemogy.Infrastructure.Database.Cosmos.UnitTests.Plugins.MultiTenantDatabase;
+namespace Wemogy.Infrastructure.Database.Core.UnitTests.Plugins.MultiTenantDatabase;
 
-public partial class CosmosMultiTenantDatabaseRepositoryTests : MultiTenantDatabaseRepositoryTestsBase
+public abstract partial class MultiTenantDatabaseRepositoryTestsBase
 {
     [Fact]
     public async Task DeleteByIdAsync_ShouldDeleteFromCorrectTenant()
@@ -123,13 +121,13 @@ public partial class CosmosMultiTenantDatabaseRepositoryTests : MultiTenantDatab
         var user2 = User.Faker.Generate();
         await MicrosoftUserRepository.CreateAsync(user2);
 
-        // Act - TODO: tenantId does not work, must be prefixed!
+        // Act
         await MicrosoftUserRepository.DeleteAsync(u => u.TenantId == user2.TenantId && u.Id == user2.Id);
 
         // Assert
         var msEntities = await MicrosoftUserRepository.GetAllAsync();
 
-        msEntities.Count.Should().Be(0);
+        msEntities.Should().HaveCount(1);
         msEntities.Should().ContainSingle(u => u.Id == user1.Id);
     }
 
@@ -141,10 +139,13 @@ public partial class CosmosMultiTenantDatabaseRepositoryTests : MultiTenantDatab
         // Arrange
         await ResetAsync();
 
+        // Act
         var exception1 = await Record.ExceptionAsync(
             () => MicrosoftUserRepository.DeleteAsync(
                 "123",
                 "tenantId"));
+
+        // Assert
         exception1.Should().BeOfType<NotFoundErrorException>();
         AssertExceptionMessageDoesNotContainPrefix(exception1);
     }

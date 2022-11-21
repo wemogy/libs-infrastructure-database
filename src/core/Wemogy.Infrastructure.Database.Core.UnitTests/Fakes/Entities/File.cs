@@ -8,16 +8,16 @@ namespace Wemogy.Infrastructure.Database.Core.UnitTests.Fakes.Entities;
 
 public class File : EntityBase
 {
+    public string Name { get; set; }
+
+    [PartitionKey]
+    public string PartitionKey { get; set; } = PartitionKeyDefaults.GlobalPartition;
+
     public File()
         : base(Guid.NewGuid().ToString())
     {
         Name = string.Empty;
     }
-
-    public string Name { get; set; }
-
-    [PartitionKey]
-    public string PartitionKey { get; set; } = PartitionKeyDefaults.GlobalPartition;
 
     public static Faker<File> Faker =>
         new Faker<File>()

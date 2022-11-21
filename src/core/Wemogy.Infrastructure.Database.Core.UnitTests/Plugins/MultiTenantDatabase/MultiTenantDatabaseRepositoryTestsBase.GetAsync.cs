@@ -4,9 +4,9 @@ using Wemogy.Core.Errors.Exceptions;
 using Wemogy.Infrastructure.Database.Core.UnitTests.Fakes.Entities;
 using Xunit;
 
-namespace Wemogy.Infrastructure.Database.Cosmos.UnitTests.Plugins.MultiTenantDatabase;
+namespace Wemogy.Infrastructure.Database.Core.UnitTests.Plugins.MultiTenantDatabase;
 
-public partial class CosmosMultiTenantDatabaseRepositoryTests
+public partial class MultiTenantDatabaseRepositoryTestsBase
 {
     [Fact]
     public async Task GetAsyncMultiple_ShouldGetExistingItemsByIdAndPartitionKey()
@@ -114,7 +114,7 @@ public partial class CosmosMultiTenantDatabaseRepositoryTests
         await MicrosoftUserRepository.CreateAsync(user1);
         await AppleUserRepository.CreateAsync(user2);
 
-        // Act - TODO: PartitionKey not supported
+        // Act
         var msUserFromDb = await MicrosoftUserRepository.GetAsync(u => u.TenantId == user1.TenantId);
         var appleUserFromDb = await AppleUserRepository.GetAsync(u => u.TenantId == user2.TenantId && u.Id == user2.Id);
         AssertPartitionKeyPrefixIsRemoved(msUserFromDb);

@@ -1,35 +1,50 @@
 using System;
 using System.Linq.Expressions;
 using System.Threading.Tasks;
-using Wemogy.Infrastructure.Database.Core.Repositories;
 
 namespace Wemogy.Infrastructure.Database.Core.Plugins.MultiTenantDatabase.Repositories;
 
 public partial class MultiTenantDatabaseRepository<TEntity>
 {
-    public Task DeleteAsync(string id)
+    public async Task DeleteAsync(string id)
     {
-        return GetAndWrapAroundNotFoundExceptionIfNotExists(
-            id,
-            null,
-            () => _databaseRepository.DeleteAsync(IdAndPartitionKeyPrefixedPredicate(id)));
+        try
+        {
+            await _databaseRepository.DeleteAsync(IdAndPartitionKeyPrefixedPredicate(id));
+        }
+        catch (Exception e)
+        {
+            CleanupException(e);
+            throw;
+        }
     }
 
-    public Task DeleteAsync(string id, string partitionKey)
+    public async Task DeleteAsync(string id, string partitionKey)
     {
-        return GetAndWrapAroundNotFoundExceptionIfNotExists(
-            id,
-            partitionKey,
-            () => _databaseRepository.DeleteAsync(
+        try
+        {
+            await _databaseRepository.DeleteAsync(
                 id,
-                BuildComposedPartitionKey(partitionKey)));
+                BuildComposedPartitionKey(partitionKey));
+        }
+        catch (Exception e)
+        {
+            CleanupException(e);
+            throw;
+        }
     }
 
-    public Task DeleteAsync(Expression<Func<TEntity, bool>> predicate)
+    public async Task DeleteAsync(Expression<Func<TEntity, bool>> predicate)
     {
-        return GetAndWrapAroundNotFoundExceptionIfNotExists(
-            null,
-            null,
-            () => _databaseRepository.DeleteAsync(predicate.And(PartitionKeyPredicate)));
+        try
+        {
+            predicate = BuildComposedPartitionKeyPredicate(predicate);
+            await _databaseRepository.DeleteAsync(predicate);
+        }
+        catch (Exception e)
+        {
+            CleanupException(e);
+            throw;
+        }
     }
 }

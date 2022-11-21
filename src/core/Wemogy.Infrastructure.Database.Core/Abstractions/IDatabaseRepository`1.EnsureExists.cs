@@ -6,7 +6,6 @@ using System.Threading.Tasks;
 namespace Wemogy.Infrastructure.Database.Core.Abstractions;
 
 public partial interface IDatabaseRepository<TEntity>
-    where TEntity : IEntityBase
 {
     Task EnsureExistsAsync(string id, string partitionKey, CancellationToken cancellationToken = default);
 

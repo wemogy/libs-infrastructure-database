@@ -11,13 +11,18 @@ public interface IDatabaseClient<TEntity> : IDatabaseClient
 {
     Task<TEntity> GetAsync(string id, string partitionKey, CancellationToken cancellationToken);
 
-    Task IterateAsync(QueryParameters queryParameters, Expression<Func<TEntity, bool>>? generalFilterPredicate,
-        Func<TEntity, Task> callback, CancellationToken cancellationToken);
+    Task IterateAsync(
+        QueryParameters queryParameters,
+        Expression<Func<TEntity, bool>>? generalFilterPredicate,
+        Func<TEntity, Task> callback,
+        CancellationToken cancellationToken);
 
     /// <summary>
     ///     Iterates over all items which matches the predicate.
     /// </summary>
-    Task IterateAsync(Expression<Func<TEntity, bool>> predicate, Func<TEntity, Task> callback,
+    Task IterateAsync(
+        Expression<Func<TEntity, bool>> predicate,
+        Func<TEntity, Task> callback,
         CancellationToken cancellationToken);
 
     /// <summary>

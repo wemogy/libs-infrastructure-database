@@ -8,15 +8,6 @@ namespace Wemogy.Infrastructure.Database.Core.UnitTests.Fakes.Entities;
 
 public class Animal : EntityBase
 {
-    public Animal()
-        : base(Guid.NewGuid().ToString())
-    {
-        TenantId = string.Empty;
-        Firstname = string.Empty;
-        Lastname = string.Empty;
-        PrivateNote = string.Empty;
-    }
-
     [PartitionKey]
     public string TenantId { get; set; }
 
@@ -25,6 +16,15 @@ public class Animal : EntityBase
     public string Lastname { get; set; }
 
     public string PrivateNote { get; set; }
+
+    public Animal()
+        : base(Guid.NewGuid().ToString())
+    {
+        TenantId = string.Empty;
+        Firstname = string.Empty;
+        Lastname = string.Empty;
+        PrivateNote = string.Empty;
+    }
 
     public static Faker<Animal> Faker =>
         new Faker<Animal>()

@@ -3,6 +3,7 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Threading;
 using System.Threading.Tasks;
+using Wemogy.Core.Errors.Exceptions;
 using Wemogy.Infrastructure.Database.Core.Abstractions;
 using Wemogy.Infrastructure.Database.Core.Errors;
 
@@ -43,11 +44,18 @@ public partial class DatabaseRepository<TEntity>
         return entity;
     }
 
-    public Task<TEntity> GetAsync(string id, CancellationToken cancellationToken = default)
+    public async Task<TEntity> GetAsync(string id, CancellationToken cancellationToken = default)
     {
-        return GetAsync(
-            x => x.Id.ToString() == id,
-            cancellationToken);
+        try
+        {
+            return await GetAsync(
+                x => x.Id.ToString() == id,
+                cancellationToken);
+        }
+        catch (NotFoundErrorException)
+        {
+            throw DatabaseError.EntityNotFound(id);
+        }
     }
 
     public async Task<TEntity> GetAsync(

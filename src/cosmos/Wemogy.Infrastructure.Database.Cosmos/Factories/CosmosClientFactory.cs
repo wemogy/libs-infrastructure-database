@@ -1,9 +1,11 @@
 using System.Net.Http;
+using System.Runtime.CompilerServices;
 using Microsoft.Azure.Cosmos;
 
+[assembly:InternalsVisibleTo("Wemogy.Infrastructure.Database.Cosmos.UnitTests")]
 namespace Wemogy.Infrastructure.Database.Cosmos.Factories
 {
-    public static class CosmosClientFactory
+    internal static class CosmosClientFactory
     {
         /// <summary>
         ///     Creates a CosmosClient with out default CosmosClientOptions like camel case

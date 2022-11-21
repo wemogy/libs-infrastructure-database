@@ -2,14 +2,15 @@ using System;
 using System.Linq.Expressions;
 using System.Threading.Tasks;
 using FluentAssertions;
+using Wemogy.Core.Extensions;
 using Wemogy.Infrastructure.Database.Core.Enums;
 using Wemogy.Infrastructure.Database.Core.UnitTests.Fakes.Entities;
 using Wemogy.Infrastructure.Database.Core.ValueObjects;
 using Xunit;
 
-namespace Wemogy.Infrastructure.Database.Cosmos.UnitTests.Plugins.MultiTenantDatabase;
+namespace Wemogy.Infrastructure.Database.Core.UnitTests.Plugins.MultiTenantDatabase;
 
-public partial class CosmosMultiTenantDatabaseRepositoryTests
+public partial class MultiTenantDatabaseRepositoryTestsBase
 {
     [Fact]
     public async Task QueryAsync_ShouldReturnAllItemsForeachDatabaseIfEmptyQueryParameters()
@@ -53,8 +54,8 @@ public partial class CosmosMultiTenantDatabaseRepositoryTests
             new QueryFilter
             {
                 Comparator = Comparator.Equals,
-                Property = nameof(User.Firstname),
-                Value = user1.Firstname
+                Property = nameof(User.Firstname).ToCamelCase(),
+                Value = user1.Firstname.ToJson()
             });
 
         // Act
@@ -87,17 +88,16 @@ public partial class CosmosMultiTenantDatabaseRepositoryTests
             new QueryFilter
             {
                 Comparator = Comparator.Equals,
-                Property = nameof(User.Firstname),
-                Value = user1.Firstname
+                Property = nameof(User.Firstname).ToCamelCase(),
+                Value = user1.Firstname.ToJson()
             });
 
-        // TODO: This does not work with partitionKey filters yet
         queryParameters.Filters.Add(
             new QueryFilter
             {
                 Comparator = Comparator.Equals,
-                Property = nameof(User.TenantId),
-                Value = user1.TenantId
+                Property = nameof(User.TenantId).ToCamelCase(),
+                Value = user1.TenantId.ToJson()
             });
 
         // Act
@@ -178,9 +178,9 @@ public partial class CosmosMultiTenantDatabaseRepositoryTests
         await AppleUserRepository.CreateAsync(user1);
         await MicrosoftUserRepository.CreateAsync(user2);
 
-        // Act - TODO: does not support partition key in the predicate
-        var msQueriedUsers = await MicrosoftUserRepository.QueryAsync(x => x.TenantId == user1.TenantId);
-        var appleQueriedUsers = await AppleUserRepository.QueryAsync(x => x.TenantId == user2.TenantId);
+        // Act
+        var msQueriedUsers = await MicrosoftUserRepository.QueryAsync(x => x.TenantId == user1.TenantId || x.TenantId == user2.TenantId);
+        var appleQueriedUsers = await AppleUserRepository.QueryAsync(x => x.TenantId == user1.TenantId);
 
         // Assert
         msQueriedUsers.Should().HaveCount(2);

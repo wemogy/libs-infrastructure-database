@@ -4,8 +4,8 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="16.9.4"/>
-    <PackageReference Include="xunit" Version="2.4.1"/>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="16.9.4" />
+    <PackageReference Include="xunit" Version="2.4.1" />
     <PackageReference Include="xunit.runner.visualstudio" Version="2.4.3">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
@@ -21,11 +21,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="../Wemogy.Infrastructure.Database.InMemory/Wemogy.Infrastructure.Database.InMemory.csproj"/>
-    <ProjectReference Include="..\..\core\Wemogy.Infrastructure.Database.Core.UnitTests\Wemogy.Infrastructure.Database.Core.UnitTests.csproj"/>
-  </ItemGroup>
-
-  <ItemGroup>
-    <Folder Include="Plugins"/>
+    <ProjectReference Include="../Wemogy.Infrastructure.Database.InMemory/Wemogy.Infrastructure.Database.InMemory.csproj" />
+    <ProjectReference Include="..\..\core\Wemogy.Infrastructure.Database.Core.UnitTests\Wemogy.Infrastructure.Database.Core.UnitTests.csproj" />
   </ItemGroup>
 </Project>

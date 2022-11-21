@@ -1,7 +1,7 @@
 {
   "solution": "Wemogy.Infrastructure.Database.sln",
   "mappings": {
-    "Wemogy.Core": "../../libs/helpers/src/Wemogy.Core/Wemogy.Core.csproj"
+    "Wemogy.Core": "../../libs-core/src/Wemogy.Core/Wemogy.Core.csproj"
   },
   "removeProjects": true
 }

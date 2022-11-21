@@ -5,8 +5,7 @@ using System.Threading.Tasks;
 
 namespace Wemogy.Infrastructure.Database.Core.Abstractions;
 
-public partial interface IDatabaseRepository<TEntity> : IDatabaseRepository
-    where TEntity : IEntityBase
+public partial interface IDatabaseRepository<TEntity>
 {
     Task<TEntity> GetAsync(string id, string partitionKey, CancellationToken cancellationToken = default);
 

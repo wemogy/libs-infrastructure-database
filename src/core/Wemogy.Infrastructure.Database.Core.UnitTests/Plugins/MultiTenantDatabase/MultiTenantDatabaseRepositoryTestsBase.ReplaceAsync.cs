@@ -1,16 +1,12 @@
-using System;
 using System.Linq;
-using System.Linq.Expressions;
 using System.Threading.Tasks;
 using FluentAssertions;
-using Wemogy.Infrastructure.Database.Core.Enums;
 using Wemogy.Infrastructure.Database.Core.UnitTests.Fakes.Entities;
-using Wemogy.Infrastructure.Database.Core.ValueObjects;
 using Xunit;
 
-namespace Wemogy.Infrastructure.Database.Cosmos.UnitTests.Plugins.MultiTenantDatabase;
+namespace Wemogy.Infrastructure.Database.Core.UnitTests.Plugins.MultiTenantDatabase;
 
-public partial class CosmosMultiTenantDatabaseRepositoryTests
+public partial class MultiTenantDatabaseRepositoryTestsBase
 {
     [Fact]
     public async Task ReplaceAsync_ShouldWorkForMultipleTenants()

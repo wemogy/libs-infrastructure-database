@@ -10,11 +10,13 @@ namespace Wemogy.Infrastructure.Database.Core.Plugins.MultiTenantDatabase.Reposi
 
 public partial class MultiTenantDatabaseRepository<TEntity>
 {
-    public async Task<List<TEntity>> QueryAsync(Expression<Func<TEntity, bool>> predicate,
+    public async Task<List<TEntity>> QueryAsync(
+        Expression<Func<TEntity, bool>> predicate,
         CancellationToken cancellationToken = default)
     {
+        predicate = BuildComposedPartitionKeyPredicate(predicate);
         var entities = await _databaseRepository.QueryAsync(
-            PartitionKeyPredicate.And(predicate),
+            predicate,
             cancellationToken);
 
         foreach (var entity in entities)
@@ -25,7 +27,8 @@ public partial class MultiTenantDatabaseRepository<TEntity>
         return entities;
     }
 
-    public async Task<List<TEntity>> QueryAsync(QueryParameters queryParameters,
+    public async Task<List<TEntity>> QueryAsync(
+        QueryParameters queryParameters,
         CancellationToken cancellationToken = default)
     {
         var queryParametersInternal = GetQueryParametersWithPartitionKeyFilter(queryParameters);

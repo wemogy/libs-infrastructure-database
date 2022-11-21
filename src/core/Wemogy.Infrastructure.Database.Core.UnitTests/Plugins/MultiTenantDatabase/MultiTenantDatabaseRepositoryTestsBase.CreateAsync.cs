@@ -1,12 +1,11 @@
 using System.Threading.Tasks;
 using FluentAssertions;
 using Wemogy.Infrastructure.Database.Core.UnitTests.Fakes.Entities;
-using Wemogy.Infrastructure.Database.Core.UnitTests.Plugins.MultiTenantDatabase;
 using Xunit;
 
-namespace Wemogy.Infrastructure.Database.Cosmos.UnitTests.Plugins.MultiTenantDatabase;
+namespace Wemogy.Infrastructure.Database.Core.UnitTests.Plugins.MultiTenantDatabase;
 
-public partial class CosmosMultiTenantDatabaseRepositoryTests : MultiTenantDatabaseRepositoryTestsBase
+public abstract partial class MultiTenantDatabaseRepositoryTestsBase
 {
     [Fact]
     public async Task CreateAsync_ShouldReturnTwoDifferentCreatedEntities()

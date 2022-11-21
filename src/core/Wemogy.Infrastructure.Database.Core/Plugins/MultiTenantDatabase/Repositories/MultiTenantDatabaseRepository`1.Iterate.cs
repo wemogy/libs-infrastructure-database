@@ -9,7 +9,9 @@ namespace Wemogy.Infrastructure.Database.Core.Plugins.MultiTenantDatabase.Reposi
 
 public partial class MultiTenantDatabaseRepository<TEntity>
 {
-    public Task IterateAsync(Expression<Func<TEntity, bool>> predicate, Func<TEntity, Task> callback,
+    public Task IterateAsync(
+        Expression<Func<TEntity, bool>> predicate,
+        Func<TEntity, Task> callback,
         CancellationToken cancellationToken = default)
     {
         async Task UpdatedCallback(TEntity entity)
@@ -25,7 +27,9 @@ public partial class MultiTenantDatabaseRepository<TEntity>
             cancellationToken);
     }
 
-    public Task IterateAsync(QueryParameters queryParameters, Func<TEntity, Task> callback,
+    public Task IterateAsync(
+        QueryParameters queryParameters,
+        Func<TEntity, Task> callback,
         CancellationToken cancellationToken = default)
     {
         async Task UpdatedCallback(TEntity entity)
@@ -42,7 +46,9 @@ public partial class MultiTenantDatabaseRepository<TEntity>
             cancellationToken);
     }
 
-    public Task IterateAsync(Expression<Func<TEntity, bool>> predicate, Action<TEntity> callback,
+    public Task IterateAsync(
+        Expression<Func<TEntity, bool>> predicate,
+        Action<TEntity> callback,
         CancellationToken cancellationToken = default)
     {
         Task UpdatedCallback(TEntity entity)
@@ -59,7 +65,9 @@ public partial class MultiTenantDatabaseRepository<TEntity>
             cancellationToken);
     }
 
-    public Task IterateAsync(QueryParameters queryParameters, Action<TEntity> callback,
+    public Task IterateAsync(
+        QueryParameters queryParameters,
+        Action<TEntity> callback,
         CancellationToken cancellationToken = default)
     {
         Task UpdatedCallback(TEntity entity)

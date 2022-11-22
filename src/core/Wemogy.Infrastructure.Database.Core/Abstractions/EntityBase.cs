@@ -1,12 +1,24 @@
 using System;
+using Wemogy.Infrastructure.Database.Core.Attributes;
 
-namespace Wemogy.Infrastructure.Database.Core.Abstractions
+namespace Wemogy.Infrastructure.Database.Core.Abstractions;
+
+public abstract class EntityBase : IEntityBase
 {
-    public abstract class EntityBase : EntityBase<Guid>
+    protected EntityBase(string id)
     {
-        protected EntityBase()
-            : base(Guid.NewGuid())
-        {
-        }
+        Id = id;
+        CreatedAt = DateTime.UtcNow;
+        UpdatedAt = DateTime.UtcNow;
     }
+
+    [SoftDeleteFlag]
+    public bool IsDeleted { get; set; }
+
+    [Id]
+    public string Id { get; set; }
+
+    public DateTime CreatedAt { get; set; }
+
+    public DateTime UpdatedAt { get; set; }
 }

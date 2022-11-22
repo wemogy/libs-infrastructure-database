@@ -27,7 +27,7 @@ jobs:
         run: dotnet test -c Release /p:CollectCoverage=true -m:1
         env:
           COSMOS_CONNECTION_STRING: ${{ secrets.COSMOS_CONNECTION_STRING }}
-          COSMOS_DATABASE_NAME: testdata
+          COSMOS_DATABASE_NAME: infrastructuredbtests
 
       - name: Code Coverage Summary Report
         uses: irongut/CodeCoverageSummary@v1.0.2

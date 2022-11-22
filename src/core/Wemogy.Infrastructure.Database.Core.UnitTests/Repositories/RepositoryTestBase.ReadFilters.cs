@@ -14,9 +14,12 @@ public partial class RepositoryTestBase
         await ResetAsync();
         var user = User.Faker.Generate();
         user.Firstname = "John";
-        await UserRepository.CreateAsync(user);
+        await MicrosoftUserRepository.CreateAsync(user);
 
         // Act & Assert
-        await Assert.ThrowsAsync<NotFoundErrorException>(() => UserRepository.GetAsync(user.Id, user.TenantId));
+        await Assert.ThrowsAsync<NotFoundErrorException>(
+            () => MicrosoftUserRepository.GetAsync(
+                user.Id,
+                user.TenantId));
     }
 }

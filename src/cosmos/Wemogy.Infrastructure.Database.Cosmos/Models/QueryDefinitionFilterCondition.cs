@@ -6,39 +6,48 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Models
 {
     public class QueryDefinitionFilterCondition
     {
-        public string QueryText { get; set; }
-
-        public Dictionary<string, object> Parameters { get; set; }
-
-        public bool HasFilter => this.QueryText.Length > 0;
-
         private readonly string _parametersNamespace;
 
         public QueryDefinitionFilterCondition()
         {
-            this.QueryText = "";
-            this.Parameters = new Dictionary<string, object>();
+            QueryText = string.Empty;
+            Parameters = new Dictionary<string, object>();
+
             // short GUID used here
-            this._parametersNamespace = Convert.ToBase64String(Guid.NewGuid().ToByteArray()).OnlyAlphanumeric();
+            _parametersNamespace = Convert.ToBase64String(Guid.NewGuid().ToByteArray()).OnlyAlphanumeric();
         }
+
+        public string QueryText { get; set; }
+
+        public Dictionary<string, object> Parameters { get; set; }
+
+        public bool HasFilter => QueryText.Length > 0;
 
         public void And(string andCondition, bool withBrackets = false)
         {
-            this.AppendCondition(andCondition, "AND", withBrackets);
+            AppendCondition(
+                andCondition,
+                "AND",
+                withBrackets);
         }
 
         public void Or(string orCondition, bool withBrackets = false)
         {
-            this.AppendCondition(orCondition, "OR", withBrackets);
+            AppendCondition(
+                orCondition,
+                "OR",
+                withBrackets);
         }
 
         public void Comma(string commaStatement, bool withBrackets = false)
         {
-            this.AppendCondition(commaStatement, ",", withBrackets);
+            AppendCondition(
+                commaStatement,
+                ",",
+                withBrackets);
         }
 
         /// <summary>
-        ///
         /// </summary>
         /// <param name="condition">c.Name = "Some name"</param>
         /// <param name="conditionOperator">AND or OR</param>
@@ -49,55 +58,77 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Models
             {
                 return;
             }
+
             if (withBrackets)
             {
                 condition = $"({condition})";
             }
 
-            if (this.HasFilter)
+            if (HasFilter)
             {
-                this.QueryText += $"{conditionOperator} {condition} ";
+                QueryText += $"{conditionOperator} {condition} ";
             }
             else
             {
-                this.QueryText = $"{condition} ";
+                QueryText = $"{condition} ";
             }
         }
 
         public void And<TParameter>(string andCondition, TParameter parameter, bool withBrackets = false)
         {
-            this.AppendCondition(andCondition, parameter, "AND", withBrackets);
+            AppendCondition(
+                andCondition,
+                parameter,
+                "AND",
+                withBrackets);
         }
 
         public void Or<TParameter>(string orCondition, TParameter parameter, bool withBrackets = false)
         {
-            this.AppendCondition(orCondition, parameter, "OR", withBrackets);
+            AppendCondition(
+                orCondition,
+                parameter,
+                "OR",
+                withBrackets);
         }
 
-        private void AppendCondition<TParameter>(string condition, TParameter parameter, string conditionOperator, bool withBrackets)
+        private void AppendCondition<TParameter>(string condition, TParameter parameter, string conditionOperator,
+            bool withBrackets)
         {
-            var parameterName = $"@param{this._parametersNamespace}_{this.Parameters.Count}";
-            var fullCondition = condition.Replace("@paramHere", parameterName);
+            var parameterName = $"@param{_parametersNamespace}_{Parameters.Count}";
+            var fullCondition = condition.Replace(
+                "@paramHere",
+                parameterName);
 
             // dateTime.ToString("yyyy-MM-ddTHH:mm:ss.fffffffZ");
-            this.Parameters.Add(parameterName, parameter);
-            this.AppendCondition(fullCondition, conditionOperator, withBrackets);
+            Parameters.Add(
+                parameterName,
+                parameter);
+            AppendCondition(
+                fullCondition,
+                conditionOperator,
+                withBrackets);
         }
 
         public void ReplaceGreaterThanWithEquals()
         {
-            this.QueryText = this.QueryText.Replace(">", "=");
+            QueryText = QueryText.Replace(
+                ">",
+                "=");
         }
 
         public void MergeParameters(QueryDefinitionFilterCondition queryDefinitionFilterCondition)
         {
             foreach (var parameter in queryDefinitionFilterCondition.Parameters)
             {
-                if (this.Parameters.ContainsKey(parameter.Key))
+                if (Parameters.ContainsKey(parameter.Key))
                 {
                     continue;
                 }
-                this.Parameters.Add(parameter.Key, parameter.Value);
+
+                Parameters.Add(
+                    parameter.Key,
+                    parameter.Value);
             }
         }
     }

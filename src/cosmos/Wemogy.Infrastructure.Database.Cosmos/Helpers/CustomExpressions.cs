@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq.Expressions;
-using System.Reflection;
 using Wemogy.Core.Extensions;
 
 namespace Wemogy.Infrastructure.Database.Cosmos.Helpers
@@ -10,25 +9,37 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Helpers
     {
         public static Expression FalseIfPropertyIsNull(Expression propertyExpression, Expression target)
         {
-            var nullExpression = Expression.Constant(null, typeof(object));
+            var nullExpression = Expression.Constant(
+                null,
+                typeof(object));
             return Expression.AndAlso(
-                Expression.NotEqual(propertyExpression, nullExpression),
+                Expression.NotEqual(
+                    propertyExpression,
+                    nullExpression),
                 target);
         }
 
         public static Expression ContainsIgnoreCaseExpression(Expression propertyExpression, Expression valueExpression)
         {
-            MethodInfo startsWithMethodInfo = typeof(string).GetMethod("Contains", new Type[] { typeof(string), typeof(StringComparison) });
+            var startsWithMethodInfo = typeof(string).GetMethod(
+                "Contains",
+                new[] { typeof(string), typeof(StringComparison) });
 
             if (startsWithMethodInfo == null)
             {
                 throw new Exception("StartsWith was not found in string");
             }
 
-            var ignoreCaseExpression = Expression.Constant(StringComparison.InvariantCultureIgnoreCase, typeof(StringComparison));
+            var ignoreCaseExpression = Expression.Constant(
+                StringComparison.InvariantCultureIgnoreCase,
+                typeof(StringComparison));
             return FalseIfPropertyIsNull(
                 propertyExpression,
-                Expression.Call(propertyExpression, startsWithMethodInfo, valueExpression, ignoreCaseExpression));
+                Expression.Call(
+                    propertyExpression,
+                    startsWithMethodInfo,
+                    valueExpression,
+                    ignoreCaseExpression));
         }
 
         public static Func<Expression, Expression, Expression> GetContainsExpression<T>(string propertyName)
@@ -56,7 +67,9 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Helpers
 
         public static Expression ContainsExpressionGuidList(Expression propertyExpression, Expression valueExpression)
         {
-            MethodInfo containsMethodInfo = typeof(List<Guid>).GetMethod("Contains", new Type[] { typeof(Guid) });
+            var containsMethodInfo = typeof(List<Guid>).GetMethod(
+                "Contains",
+                new[] { typeof(Guid) });
 
             if (containsMethodInfo == null)
             {
@@ -65,12 +78,17 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Helpers
 
             return FalseIfPropertyIsNull(
                 propertyExpression,
-                Expression.Call(propertyExpression, containsMethodInfo, valueExpression));
+                Expression.Call(
+                    propertyExpression,
+                    containsMethodInfo,
+                    valueExpression));
         }
 
         public static Expression ContainsExpressionStringList(Expression propertyExpression, Expression valueExpression)
         {
-            MethodInfo containsMethodInfo = typeof(List<string>).GetMethod("Contains", new Type[] { typeof(string) });
+            var containsMethodInfo = typeof(List<string>).GetMethod(
+                "Contains",
+                new[] { typeof(string) });
 
             if (containsMethodInfo == null)
             {
@@ -79,12 +97,17 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Helpers
 
             return FalseIfPropertyIsNull(
                 propertyExpression,
-                Expression.Call(propertyExpression, containsMethodInfo, valueExpression));
+                Expression.Call(
+                    propertyExpression,
+                    containsMethodInfo,
+                    valueExpression));
         }
 
         public static Expression ContainsExpressionString(Expression propertyExpression, Expression valueExpression)
         {
-            MethodInfo containsMethodInfo = typeof(string).GetMethod("Contains", new Type[] { typeof(string) });
+            var containsMethodInfo = typeof(string).GetMethod(
+                "Contains",
+                new[] { typeof(string) });
 
             if (containsMethodInfo == null)
             {
@@ -93,34 +116,53 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Helpers
 
             return FalseIfPropertyIsNull(
                 propertyExpression,
-                Expression.Call(propertyExpression, containsMethodInfo, valueExpression));
+                Expression.Call(
+                    propertyExpression,
+                    containsMethodInfo,
+                    valueExpression));
         }
 
         public static Expression StartsWithExpression(Expression propertyExpression, Expression valueExpression)
         {
-            MethodInfo startsWithMethodInfo = typeof(string).GetMethod("StartsWith", new Type[] { typeof(string) });
+            var startsWithMethodInfo = typeof(string).GetMethod(
+                "StartsWith",
+                new[] { typeof(string) });
 
             if (startsWithMethodInfo == null)
             {
                 throw new Exception("StartsWith was not found in string");
             }
 
-            return FalseIfPropertyIsNull(propertyExpression, Expression.Call(propertyExpression, startsWithMethodInfo, valueExpression));
-        }
-
-        public static Expression StartsWithIgnoreCaseExpression(Expression propertyExpression, Expression valueExpression)
-        {
-            MethodInfo startsWithMethodInfo = typeof(string).GetMethod("StartsWith", new Type[] { typeof(string), typeof(StringComparison) });
-
-            if (startsWithMethodInfo == null)
-            {
-                throw new Exception("StartsWith was not found in string");
-            }
-
-            var ignoreCaseExpression = Expression.Constant(StringComparison.InvariantCultureIgnoreCase, typeof(StringComparison));
             return FalseIfPropertyIsNull(
                 propertyExpression,
-                Expression.Call(propertyExpression, startsWithMethodInfo, valueExpression, ignoreCaseExpression));
+                Expression.Call(
+                    propertyExpression,
+                    startsWithMethodInfo,
+                    valueExpression));
+        }
+
+        public static Expression StartsWithIgnoreCaseExpression(Expression propertyExpression,
+            Expression valueExpression)
+        {
+            var startsWithMethodInfo = typeof(string).GetMethod(
+                "StartsWith",
+                new[] { typeof(string), typeof(StringComparison) });
+
+            if (startsWithMethodInfo == null)
+            {
+                throw new Exception("StartsWith was not found in string");
+            }
+
+            var ignoreCaseExpression = Expression.Constant(
+                StringComparison.InvariantCultureIgnoreCase,
+                typeof(StringComparison));
+            return FalseIfPropertyIsNull(
+                propertyExpression,
+                Expression.Call(
+                    propertyExpression,
+                    startsWithMethodInfo,
+                    valueExpression,
+                    ignoreCaseExpression));
             /*var ignoreCaseExpression = Expression.Constant(true, typeof(bool));
             var cultureInfoExpression = Expression.Constant(CultureInfo.CurrentCulture, typeof(CultureInfo));
 
@@ -131,19 +173,31 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Helpers
 
         public static Expression IsOneOfExpression(Expression propertyExpression, Expression valueExpression)
         {
-            MethodInfo startsWithMethodInfo = typeof(List<>).MakeGenericType(typeof(Guid))
-                .GetMethod("Contains", new Type[] {typeof(Guid)});
+            var startsWithMethodInfo = typeof(List<>).MakeGenericType(typeof(Guid))
+                .GetMethod(
+                    "Contains",
+                    new[] { typeof(Guid) });
 
             if (startsWithMethodInfo == null)
             {
                 throw new Exception("StartsWith was not found in string");
             }
 
-            return Expression.Call(valueExpression, startsWithMethodInfo, propertyExpression);
-            var arrayIndexOfExpression = Expression.ArrayIndex(valueExpression, propertyExpression);
-        //     UnaryExpression.ArrayIndex(valueExpression, propertyExpression);
+            return Expression.Call(
+                valueExpression,
+                startsWithMethodInfo,
+                propertyExpression);
+            var arrayIndexOfExpression = Expression.ArrayIndex(
+                valueExpression,
+                propertyExpression);
 
-            return FalseIfPropertyIsNull(propertyExpression, Expression.NotEqual(arrayIndexOfExpression, Expression.Constant(-1)));
+            //     UnaryExpression.ArrayIndex(valueExpression, propertyExpression);
+
+            return FalseIfPropertyIsNull(
+                propertyExpression,
+                Expression.NotEqual(
+                    arrayIndexOfExpression,
+                    Expression.Constant(-1)));
         }
     }
 }

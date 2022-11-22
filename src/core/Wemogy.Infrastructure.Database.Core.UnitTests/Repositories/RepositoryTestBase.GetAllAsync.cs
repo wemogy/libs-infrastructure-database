@@ -15,11 +15,11 @@ public partial class RepositoryTestBase
         var users = User.Faker.Generate(20);
         foreach (var user in users)
         {
-            await UserRepository.CreateAsync(user);
+            await MicrosoftUserRepository.CreateAsync(user);
         }
 
         // Act
-        var usersFromDb = await UserRepository.GetAllAsync();
+        var usersFromDb = await MicrosoftUserRepository.GetAllAsync();
 
         // Assert
         usersFromDb.Should().HaveCount(20);
@@ -38,11 +38,11 @@ public partial class RepositoryTestBase
                 user.IsDeleted = true;
             }
 
-            await UserRepository.CreateAsync(user);
+            await MicrosoftUserRepository.CreateAsync(user);
         }
 
         // Act
-        var usersFromDb = await UserRepository.GetAllAsync();
+        var usersFromDb = await MicrosoftUserRepository.GetAllAsync();
 
         // Assert
         usersFromDb.Should().HaveCount(10);

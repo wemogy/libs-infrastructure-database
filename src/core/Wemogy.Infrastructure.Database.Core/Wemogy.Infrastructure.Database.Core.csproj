@@ -20,15 +20,15 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
-    <PackageReference Include="Wemogy.Core" Version="0.4.12" />
+    <PackageReference Include="Wemogy.Core" Version="0.5.4" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Update="Repositories\DatabaseRepository`3.Exists.cs">
+    <Compile Update="Repositories\DatabaseRepository`1.Exists.cs">
       <CodeLanguage>cs</CodeLanguage>
       <DefaultPackFolder>content</DefaultPackFolder>
       <BuildAction>Compile</BuildAction>
     </Compile>
-    <Compile Update="Abstractions\IDatabaseRepository`3.Exists.cs">
+    <Compile Update="Abstractions\IDatabaseRepository`1.Exists.cs">
       <CodeLanguage>cs</CodeLanguage>
       <DefaultPackFolder>content</DefaultPackFolder>
       <BuildAction>Compile</BuildAction>
@@ -38,17 +38,7 @@
       <DefaultPackFolder>content</DefaultPackFolder>
       <BuildAction>Compile</BuildAction>
     </Compile>
-    <Compile Update="Abstractions\EntityBase`1.cs">
-      <CodeLanguage>cs</CodeLanguage>
-      <DefaultPackFolder>content</DefaultPackFolder>
-      <BuildAction>Compile</BuildAction>
-    </Compile>
     <Compile Update="Abstractions\GlobalEntityBase.cs">
-      <CodeLanguage>cs</CodeLanguage>
-      <DefaultPackFolder>content</DefaultPackFolder>
-      <BuildAction>Compile</BuildAction>
-    </Compile>
-    <Compile Update="Abstractions\GlobalEntityBase`1.cs">
       <CodeLanguage>cs</CodeLanguage>
       <DefaultPackFolder>content</DefaultPackFolder>
       <BuildAction>Compile</BuildAction>
@@ -58,7 +48,7 @@
       <DefaultPackFolder>content</DefaultPackFolder>
       <BuildAction>Compile</BuildAction>
     </Compile>
-    <Compile Update="Abstractions\IEntityBase`1.cs">
+    <Compile Update="Abstractions\IEntityBase.cs">
       <CodeLanguage>cs</CodeLanguage>
       <DefaultPackFolder>content</DefaultPackFolder>
       <BuildAction>Compile</BuildAction>
@@ -68,52 +58,47 @@
       <DefaultPackFolder>content</DefaultPackFolder>
       <BuildAction>Compile</BuildAction>
     </Compile>
-    <Compile Update="Repositories\DatabaseRepository`3.Get.cs">
+    <Compile Update="Repositories\DatabaseRepository`1.Get.cs">
       <CodeLanguage>cs</CodeLanguage>
       <DefaultPackFolder>content</DefaultPackFolder>
       <BuildAction>Compile</BuildAction>
     </Compile>
-    <Compile Update="Repositories\DatabaseRepository`3.Template.cs">
+    <Compile Update="Repositories\DatabaseRepository`1.Template.cs">
       <CodeLanguage>cs</CodeLanguage>
       <DefaultPackFolder>content</DefaultPackFolder>
       <BuildAction>Compile</BuildAction>
     </Compile>
-    <Compile Update="Repositories\DatabaseRepository`3.GetAll.cs">
+    <Compile Update="Repositories\DatabaseRepository`1.GetAll.cs">
       <CodeLanguage>cs</CodeLanguage>
       <DefaultPackFolder>content</DefaultPackFolder>
       <BuildAction>Compile</BuildAction>
     </Compile>
-    <Compile Update="Repositories\DatabaseRepository`3.Query.cs">
+    <Compile Update="Repositories\DatabaseRepository`1.Query.cs">
       <CodeLanguage>cs</CodeLanguage>
       <DefaultPackFolder>content</DefaultPackFolder>
       <BuildAction>Compile</BuildAction>
     </Compile>
-    <Compile Update="Repositories\DatabaseRepository`3.Iterate.cs">
+    <Compile Update="Repositories\DatabaseRepository`1.Iterate.cs">
       <CodeLanguage>cs</CodeLanguage>
       <DefaultPackFolder>content</DefaultPackFolder>
       <BuildAction>Compile</BuildAction>
     </Compile>
-    <Compile Update="Repositories\DatabaseRepository`3.Create.cs">
+    <Compile Update="Repositories\DatabaseRepository`1.Create.cs">
       <CodeLanguage>cs</CodeLanguage>
       <DefaultPackFolder>content</DefaultPackFolder>
       <BuildAction>Compile</BuildAction>
     </Compile>
-    <Compile Update="Repositories\DatabaseRepository`3.Replace.cs">
+    <Compile Update="Repositories\DatabaseRepository`1.Replace.cs">
       <CodeLanguage>cs</CodeLanguage>
       <DefaultPackFolder>content</DefaultPackFolder>
       <BuildAction>Compile</BuildAction>
     </Compile>
-    <Compile Update="Repositories\DatabaseRepository`3.Update.cs">
+    <Compile Update="Repositories\DatabaseRepository`1.Update.cs">
       <CodeLanguage>cs</CodeLanguage>
       <DefaultPackFolder>content</DefaultPackFolder>
       <BuildAction>Compile</BuildAction>
     </Compile>
-    <Compile Update="Repositories\DatabaseRepository`3.Delete.cs">
-      <CodeLanguage>cs</CodeLanguage>
-      <DefaultPackFolder>content</DefaultPackFolder>
-      <BuildAction>Compile</BuildAction>
-    </Compile>
-    <Compile Update="Plugins\ComposedPrimaryKey\Repositories\ComposedPrimaryKeyDatabaseRepository`5.Get.cs">
+    <Compile Update="Repositories\DatabaseRepository`1.Delete.cs">
       <CodeLanguage>cs</CodeLanguage>
       <DefaultPackFolder>content</DefaultPackFolder>
       <BuildAction>Compile</BuildAction>
@@ -123,62 +108,52 @@
       <DefaultPackFolder>content</DefaultPackFolder>
       <BuildAction>Compile</BuildAction>
     </Compile>
-    <Compile Update="Plugins\ComposedPrimaryKey\Delegates\ComposedPrimaryKeyDatabaseRepositoryFactoryDelegate.cs">
+    <Compile Update="Plugins\MultiTenantDatabase\Repositories\MultiTenantDatabaseRepository`1.Delete.cs">
       <CodeLanguage>cs</CodeLanguage>
       <DefaultPackFolder>content</DefaultPackFolder>
       <BuildAction>Compile</BuildAction>
     </Compile>
-    <Compile Update="Plugins\ComposedPrimaryKey\Repositories\ComposedPrimaryKeyDatabaseRepository`5.Template.cs">
+    <Compile Update="Plugins\MultiTenantDatabase\Repositories\MultiTenantDatabaseRepository`1.EnsureExists.cs">
       <CodeLanguage>cs</CodeLanguage>
       <DefaultPackFolder>content</DefaultPackFolder>
       <BuildAction>Compile</BuildAction>
     </Compile>
-    <Compile Update="Plugins\ComposedPrimaryKey\Repositories\ComposedPrimaryKeyDatabaseRepository`5.Create.cs">
+    <Compile Update="Plugins\MultiTenantDatabase\Repositories\MultiTenantDatabaseRepository`1.Exists.cs">
       <CodeLanguage>cs</CodeLanguage>
       <DefaultPackFolder>content</DefaultPackFolder>
       <BuildAction>Compile</BuildAction>
     </Compile>
-    <Compile Update="Plugins\ComposedPrimaryKey\Repositories\ComposedPrimaryKeyDatabaseRepository`5.GetAll.cs">
+    <Compile Update="Plugins\MultiTenantDatabase\Repositories\MultiTenantDatabaseRepository`1.GetAll.cs">
       <CodeLanguage>cs</CodeLanguage>
       <DefaultPackFolder>content</DefaultPackFolder>
       <BuildAction>Compile</BuildAction>
     </Compile>
-    <Compile Update="Plugins\ComposedPrimaryKey\Repositories\ComposedPrimaryKeyDatabaseRepository`5.Query.cs">
+    <Compile Update="Plugins\MultiTenantDatabase\Repositories\MultiTenantDatabaseRepository`1.GetByIds.cs">
       <CodeLanguage>cs</CodeLanguage>
       <DefaultPackFolder>content</DefaultPackFolder>
       <BuildAction>Compile</BuildAction>
     </Compile>
-    <Compile Update="Plugins\ComposedPrimaryKey\Repositories\ComposedPrimaryKeyDatabaseRepository`5.Update.cs">
+    <Compile Update="Plugins\MultiTenantDatabase\Repositories\MultiTenantDatabaseRepository`1.Iterate.cs">
       <CodeLanguage>cs</CodeLanguage>
       <DefaultPackFolder>content</DefaultPackFolder>
       <BuildAction>Compile</BuildAction>
     </Compile>
-    <Compile Update="Plugins\ComposedPrimaryKey\Repositories\ComposedPrimaryKeyDatabaseRepository`5.Iterate.cs">
+    <Compile Update="Plugins\MultiTenantDatabase\Repositories\MultiTenantDatabaseRepository`1.Query.cs">
       <CodeLanguage>cs</CodeLanguage>
       <DefaultPackFolder>content</DefaultPackFolder>
       <BuildAction>Compile</BuildAction>
     </Compile>
-    <Compile Update="Plugins\ComposedPrimaryKey\Repositories\ComposedPrimaryKeyDatabaseRepository`5.Replace.cs">
+    <Compile Update="Plugins\MultiTenantDatabase\Repositories\MultiTenantDatabaseRepository`1.Replace.cs">
       <CodeLanguage>cs</CodeLanguage>
       <DefaultPackFolder>content</DefaultPackFolder>
       <BuildAction>Compile</BuildAction>
     </Compile>
-    <Compile Update="Plugins\ComposedPrimaryKey\Repositories\ComposedPrimaryKeyDatabaseRepository`5.Delete.cs">
+    <Compile Update="Plugins\MultiTenantDatabase\Repositories\MultiTenantDatabaseRepository`1.Template.cs">
       <CodeLanguage>cs</CodeLanguage>
       <DefaultPackFolder>content</DefaultPackFolder>
       <BuildAction>Compile</BuildAction>
     </Compile>
-    <Compile Update="Plugins\ComposedPrimaryKey\Repositories\ComposedPrimaryKeyDatabaseRepository`5.Exists.cs">
-      <CodeLanguage>cs</CodeLanguage>
-      <DefaultPackFolder>content</DefaultPackFolder>
-      <BuildAction>Compile</BuildAction>
-    </Compile>
-    <Compile Update="Plugins\ComposedPrimaryKey\ReadFilters\ComposedPrimaryKeyReadFilterWrapper.cs">
-      <CodeLanguage>cs</CodeLanguage>
-      <DefaultPackFolder>content</DefaultPackFolder>
-      <BuildAction>Compile</BuildAction>
-    </Compile>
-    <Compile Update="Plugins\ComposedPrimaryKey\ReadFilters\ComposedPrimaryKeyPropertyFilterWrapper.cs">
+    <Compile Update="Plugins\MultiTenantDatabase\Repositories\MultiTenantDatabaseRepository`1.Update.cs">
       <CodeLanguage>cs</CodeLanguage>
       <DefaultPackFolder>content</DefaultPackFolder>
       <BuildAction>Compile</BuildAction>

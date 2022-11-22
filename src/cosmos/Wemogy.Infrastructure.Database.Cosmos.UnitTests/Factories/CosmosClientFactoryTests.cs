@@ -12,7 +12,9 @@ public class CosmosClientFactoryTests : CosmosUnitTestBase
         // Arrange
 
         // Act
-        var cosmosClient = CosmosClientFactory.FromConnectionString(ConnectionString, true);
+        var cosmosClient = CosmosClientFactory.FromConnectionString(
+            ConnectionString,
+            true);
 
         // Assert
         Assert.NotNull(cosmosClient);

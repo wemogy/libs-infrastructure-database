@@ -14,10 +14,10 @@ public partial class RepositoryTestBase
         // Arrange
         await ResetAsync();
         var user = User.Faker.Generate();
-        await UserRepository.CreateAsync(user);
+        await MicrosoftUserRepository.CreateAsync(user);
 
         // Act & Assert
-        await Assert.ThrowsAsync<ConflictErrorException>(() => UserRepository.CreateAsync(user));
+        await Assert.ThrowsAsync<ConflictErrorException>(() => MicrosoftUserRepository.CreateAsync(user));
     }
 
     [Fact]
@@ -28,7 +28,7 @@ public partial class RepositoryTestBase
         var user = User.Faker.Generate();
 
         // Act
-        var entity = await UserRepository.CreateAsync(user);
+        var entity = await MicrosoftUserRepository.CreateAsync(user);
 
         // Act & Assert
         entity.Should().BeEquivalentTo(user);

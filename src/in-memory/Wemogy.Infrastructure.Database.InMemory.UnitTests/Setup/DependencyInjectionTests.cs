@@ -5,6 +5,7 @@ using Xunit;
 
 namespace Wemogy.Infrastructure.Database.InMemory.UnitTests.Setup;
 
+[Collection("Sequential")]
 public class DependencyInjectionTests
 {
     [Fact]

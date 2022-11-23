@@ -15,8 +15,6 @@ namespace Wemogy.Infrastructure.Database.Cosmos.UnitTests.Plugins.MultiTenantDat
 [Collection("Sequential")]
 public class CosmosMultiTenantDatabaseRepositoryTests : MultiTenantDatabaseRepositoryTestsBase
 {
-    // TODO: Implement the wrapped methods with multi-tenant support and fix all tests.
-    // TODO: Add more tests that cover edge cases for Multi-Tenancy
     public CosmosMultiTenantDatabaseRepositoryTests()
         : base(
             GetFactory(new MicrosoftTenantProvider()),

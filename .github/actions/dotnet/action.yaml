@@ -37,4 +37,4 @@ runs:
       run: dotnet test --configuration ${{ inputs.configuration }} --no-build --verbosity normal
       env:
         COSMOS_CONNECTION_STRING: ${{ inputs.cosmos-connection-string }}
-        COSMOS_DATABASE_NAME: testdata
+        COSMOS_DATABASE_NAME: infrastructuredbtests

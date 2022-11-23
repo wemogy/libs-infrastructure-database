@@ -6,6 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Azure.Cosmos;
 using Microsoft.Azure.Cosmos.Linq;
+using Microsoft.Extensions.Logging;
 using Wemogy.Core.Errors;
 using Wemogy.Infrastructure.Database.Core.Abstractions;
 using Wemogy.Infrastructure.Database.Core.Errors;
@@ -18,14 +19,16 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Client
     public class CosmosDatabaseClient<TEntity> : DatabaseClientBase<TEntity>, IDatabaseClient<TEntity>
         where TEntity : class, IEntityBase
     {
+        private readonly ILogger? _logger;
         private readonly Container _container;
         private MappingMetadata? _cachedMappingMetadata;
 
-        public CosmosDatabaseClient(CosmosClient cosmosClient, CosmosDatabaseClientOptions options)
+        public CosmosDatabaseClient(CosmosClient cosmosClient, CosmosDatabaseClientOptions options, ILogger? logger)
         {
             var database = cosmosClient.GetDatabase(options.DatabaseName);
             var containerName = options.ContainerName;
             _container = database.GetContainer(containerName);
+            _logger = logger;
         }
 
         public async Task<TEntity> GetAsync(string id, string partitionKey, CancellationToken cancellationToken)
@@ -196,7 +199,8 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Client
             return _container.GetItemQueryIterator<TEntity, string>(
                 queryParameters,
                 mappingMetadata,
-                queryable);
+                queryable,
+                _logger);
         }
 
         private MappingMetadata GetMappingMetadata()

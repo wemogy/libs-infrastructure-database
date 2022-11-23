@@ -10,12 +10,15 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Setup
             this IServiceCollection serviceCollection,
             string connectionString,
             string databaseName,
-            bool insecureDevelopmentMode = false)
+            bool insecureDevelopmentMode = false,
+            bool enableLogging = false)
         {
             var cosmosDatabaseClientFactory = new CosmosDatabaseClientFactory(
                 connectionString,
                 databaseName,
-                insecureDevelopmentMode);
+                insecureDevelopmentMode,
+                enableLogging);
+
             return serviceCollection
                 .AddDatabase(cosmosDatabaseClientFactory);
         }

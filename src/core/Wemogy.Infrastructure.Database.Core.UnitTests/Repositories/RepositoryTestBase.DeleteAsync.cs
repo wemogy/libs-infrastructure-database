@@ -14,12 +14,18 @@ public partial class RepositoryTestBase
     {
         // Arrange
         var user = User.Faker.Generate();
-        await UserRepository.CreateAsync(user);
+        await MicrosoftUserRepository.CreateAsync(user);
 
         // Act
-        var userExistsBeforeDeletion = await UserRepository.ExistsAsync(user.Id, user.TenantId);
-        await UserRepository.DeleteAsync(user.Id, user.TenantId);
-        var userExistsAfterDeletion = await UserRepository.ExistsAsync(user.Id, user.TenantId);
+        var userExistsBeforeDeletion = await MicrosoftUserRepository.ExistsAsync(
+            user.Id,
+            user.TenantId);
+        await MicrosoftUserRepository.DeleteAsync(
+            user.Id,
+            user.TenantId);
+        var userExistsAfterDeletion = await MicrosoftUserRepository.ExistsAsync(
+            user.Id,
+            user.TenantId);
 
         // Assert
         userExistsBeforeDeletion.Should().BeTrue();
@@ -30,11 +36,14 @@ public partial class RepositoryTestBase
     public async Task DeleteAsyncShouldThrowForNonExistingEntities()
     {
         // Arrange
-        var notExistingUserId = Guid.NewGuid();
-        var notExistingTenantId = Guid.NewGuid();
+        var notExistingUserId = Guid.NewGuid().ToString();
+        var notExistingTenantId = Guid.NewGuid().ToString();
 
         // Act
-        var exception = await Record.ExceptionAsync(() => UserRepository.DeleteAsync(notExistingUserId, notExistingTenantId));
+        var exception = await Record.ExceptionAsync(
+            () => MicrosoftUserRepository.DeleteAsync(
+                notExistingUserId,
+                notExistingTenantId));
 
         // Assert
         exception.Should().BeOfType<NotFoundErrorException>();
@@ -45,13 +54,13 @@ public partial class RepositoryTestBase
     {
         // Arrange
         await ResetAsync();
-        await UserRepository.CreateAsync(User.Faker.Generate());
+        await MicrosoftUserRepository.CreateAsync(User.Faker.Generate());
 
         // Act
-        await UserRepository.DeleteAsync(x => true);
+        await MicrosoftUserRepository.DeleteAsync(x => true);
 
         // Assert
-        var entities = await UserRepository.QueryAsync(x => true);
+        var entities = await MicrosoftUserRepository.QueryAsync(x => true);
         entities.Should().BeEmpty();
     }
 }

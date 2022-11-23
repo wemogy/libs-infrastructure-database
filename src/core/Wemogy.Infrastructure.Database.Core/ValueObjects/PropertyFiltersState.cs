@@ -18,7 +18,7 @@ public class PropertyFiltersState<TEntity> : EnabledState
 
     internal Task ApplyAsync(TEntity entity)
     {
-        return ApplyAsync(new List<TEntity>() { entity });
+        return ApplyAsync(new List<TEntity> { entity });
     }
 
     internal async Task ApplyAsync(List<TEntity> entities)

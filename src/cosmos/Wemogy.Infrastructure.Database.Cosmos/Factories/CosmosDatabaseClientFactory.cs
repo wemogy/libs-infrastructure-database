@@ -1,4 +1,3 @@
-using System;
 using Microsoft.Azure.Cosmos;
 using Microsoft.Extensions.Logging;
 using Wemogy.Infrastructure.Database.Core.Abstractions;
@@ -20,7 +19,9 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Factories
             bool insecureDevelopmentMode = false,
             bool enableLogging = false)
         {
-            _cosmosClient = CosmosClientFactory.FromConnectionString(connectionString, insecureDevelopmentMode);
+            _cosmosClient = CosmosClientFactory.FromConnectionString(
+                connectionString,
+                insecureDevelopmentMode);
             _databaseName = databaseName;
 
             if (enableLogging)
@@ -33,16 +34,14 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Factories
             }
         }
 
-        public IDatabaseClient<TEntity, TPartitionKey, TId> CreateClient<TEntity, TPartitionKey, TId>(DatabaseRepositoryOptions databaseRepositoryOptions)
-            where TEntity : class, IEntityBase<TId>
-            where TPartitionKey : IEquatable<TPartitionKey>
-            where TId : IEquatable<TId>
+        public IDatabaseClient<TEntity> CreateClient<TEntity>(DatabaseRepositoryOptions databaseRepositoryOptions)
+            where TEntity : class, IEntityBase
         {
             var options = new CosmosDatabaseClientOptions(
                 _databaseName,
                 databaseRepositoryOptions.CollectionName);
 
-            return new CosmosDatabaseClient<TEntity, TPartitionKey, TId>(
+            return new CosmosDatabaseClient<TEntity>(
                 _cosmosClient,
                 options,
                 _logger);

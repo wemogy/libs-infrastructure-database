@@ -16,13 +16,13 @@ public partial class RepositoryTestBase
         var users = User.Faker.Generate(20);
         foreach (var user in users)
         {
-            await UserRepository.CreateAsync(user);
+            await MicrosoftUserRepository.CreateAsync(user);
         }
 
         var ids = users.Take(5).Select(x => x.Id).ToList();
 
         // Act
-        var usersFromDb = await UserRepository.GetByIdsAsync(ids);
+        var usersFromDb = await MicrosoftUserRepository.GetByIdsAsync(ids);
 
         // Assert
         usersFromDb.Should().HaveCount(5);

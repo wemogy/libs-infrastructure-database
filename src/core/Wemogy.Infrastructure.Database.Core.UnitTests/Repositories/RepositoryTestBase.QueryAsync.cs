@@ -15,13 +15,14 @@ public partial class RepositoryTestBase
         await ResetAsync();
         var queryParameters = new QueryParameters();
         var user = User.Faker.Generate();
-        await UserRepository.CreateAsync(user);
+        await MicrosoftUserRepository.CreateAsync(user);
 
         // Act
-        var queriedUser = await UserRepository.QueryAsync(queryParameters);
+        var queriedUser = await MicrosoftUserRepository.QueryAsync(queryParameters);
 
         // Assert
         queriedUser.Should().HaveCount(1);
+        queriedUser[0].TenantId.Should().Be(user.TenantId);
     }
 
     [Fact]
@@ -32,10 +33,10 @@ public partial class RepositoryTestBase
         var queryParameters = new QueryParameters();
         var user = User.Faker.Generate();
         user.IsDeleted = true;
-        await UserRepository.CreateAsync(user);
+        await MicrosoftUserRepository.CreateAsync(user);
 
         // Act
-        var queriedUser = await UserRepository.QueryAsync(queryParameters);
+        var queriedUser = await MicrosoftUserRepository.QueryAsync(queryParameters);
 
         // Assert
         queriedUser.Should().HaveCount(0);
@@ -46,18 +47,18 @@ public partial class RepositoryTestBase
     {
         // Arrange
         await ResetAsync();
-        var queryParameters = new QueryParameters()
+        var queryParameters = new QueryParameters
         {
             Take = 5
         };
         var users = User.Faker.Generate(10);
         foreach (var user in users)
         {
-            await UserRepository.CreateAsync(user);
+            await MicrosoftUserRepository.CreateAsync(user);
         }
 
         // Act
-        var queriedUser = await UserRepository.QueryAsync(queryParameters);
+        var queriedUser = await MicrosoftUserRepository.QueryAsync(queryParameters);
 
         // Assert
         queriedUser.Should().HaveCount(queryParameters.Take.Value);

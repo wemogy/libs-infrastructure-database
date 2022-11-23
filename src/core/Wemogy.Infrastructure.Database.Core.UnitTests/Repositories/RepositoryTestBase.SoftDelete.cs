@@ -14,11 +14,13 @@ public partial class RepositoryTestBase
         // Arrange
         var user = User.Faker.Generate();
         user.IsDeleted = true;
-        await UserRepository.CreateAsync(user);
+        await MicrosoftUserRepository.CreateAsync(user);
 
         // Act & Assert
         await Assert.ThrowsAsync<NotFoundErrorException>(
-            () => UserRepository.GetAsync(user.Id, user.TenantId));
+            () => MicrosoftUserRepository.GetAsync(
+                user.Id,
+                user.TenantId));
     }
 
     [Fact]
@@ -27,11 +29,13 @@ public partial class RepositoryTestBase
         // Arrange
         var user = User.Faker.Generate();
         user.IsDeleted = true;
-        UserRepository.SoftDelete.Disable();
-        await UserRepository.CreateAsync(user);
+        MicrosoftUserRepository.SoftDelete.Disable();
+        await MicrosoftUserRepository.CreateAsync(user);
 
         // Act
-        var userFromDb = await UserRepository.GetAsync(user.Id, user.TenantId);
+        var userFromDb = await MicrosoftUserRepository.GetAsync(
+            user.Id,
+            user.TenantId);
 
         // Assert
         Assert.True(userFromDb.IsDeleted);

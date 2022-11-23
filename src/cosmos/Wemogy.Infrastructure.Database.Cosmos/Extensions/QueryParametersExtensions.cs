@@ -4,7 +4,6 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 using Microsoft.Azure.Cosmos;
-using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Wemogy.Core.Extensions;
@@ -22,328 +21,6 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Extensions
 {
     public static class QueryParametersExtensions
     {
-        #region QueryDefinition
-
-        private static string UseIfNotNullOrWhiteSpace(string keyword, string value)
-        {
-            if (string.IsNullOrWhiteSpace(value))
-            {
-                return string.Empty;
-            }
-
-            return $"{keyword} {value}";
-        }
-
-        private static QueryDefinition GetQueryDefinition(
-            this Container container,
-            string selectStatement,
-            QueryParameters queryParameters,
-            MappingMetadata mappingMetadata,
-            IQueryable generalFilter,
-            ILogger? logger)
-        {
-            queryParameters.EnsureCamelCase();
-            var whereCondition = queryParameters.GetQueryDefinitionFilterCondition(mappingMetadata, logger);
-            var sorting = queryParameters.GetQueryDefinitionSort();
-
-            var whereStatement = UseIfNotNullOrWhiteSpace(
-                "WHERE",
-                whereCondition.QueryText);
-            var orderStatement = UseIfNotNullOrWhiteSpace(
-                "ORDER BY",
-                sorting.QueryText);
-            var limitStatement = queryParameters.Take.HasValue ? $"OFFSET 0 LIMIT {queryParameters.Take}" : "";
-            var joinStatement = string.Empty;
-
-            // Prepend generalFilter to where statement, if given
-            if (generalFilter != null)
-            {
-                // convert the IQueryable LINQ expression to a SQL query
-                var generalFilterSql = generalFilter.ToString();
-
-                logger?.LogInformation("generalFilterSql");
-                logger?.LogInformation(generalFilterSql);
-
-                // check if the stringified IQueryable LINQ expression equals the container link, which happens, if the query is empty
-                var containerLink = $"dbs/{container.Database.Id}/colls/{container.Id}";
-                if (generalFilterSql == containerLink)
-                {
-                    generalFilterSql = string.Empty;
-                }
-
-                // extract JOIN condition
-                var join = generalFilterSql.SplitOnFirstOccurrence("FROM root").Last().SplitOnLastOccurrence("WHERE")
-                    .First().Trim();
-                join = join
-                    .Replace(
-                        "root[",
-                        "c[")
-                    .Replace(
-                        "FROM root",
-                        "FROM c");
-                join = join.Replace(
-                    "\\\"",
-                    "\"");
-                if (!string.IsNullOrWhiteSpace(join))
-                {
-                    logger?.LogInformation("JOIN");
-                    logger?.LogInformation(join);
-                    joinStatement = join;
-                    logger?.LogInformation($"Join statement: {joinStatement}");
-                }
-
-                if (!string.IsNullOrWhiteSpace(generalFilterSql))
-                {
-                    // extract the WHERE condition from the SQL query
-                    generalFilterSql = generalFilterSql.Split("WHERE").LastOrDefault();
-                    generalFilterSql = generalFilterSql?.Remove(generalFilterSql.Length - 2);
-
-                    // remove whitespace at begin and end
-                    generalFilterSql = generalFilterSql?.Trim();
-
-                    // replace the root alias, which is used by converting with the c alias which we are using for the container
-                    generalFilterSql = generalFilterSql?.Replace(
-                        "root[",
-                        "c[");
-
-                    // remove escape character before quotes
-                    generalFilterSql = generalFilterSql?.Replace(
-                        "\\\"",
-                        "\"");
-                }
-
-                if (!string.IsNullOrWhiteSpace(generalFilterSql))
-                {
-                    if (string.IsNullOrWhiteSpace(whereStatement))
-                    {
-                        whereStatement = $"WHERE {generalFilterSql}";
-                    }
-                    else
-                    {
-                        whereStatement = whereStatement.Replace(
-                            "WHERE",
-                            $"WHERE {generalFilterSql} AND ");
-                    }
-                }
-            }
-
-            var queryText = $@"
-                {selectStatement}
-                FROM {container.Id} c
-                {joinStatement}
-                {whereStatement}
-                {orderStatement}
-                {limitStatement}";
-
-            var queryDefinition = new QueryDefinition(queryText);
-            whereCondition.MergeParameters(sorting);
-
-            foreach (var parameter in whereCondition.Parameters)
-            {
-                queryDefinition = queryDefinition.WithParameter(
-                    parameter.Key,
-                    parameter.Value);
-            }
-
-            logger?.LogInformation("Query:");
-            logger?.LogInformation(queryText);
-            logger?.LogInformation(JsonConvert.SerializeObject(queryDefinition.GetQueryParameters()));
-
-            return queryDefinition;
-        }
-
-        public static FeedIterator<T> GetItemQueryIterator<T, TId>(
-            this Container container,
-            QueryParameters queryParameters,
-            MappingMetadata mappingMetadata,
-            IQueryable<T> generalFilter,
-            ILogger? logger)
-            where T : class, IEntityBase<TId>
-            where TId : IEquatable<TId>
-        {
-            var queryDefinition = container.GetQueryDefinition(
-                "SELECT VALUE c",
-                queryParameters,
-                mappingMetadata,
-                generalFilter,
-                logger);
-
-            return container.GetItemQueryIterator<T>(queryDefinition);
-        }
-
-        public static FeedIterator<JObject> GetCount(this Container container, QueryParameters queryParameters,
-            MappingMetadata mappingMetadata, bool softDeleteEnabled, IQueryable generalFilter, ILogger? logger)
-        {
-            var queryDefinition = container.GetQueryDefinition(
-                "SELECT COUNT(1)",
-                queryParameters,
-                mappingMetadata,
-                generalFilter,
-                logger);
-
-            return container.GetItemQueryIterator<JObject>(queryDefinition);
-        }
-
-        private static QueryDefinitionFilterCondition GetQueryDefinitionFilterCondition(
-            this QueryParameters queryParameters,
-            MappingMetadata mappingMetadata,
-            ILogger? logger)
-        {
-            var result = new QueryDefinitionFilterCondition();
-
-            foreach (var filter in queryParameters.Filters)
-            {
-                string condition;
-                var valueDeserialized = mappingMetadata.Deserialize(
-                    filter.Property,
-                    filter.Value);
-
-                switch (filter.Comparator)
-                {
-                    case Comparator.Equals:
-                        if (valueDeserialized == null)
-                        {
-                            condition =
-                                $"(IS_DEFINED(c.{filter.Property}) = false OR IS_NULL(c.{filter.Property}) = true)";
-                        }
-                        else
-                        {
-                            condition = $"c.{filter.Property} = @paramHere";
-                        }
-
-                        break;
-                    case Comparator.NotEquals:
-                        if (valueDeserialized == null)
-                        {
-                            condition = $"(IS_DEFINED(c.{filter.Property}) AND IS_NULL(c.{filter.Property}) = false)";
-                        }
-                        else
-                        {
-                            condition = $"c.{filter.Property} != @paramHere";
-                        }
-
-                        break;
-                    case Comparator.StartsWith:
-                        condition = $"STARTSWITH(c.{filter.Property}, @paramHere, false)";
-                        break;
-                    case Comparator.StartsWithIgnoreCase:
-                        condition = $"STARTSWITH(c.{filter.Property}, @paramHere, true)";
-                        break;
-                    case Comparator.IsEmpty:
-                        condition = $"ARRAY_LENGTH(c.{filter.Property}) = 0";
-                        break;
-                    case Comparator.IsNotEmpty:
-                        condition = $"ARRAY_LENGTH(c.{filter.Property}) > 0";
-                        break;
-                    case Comparator.IsOneOf:
-                        var arr = mappingMetadata.Deserialize(
-                            filter.Property,
-                            filter.Value) as JArray;
-                        if (arr == null)
-                        {
-                            logger?.LogInformation(
-                                $"Comparator.IsOneOf failed for filter: {JsonConvert.SerializeObject(filter)}");
-                            continue;
-                        }
-
-                        var isOneOfQueryDefinition = new QueryDefinitionFilterCondition();
-                        foreach (var item in arr)
-                        {
-                            var json = JsonConvert.SerializeObject(item);
-                            isOneOfQueryDefinition.Or(
-                                $"c.{filter.Property} = @paramHere",
-                                mappingMetadata.Deserialize(
-                                    filter.Property,
-                                    json),
-                                true);
-                        }
-
-                        condition = isOneOfQueryDefinition.QueryText;
-                        result.MergeParameters(isOneOfQueryDefinition);
-                        result.And(
-                            condition,
-                            true);
-                        continue;
-                    case Comparator.Contains:
-                        condition = $"ARRAY_CONTAINS(c.{filter.Property}, @paramHere)";
-
-                        // ToDo: remove next two lines and fix todo in 203
-                        result.Or(
-                            condition,
-                            valueDeserialized,
-                            true);
-                        continue;
-                    default:
-                        logger?.LogInformation(
-                            $"GetQueryDefinitionFilterCondition failed for filter: {JsonConvert.SerializeObject(filter)}");
-                        continue;
-                }
-
-                // ToDo: support OR conditions (build the correct expression tree)
-                result.And(
-                    condition,
-                    valueDeserialized);
-            }
-
-            var sortingQueryDefinition = new QueryDefinitionFilterCondition();
-            var previousQueryDefinition = new QueryDefinitionFilterCondition();
-
-            // c.Name > "A"
-            // OR (c.Name = "A" AND c.createdAt > DT)
-            // OR (c.Name = "A" AND c.createdAt = DT AND c.id > ID)
-            foreach (var sorting in queryParameters.Sortings)
-            {
-                if (!sorting.ContainsSearchAfter)
-                {
-                    break;
-                }
-
-                var condition = $"c.{sorting.OrderBy} > @paramHere";
-
-                previousQueryDefinition.ReplaceGreaterThanWithEquals();
-
-                // mappingMetadata.Deserialize(propertyName, value)
-                previousQueryDefinition.And(
-                    condition,
-                    mappingMetadata.Deserialize(
-                        sorting.OrderBy,
-                        sorting.SearchAfter));
-
-                sortingQueryDefinition.Or(
-                    previousQueryDefinition.QueryText,
-                    true);
-                sortingQueryDefinition.MergeParameters(previousQueryDefinition);
-            }
-
-            result.And(
-                sortingQueryDefinition.QueryText,
-                true);
-            result.MergeParameters(sortingQueryDefinition);
-
-            return result;
-        }
-
-        private static QueryDefinitionFilterCondition GetQueryDefinitionSort(this QueryParameters queryParameters)
-        {
-            var result = new QueryDefinitionFilterCondition();
-
-            // ToDo: support composite index
-            // The order by query does not have a corresponding composite index that it can be served from.
-            // queryParameters.Sortings = queryParameters.Sortings.Take(1).ToList();
-
-            foreach (var sorting in queryParameters.Sortings)
-            {
-                var sortingDirection = sorting.IsAscending ? "ASC" : "DESC";
-                var orderByStatement = $"c.{sorting.OrderBy} {sortingDirection}";
-                result.Comma(orderByStatement);
-            }
-
-            return result;
-        }
-
-        #endregion
-
-
         public static Expression<Func<T, bool>> GetSearchAfterExpression<T>(this QuerySorting querySorting)
         {
             // Thanks to: https://stackoverflow.com/questions/48954125/c-sharp-how-to-evaluate-compareto-in-expression-which-returns-a-string
@@ -362,10 +39,10 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Extensions
 
             var propertyType = ResolvePropertyType<T>(propertyName);
             var searchAfterValue = JsonConvert.DeserializeObject(
-                querySorting.SearchAfter,
+                querySorting.SearchAfter!,
                 propertyType);
 
-            MethodInfo comparisonMethod = null;
+            MethodInfo? comparisonMethod = null;
             Expression searchAfterValueExpression = Expression.Constant(searchAfterValue);
 
             // CompareTo is not working for GUID, for that reason we handle the GUID as string in comparison
@@ -435,26 +112,26 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Extensions
 
             return myLambda;
 
-            /*
-                        var propertyName = querySorting.OrderBy.ToPascalCase();
+/*
+            var propertyName = querySorting.OrderBy.ToPascalCase();
 
-                        // x =>
-                        var param = Expression.Parameter(typeof(T), "x");
+            // x =>
+            var param = Expression.Parameter(typeof(T), "x");
 
-                        // x.PropertyNameA.PropertyNameB
-                        var prop = GetPropertyExpression(propertyName, param);
+            // x.PropertyNameA.PropertyNameB
+            var prop = GetPropertyExpression(propertyName, param);
 
-                        var propertyType = ResolvePropertyType<T>(propertyName);
+            var propertyType = ResolvePropertyType<T>(propertyName);
 
-                        var searchAfterValue = JsonConvert.DeserializeObject(querySorting.SearchAfter, typeof(string));
+            var searchAfterValue = JsonConvert.DeserializeObject(querySorting.SearchAfter, typeof(string));
 
-                        Expression searchExpr = Expression.GreaterThanOrEqual(prop, Expression.Constant(searchAfterValue));
+            Expression searchExpr = Expression.GreaterThanOrEqual(prop, Expression.Constant(searchAfterValue));
 
 
-                        Expression<Func<T, bool>> myLambda =
-                            Expression.Lambda<Func<T, bool>>(searchExpr, param);
+            Expression<Func<T, bool>> myLambda =
+                Expression.Lambda<Func<T, bool>>(searchExpr, param);
 
-                        return myLambda;*/
+            return myLambda;*/
         }
 
         public static Expression<Func<T, object>> GetOrderByExpression<T>(this QuerySorting querySorting)
@@ -817,7 +494,6 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Extensions
                 var innerQueryFilter = queryFilter.Clone();
                 innerQueryFilter.Property = complexTypeIdentifierEndSplitted.Skip(1).Join(">").Substring(1);
 
-
                 var innerExpression = typeof(QueryParametersExtensions)
                     .GetMethod(nameof(GetQueryFilterExpression))?.MakeGenericMethod(innerParameterExpressionType)
                     .Invoke(
@@ -855,7 +531,6 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Extensions
             var fullExpression = comparatorExpressionBuilder(
                 propertyExpression,
                 valueExpression);
-
 
             return AddPropertyNullCheckExpression(
                 queryFilter.Property.ToPascalCase(),
@@ -903,5 +578,319 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Extensions
                         $"The expression indicator {expressionIndicator} of expressionTreeNodeId {expressionTreeNodeId} is not supported");
             }
         }
+
+        #region QueryDefinition
+
+        private static string UseIfNotNullOrWhiteSpace(string keyword, string value)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                return string.Empty;
+            }
+
+            return $"{keyword} {value}";
+        }
+
+        private static QueryDefinition GetQueryDefinition(
+            this Container container, string selectStatement,
+            QueryParameters queryParameters,
+            MappingMetadata mappingMetadata,
+            IQueryable generalFilter)
+        {
+            queryParameters.EnsureCamelCase();
+            var whereCondition = queryParameters.GetQueryDefinitionFilterCondition(mappingMetadata);
+            var sorting = queryParameters.GetQueryDefinitionSort();
+
+            var whereStatement = UseIfNotNullOrWhiteSpace(
+                "WHERE",
+                whereCondition.QueryText);
+            var orderStatement = UseIfNotNullOrWhiteSpace(
+                "ORDER BY",
+                sorting.QueryText);
+            var limitStatement =
+                queryParameters.Take.HasValue ? $"OFFSET 0 LIMIT {queryParameters.Take}" : string.Empty;
+            var joinStatement = string.Empty;
+
+            // Prepend generalFilter to where statement, if given
+            if (generalFilter != null)
+            {
+                // convert the IQueryable LINQ expression to a SQL query
+                var generalFilterSql = generalFilter.ToString();
+
+                Console.WriteLine("generalFilterSql");
+                Console.WriteLine(generalFilterSql);
+
+                // check if the stringified IQueryable LINQ expression equals the container link, which happens, if the query is empty
+                var containerLink = $"dbs/{container.Database.Id}/colls/{container.Id}";
+                if (generalFilterSql == containerLink)
+                {
+                    generalFilterSql = string.Empty;
+                }
+
+                // extract JOIN condition
+                var join = generalFilterSql.SplitOnFirstOccurrence("FROM root").Last().SplitOnLastOccurrence("WHERE")
+                    .First().Trim();
+                join = join
+                    .Replace(
+                        "root[",
+                        "c[")
+                    .Replace(
+                        "FROM root",
+                        "FROM c");
+                join = join.Replace(
+                    "\\\"",
+                    "\"");
+                if (!string.IsNullOrWhiteSpace(join))
+                {
+                    Console.WriteLine("JOIN");
+                    Console.WriteLine(join);
+                    joinStatement = join;
+                    Console.WriteLine($"Join statement: {joinStatement}");
+                }
+
+                if (!string.IsNullOrWhiteSpace(generalFilterSql))
+                {
+                    // extract the WHERE condition from the SQL query
+                    generalFilterSql = generalFilterSql.Split("WHERE").LastOrDefault();
+                    generalFilterSql = generalFilterSql?.Remove(generalFilterSql.Length - 2);
+
+                    // remove whitespace at begin and end
+                    generalFilterSql = generalFilterSql?.Trim();
+
+                    // replace the root alias, which is used by converting with the c alias which we are using for the container
+                    generalFilterSql = generalFilterSql?.Replace(
+                        "root[",
+                        "c[");
+
+                    // remove escape character before quotes
+                    generalFilterSql = generalFilterSql?.Replace(
+                        "\\\"",
+                        "\"");
+                }
+
+                if (!string.IsNullOrWhiteSpace(generalFilterSql))
+                {
+                    if (string.IsNullOrWhiteSpace(whereStatement))
+                    {
+                        whereStatement = $"WHERE {generalFilterSql}";
+                    }
+                    else
+                    {
+                        whereStatement = whereStatement.Replace(
+                            "WHERE",
+                            $"WHERE {generalFilterSql} AND ");
+                    }
+                }
+            }
+
+            var queryText = $@"
+                {selectStatement}
+                FROM {container.Id} c
+                {joinStatement}
+                {whereStatement}
+                {orderStatement}
+                {limitStatement}";
+
+            var queryDefinition = new QueryDefinition(queryText);
+            whereCondition.MergeParameters(sorting);
+
+            foreach (var parameter in whereCondition.Parameters)
+            {
+                queryDefinition = queryDefinition.WithParameter(
+                    parameter.Key,
+                    parameter.Value);
+            }
+
+            Console.WriteLine("Query:");
+            Console.WriteLine(queryText);
+            Console.WriteLine(JsonConvert.SerializeObject(queryDefinition.GetQueryParameters()));
+
+            return queryDefinition;
+        }
+
+        public static FeedIterator<T> GetItemQueryIterator<T, TId>(
+            this Container container,
+            QueryParameters queryParameters,
+            MappingMetadata mappingMetadata,
+            IQueryable<T> generalFilter)
+            where T : IEntityBase
+        {
+            var queryDefinition = container.GetQueryDefinition(
+                "SELECT VALUE c",
+                queryParameters,
+                mappingMetadata,
+                generalFilter);
+
+            return container.GetItemQueryIterator<T>(queryDefinition);
+        }
+
+        public static FeedIterator<JObject> GetCount(this Container container, QueryParameters queryParameters,
+            MappingMetadata mappingMetadata, bool softDeleteEnabled, IQueryable generalFilter)
+        {
+            var queryDefinition = container.GetQueryDefinition(
+                "SELECT COUNT(1)",
+                queryParameters,
+                mappingMetadata,
+                generalFilter);
+
+            return container.GetItemQueryIterator<JObject>(queryDefinition);
+        }
+
+        private static QueryDefinitionFilterCondition GetQueryDefinitionFilterCondition(
+            this QueryParameters queryParameters, MappingMetadata mappingMetadata)
+        {
+            var result = new QueryDefinitionFilterCondition();
+
+            foreach (var filter in queryParameters.Filters)
+            {
+                string condition;
+                var valueDeserialized = mappingMetadata.Deserialize(
+                    filter.Property,
+                    filter.Value);
+
+                switch (filter.Comparator)
+                {
+                    case Comparator.Equals:
+                        if (valueDeserialized == null)
+                        {
+                            condition =
+                                $"(IS_DEFINED(c.{filter.Property}) = false OR IS_NULL(c.{filter.Property}) = true)";
+                        }
+                        else
+                        {
+                            condition = $"c.{filter.Property} = @paramHere";
+                        }
+
+                        break;
+                    case Comparator.NotEquals:
+                        if (valueDeserialized == null)
+                        {
+                            condition = $"(IS_DEFINED(c.{filter.Property}) AND IS_NULL(c.{filter.Property}) = false)";
+                        }
+                        else
+                        {
+                            condition = $"c.{filter.Property} != @paramHere";
+                        }
+
+                        break;
+                    case Comparator.StartsWith:
+                        condition = $"STARTSWITH(c.{filter.Property}, @paramHere, false)";
+                        break;
+                    case Comparator.StartsWithIgnoreCase:
+                        condition = $"STARTSWITH(c.{filter.Property}, @paramHere, true)";
+                        break;
+                    case Comparator.IsEmpty:
+                        condition = $"ARRAY_LENGTH(c.{filter.Property}) = 0";
+                        break;
+                    case Comparator.IsNotEmpty:
+                        condition = $"ARRAY_LENGTH(c.{filter.Property}) > 0";
+                        break;
+                    case Comparator.IsOneOf:
+                        var arr = mappingMetadata.Deserialize(
+                            filter.Property,
+                            filter.Value) as JArray;
+                        if (arr == null)
+                        {
+                            Console.WriteLine(
+                                $"Comparator.IsOneOf failed for filter: {JsonConvert.SerializeObject(filter)}");
+                            continue;
+                        }
+
+                        var isOneOfQueryDefinition = new QueryDefinitionFilterCondition();
+                        foreach (var item in arr)
+                        {
+                            var json = JsonConvert.SerializeObject(item);
+                            isOneOfQueryDefinition.Or(
+                                $"c.{filter.Property} = @paramHere",
+                                mappingMetadata.Deserialize(
+                                    filter.Property,
+                                    json),
+                                true);
+                        }
+
+                        condition = isOneOfQueryDefinition.QueryText;
+                        result.MergeParameters(isOneOfQueryDefinition);
+                        result.And(
+                            condition,
+                            true);
+                        continue;
+                    case Comparator.Contains:
+                        condition = $"ARRAY_CONTAINS(c.{filter.Property}, @paramHere)";
+
+                        // ToDo: remove next two lines and fix todo in 203
+                        result.Or(
+                            condition,
+                            valueDeserialized,
+                            true);
+                        continue;
+                    default:
+                        Console.WriteLine(
+                            $"GetQueryDefinitionFilterCondition failed for filter: {JsonConvert.SerializeObject(filter)}");
+                        continue;
+                }
+
+                // ToDo: support OR conditions (build the correct expression tree)
+                result.And(
+                    condition,
+                    valueDeserialized);
+            }
+
+            var sortingQueryDefinition = new QueryDefinitionFilterCondition();
+            var previousQueryDefinition = new QueryDefinitionFilterCondition();
+
+            // c.Name > "A"
+            // OR (c.Name = "A" AND c.createdAt > DT)
+            // OR (c.Name = "A" AND c.createdAt = DT AND c.id > ID)
+            foreach (var sorting in queryParameters.Sortings)
+            {
+                if (!sorting.ContainsSearchAfter)
+                {
+                    break;
+                }
+
+                var condition = $"c.{sorting.OrderBy} > @paramHere";
+
+                previousQueryDefinition.ReplaceGreaterThanWithEquals();
+
+                // mappingMetadata.Deserialize(propertyName, value)
+                previousQueryDefinition.And(
+                    condition,
+                    mappingMetadata.Deserialize(
+                        sorting.OrderBy,
+                        sorting.SearchAfter!));
+
+                sortingQueryDefinition.Or(
+                    previousQueryDefinition.QueryText,
+                    true);
+                sortingQueryDefinition.MergeParameters(previousQueryDefinition);
+            }
+
+            result.And(
+                sortingQueryDefinition.QueryText,
+                true);
+            result.MergeParameters(sortingQueryDefinition);
+
+            return result;
+        }
+
+        private static QueryDefinitionFilterCondition GetQueryDefinitionSort(this QueryParameters queryParameters)
+        {
+            var result = new QueryDefinitionFilterCondition();
+
+            // ToDo: support composite index
+            // The order by query does not have a corresponding composite index that it can be served from.
+            // queryParameters.Sortings = queryParameters.Sortings.Take(1).ToList();
+
+            foreach (var sorting in queryParameters.Sortings)
+            {
+                var sortingDirection = sorting.IsAscending ? "ASC" : "DESC";
+                var orderByStatement = $"c.{sorting.OrderBy} {sortingDirection}";
+                result.Comma(orderByStatement);
+            }
+
+            return result;
+        }
+
+        #endregion
     }
 }

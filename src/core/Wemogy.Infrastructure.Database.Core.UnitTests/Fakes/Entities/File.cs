@@ -1,3 +1,4 @@
+using System;
 using Bogus;
 using Wemogy.Infrastructure.Database.Core.Abstractions;
 using Wemogy.Infrastructure.Database.Core.Attributes;
@@ -13,16 +14,14 @@ public class File : EntityBase
     public string PartitionKey { get; set; } = PartitionKeyDefaults.GlobalPartition;
 
     public File()
+        : base(Guid.NewGuid().ToString())
     {
         Name = string.Empty;
     }
 
-    public static Faker<File> Faker
-    {
-        get
-        {
-            return new Faker<File>()
-                .RuleFor(x => x.Name, f => f.System.FileName());
-        }
-    }
+    public static Faker<File> Faker =>
+        new Faker<File>()
+            .RuleFor(
+                x => x.Name,
+                f => f.System.FileName());
 }

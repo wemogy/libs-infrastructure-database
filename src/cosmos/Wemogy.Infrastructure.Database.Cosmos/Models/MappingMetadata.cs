@@ -21,7 +21,7 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Models
 
         public void AddCustomMappings(Dictionary<string, Type> customMappings)
         {
-            this._propertyTypes.Merge(customMappings);
+            _propertyTypes.Merge(customMappings);
         }
 
         public object Deserialize(string propertyPath, string jsonValue)
@@ -34,7 +34,9 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Models
                     return null;
                 }
 
-                if (this._propertyTypes.TryGetValue(propertyPath, out Type propertyType))
+                if (_propertyTypes.TryGetValue(
+                        propertyPath,
+                        out var propertyType))
                 {
                     if (propertyType == typeof(DateTime))
                     {
@@ -49,7 +51,8 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Models
             }
             catch
             {
-                Console.WriteLine($"MappingMetadata.Deserialize: Use fallback for property {propertyPath} with json value {jsonValue}");
+                Console.WriteLine(
+                    $"MappingMetadata.Deserialize: Use fallback for property {propertyPath} with json value {jsonValue}");
                 return jsonValue;
             }
         }

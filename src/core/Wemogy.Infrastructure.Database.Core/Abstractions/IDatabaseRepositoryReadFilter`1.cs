@@ -2,10 +2,9 @@ using System;
 using System.Linq.Expressions;
 using System.Threading.Tasks;
 
-namespace Wemogy.Infrastructure.Database.Core.Abstractions
+namespace Wemogy.Infrastructure.Database.Core.Abstractions;
+
+public interface IDatabaseRepositoryReadFilter<TEntity>
 {
-    public interface IDatabaseRepositoryReadFilter<TEntity>
-    {
-        Task<Expression<Func<TEntity, bool>>> FilterAsync();
-    }
+    Task<Expression<Func<TEntity, bool>>> FilterAsync();
 }

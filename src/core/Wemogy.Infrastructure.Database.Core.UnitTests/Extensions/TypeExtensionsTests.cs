@@ -8,24 +8,16 @@ namespace Wemogy.Infrastructure.Database.Core.UnitTests.Extensions;
 
 public class TypeExtensionsTests
 {
-    class NotSoftDeletableClass
-    {
-    }
-
-    class SoftDeletableClass
-    {
-        [SoftDeleteFlag]
-        public bool Flag { get; set; }
-    }
-
-    class SoftDeletableClassSubClass : SoftDeletableClass
-    {
-    }
-
     [Theory]
-    [InlineData(typeof(NotSoftDeletableClass), false)]
-    [InlineData(typeof(SoftDeletableClass), true)]
-    [InlineData(typeof(SoftDeletableClassSubClass), true)]
+    [InlineData(
+        typeof(NotSoftDeletableClass),
+        false)]
+    [InlineData(
+        typeof(SoftDeletableClass),
+        true)]
+    [InlineData(
+        typeof(SoftDeletableClassSubClass),
+        true)]
     public void IsSoftDeletableShouldWork(Type type, bool expectedToBeSoftDeletable)
     {
         // Act
@@ -33,5 +25,19 @@ public class TypeExtensionsTests
 
         // Assert
         isSoftDeletable.Should().Be(expectedToBeSoftDeletable);
+    }
+
+    private class NotSoftDeletableClass
+    {
+    }
+
+    private class SoftDeletableClass
+    {
+        [SoftDeleteFlag]
+        public bool Flag { get; set; }
+    }
+
+    private class SoftDeletableClassSubClass : SoftDeletableClass
+    {
     }
 }

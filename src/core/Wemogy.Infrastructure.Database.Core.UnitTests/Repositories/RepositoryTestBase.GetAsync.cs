@@ -2,6 +2,7 @@ using System;
 using System.Threading.Tasks;
 using FluentAssertions;
 using Wemogy.Core.Errors.Exceptions;
+using Wemogy.Infrastructure.Database.Core.Errors;
 using Wemogy.Infrastructure.Database.Core.UnitTests.Fakes.Entities;
 using Xunit;
 
@@ -15,10 +16,40 @@ public partial class RepositoryTestBase
         // Arrange
         await ResetAsync();
         var user = User.Faker.Generate();
-        await UserRepository.CreateAsync(user);
+        await MicrosoftUserRepository.CreateAsync(user);
 
         // Act
-        var userFromDb = await UserRepository.GetAsync(user.Id);
+        var userFromDb = await MicrosoftUserRepository.GetAsync(user.Id);
+
+        // Assert
+        userFromDb.Should().BeEquivalentTo(user);
+    }
+
+    [Fact]
+    public async Task GetAsync_ShouldGetAnExistingItemByIdWithExpression()
+    {
+        // Arrange
+        await ResetAsync();
+        var user = User.Faker.Generate();
+        await MicrosoftUserRepository.CreateAsync(user);
+
+        // Act
+        var userFromDb = await MicrosoftUserRepository.GetAsync(x => x.Id == user.Id);
+
+        // Assert
+        userFromDb.Should().BeEquivalentTo(user);
+    }
+
+    [Fact]
+    public async Task GetAsync_ShouldGetAnExistingItemByIdAndPartitionKeyWithExpression()
+    {
+        // Arrange
+        await ResetAsync();
+        var user = User.Faker.Generate();
+        await MicrosoftUserRepository.CreateAsync(user);
+
+        // Act
+        var userFromDb = await MicrosoftUserRepository.GetAsync(x => x.Id == user.Id && x.TenantId == user.TenantId);
 
         // Assert
         userFromDb.Should().BeEquivalentTo(user);
@@ -32,7 +63,7 @@ public partial class RepositoryTestBase
 
         // Act & Assert
         await Assert.ThrowsAsync<NotFoundErrorException>(
-            () => UserRepository.GetAsync(Guid.NewGuid()));
+            () => MicrosoftUserRepository.GetAsync(Guid.NewGuid().ToString()));
     }
 
     [Fact]
@@ -41,10 +72,12 @@ public partial class RepositoryTestBase
         // Arrange
         await ResetAsync();
         var user = User.Faker.Generate();
-        await UserRepository.CreateAsync(user);
+        await MicrosoftUserRepository.CreateAsync(user);
 
         // Act
-        var userFromDb = await UserRepository.GetAsync(user.Id, user.TenantId);
+        var userFromDb = await MicrosoftUserRepository.GetAsync(
+            user.Id,
+            user.TenantId);
 
         // Assert
         userFromDb.Should().BeEquivalentTo(user);
@@ -55,9 +88,22 @@ public partial class RepositoryTestBase
     {
         // Arrange
         await ResetAsync();
+        var id = Guid.NewGuid().ToString();
+        var partitionKey = Guid.NewGuid().ToString();
+        var notFoundException = DatabaseError.EntityNotFound(
+            id,
+            partitionKey);
+
+        // Act
+        var exception = await Record.ExceptionAsync(
+            () => MicrosoftUserRepository.GetAsync(
+                id,
+                partitionKey));
 
         // Act & Assert
-        await Assert.ThrowsAsync<NotFoundErrorException>(
-            () => UserRepository.GetAsync(Guid.NewGuid(), Guid.NewGuid()));
+        exception.Should().BeOfType<NotFoundErrorException>()
+            .Which.Code.Should().Be(notFoundException.Code);
+        exception.Should().BeOfType<NotFoundErrorException>()
+            .Which.Description.Should().Be(notFoundException.Description);
     }
 }

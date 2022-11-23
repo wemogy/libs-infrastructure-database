@@ -1,4 +1,3 @@
-using System;
 using System.Threading.Tasks;
 using FluentAssertions;
 using Wemogy.Core.DynamicProxies;
@@ -24,8 +23,10 @@ public partial class RepositoryTestBase
         var flakyProxy = new FlakyProxy(
                 2,
                 FlakyStrategy.ThrowBeforeInvocation,
-                () => Error.PreconditionFailed("EtagMismatch", "Etag mismatch"))
-            .OnlyForMethodsWithName(nameof(IDatabaseClient<User, Guid, Guid>.ReplaceAsync));
+                () => Error.PreconditionFailed(
+                    "EtagMismatch",
+                    "Etag mismatch"))
+            .OnlyForMethodsWithName(nameof(IDatabaseClient<User>.ReplaceAsync));
         DatabaseRepositoryFactoryFactory.DatabaseClientProxy = flakyProxy;
         var flakyUserRepository = UserRepositoryFactory();
         await flakyUserRepository.CreateAsync(user);
@@ -47,17 +48,19 @@ public partial class RepositoryTestBase
     }
 
     [Fact]
-    public async Task UpdateAsync_ShouldRetryOnlyMaxAttempts()
+    public async Task UpdateAsync_ShouldRetryAutomaticallyWithoutPartitionKey()
     {
         // Arrange
         await ResetAsync();
         var user = User.Faker.Generate();
 
         var flakyProxy = new FlakyProxy(
-                100,
+                2,
                 FlakyStrategy.ThrowBeforeInvocation,
-                () => Error.PreconditionFailed("EtagMismatch", "Etag mismatch"))
-            .OnlyForMethodsWithName(nameof(IDatabaseClient<User, Guid, Guid>.ReplaceAsync));
+                () => Error.PreconditionFailed(
+                    "EtagMismatch",
+                    "Etag mismatch"))
+            .OnlyForMethodsWithName(nameof(IDatabaseClient<User>.ReplaceAsync));
         DatabaseRepositoryFactoryFactory.DatabaseClientProxy = flakyProxy;
         var flakyUserRepository = UserRepositoryFactory();
         await flakyUserRepository.CreateAsync(user);
@@ -68,10 +71,44 @@ public partial class RepositoryTestBase
         }
 
         // Act
-        var updatedUserException = await Record.ExceptionAsync(() => flakyUserRepository.UpdateAsync(
+        var updatedUser = await flakyUserRepository.UpdateAsync(
             user.Id,
-            user.TenantId,
-            UpdateAction));
+            UpdateAction);
+
+        // Assert
+        updatedUser.Firstname.Should().Be("Updated");
+        flakyProxy.FailAttempts.Should().Be(2);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_ShouldRetryOnlyMaxAttempts()
+    {
+        // Arrange
+        await ResetAsync();
+        var user = User.Faker.Generate();
+
+        var flakyProxy = new FlakyProxy(
+                100,
+                FlakyStrategy.ThrowBeforeInvocation,
+                () => Error.PreconditionFailed(
+                    "EtagMismatch",
+                    "Etag mismatch"))
+            .OnlyForMethodsWithName(nameof(IDatabaseClient<User>.ReplaceAsync));
+        DatabaseRepositoryFactoryFactory.DatabaseClientProxy = flakyProxy;
+        var flakyUserRepository = UserRepositoryFactory();
+        await flakyUserRepository.CreateAsync(user);
+
+        void UpdateAction(User u)
+        {
+            u.Firstname = "Updated";
+        }
+
+        // Act
+        var updatedUserException = await Record.ExceptionAsync(
+            () => flakyUserRepository.UpdateAsync(
+                user.Id,
+                user.TenantId,
+                UpdateAction));
 
         // Assert
         updatedUserException.Should().BeOfType<PreconditionFailedErrorException>();

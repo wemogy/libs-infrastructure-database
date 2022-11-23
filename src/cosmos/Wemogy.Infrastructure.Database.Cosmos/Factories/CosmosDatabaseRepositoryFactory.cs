@@ -10,7 +10,7 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Factories
             string databaseName,
             bool insecureDevelopmentMode = false,
             bool enableLogging = false)
-            where TDatabaseRepository : class, IDatabaseRepository
+            where TDatabaseRepository : class, IDatabaseRepositoryBase
         {
             var cosmosClientFactory = new CosmosDatabaseClientFactory(
                 connectionString,

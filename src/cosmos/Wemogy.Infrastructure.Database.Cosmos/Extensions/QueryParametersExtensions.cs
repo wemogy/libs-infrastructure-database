@@ -4,6 +4,7 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 using Microsoft.Azure.Cosmos;
+using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Wemogy.Core.Extensions;
@@ -579,8 +580,6 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Extensions
             }
         }
 
-        #region QueryDefinition
-
         private static string UseIfNotNullOrWhiteSpace(string keyword, string value)
         {
             if (string.IsNullOrWhiteSpace(value))
@@ -592,13 +591,15 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Extensions
         }
 
         private static QueryDefinition GetQueryDefinition(
-            this Container container, string selectStatement,
+            this Container container,
+            string selectStatement,
             QueryParameters queryParameters,
             MappingMetadata mappingMetadata,
-            IQueryable generalFilter)
+            IQueryable generalFilter,
+            ILogger? logger)
         {
             queryParameters.EnsureCamelCase();
-            var whereCondition = queryParameters.GetQueryDefinitionFilterCondition(mappingMetadata);
+            var whereCondition = queryParameters.GetQueryDefinitionFilterCondition(mappingMetadata, logger);
             var sorting = queryParameters.GetQueryDefinitionSort();
 
             var whereStatement = UseIfNotNullOrWhiteSpace(
@@ -617,8 +618,8 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Extensions
                 // convert the IQueryable LINQ expression to a SQL query
                 var generalFilterSql = generalFilter.ToString();
 
-                Console.WriteLine("generalFilterSql");
-                Console.WriteLine(generalFilterSql);
+                logger?.LogDebug("generalFilterSql");
+                logger?.LogDebug(generalFilterSql);
 
                 // check if the stringified IQueryable LINQ expression equals the container link, which happens, if the query is empty
                 var containerLink = $"dbs/{container.Database.Id}/colls/{container.Id}";
@@ -642,10 +643,10 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Extensions
                     "\"");
                 if (!string.IsNullOrWhiteSpace(join))
                 {
-                    Console.WriteLine("JOIN");
-                    Console.WriteLine(join);
+                    logger?.LogDebug("JOIN");
+                    logger?.LogDebug(join);
                     joinStatement = join;
-                    Console.WriteLine($"Join statement: {joinStatement}");
+                    logger?.LogDebug($"Join statement: {joinStatement}");
                 }
 
                 if (!string.IsNullOrWhiteSpace(generalFilterSql))
@@ -701,9 +702,9 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Extensions
                     parameter.Value);
             }
 
-            Console.WriteLine("Query:");
-            Console.WriteLine(queryText);
-            Console.WriteLine(JsonConvert.SerializeObject(queryDefinition.GetQueryParameters()));
+            logger?.LogDebug("Query:");
+            logger?.LogDebug(queryText);
+            logger?.LogDebug(JsonConvert.SerializeObject(queryDefinition.GetQueryParameters()));
 
             return queryDefinition;
         }
@@ -712,32 +713,40 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Extensions
             this Container container,
             QueryParameters queryParameters,
             MappingMetadata mappingMetadata,
-            IQueryable<T> generalFilter)
+            IQueryable<T> generalFilter,
+            ILogger? logger)
             where T : IEntityBase
         {
             var queryDefinition = container.GetQueryDefinition(
                 "SELECT VALUE c",
                 queryParameters,
                 mappingMetadata,
-                generalFilter);
+                generalFilter,
+                logger);
 
             return container.GetItemQueryIterator<T>(queryDefinition);
         }
 
-        public static FeedIterator<JObject> GetCount(this Container container, QueryParameters queryParameters,
-            MappingMetadata mappingMetadata, bool softDeleteEnabled, IQueryable generalFilter)
+        public static FeedIterator<JObject> GetCount(
+            this Container container,
+            QueryParameters queryParameters,
+            MappingMetadata mappingMetadata,
+            bool softDeleteEnabled,
+            IQueryable generalFilter,
+            ILogger? logger)
         {
             var queryDefinition = container.GetQueryDefinition(
                 "SELECT COUNT(1)",
                 queryParameters,
                 mappingMetadata,
-                generalFilter);
+                generalFilter,
+                logger);
 
             return container.GetItemQueryIterator<JObject>(queryDefinition);
         }
 
         private static QueryDefinitionFilterCondition GetQueryDefinitionFilterCondition(
-            this QueryParameters queryParameters, MappingMetadata mappingMetadata)
+            this QueryParameters queryParameters, MappingMetadata mappingMetadata, ILogger? logger)
         {
             var result = new QueryDefinitionFilterCondition();
 
@@ -791,7 +800,7 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Extensions
                             filter.Value) as JArray;
                         if (arr == null)
                         {
-                            Console.WriteLine(
+                            logger?.LogError(
                                 $"Comparator.IsOneOf failed for filter: {JsonConvert.SerializeObject(filter)}");
                             continue;
                         }
@@ -824,7 +833,7 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Extensions
                             true);
                         continue;
                     default:
-                        Console.WriteLine(
+                        logger?.LogError(
                             $"GetQueryDefinitionFilterCondition failed for filter: {JsonConvert.SerializeObject(filter)}");
                         continue;
                 }
@@ -890,7 +899,5 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Extensions
 
             return result;
         }
-
-        #endregion
     }
 }

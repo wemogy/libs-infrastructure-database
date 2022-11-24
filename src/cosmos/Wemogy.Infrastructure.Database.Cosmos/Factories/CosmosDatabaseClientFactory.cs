@@ -19,7 +19,7 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Factories
             bool insecureDevelopmentMode = false,
             bool enableLogging = false)
         {
-            _cosmosClient = CosmosClientFactory.FromConnectionString(
+            _cosmosClient = AzureCosmosClientFactory.FromConnectionString(
                 connectionString,
                 insecureDevelopmentMode);
             _databaseName = databaseName;

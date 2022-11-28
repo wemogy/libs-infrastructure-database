@@ -1,11 +1,12 @@
 using System.Net.Http;
-using System.Runtime.CompilerServices;
 using Microsoft.Azure.Cosmos;
 
-[assembly:InternalsVisibleTo("Wemogy.Infrastructure.Database.Cosmos.UnitTests")]
 namespace Wemogy.Infrastructure.Database.Cosmos.Factories
 {
-    internal static class CosmosClientFactory
+    /// <summary>
+    /// This factory creates a plain CosmosClient from the .NET SDK.
+    /// </summary>
+    public static class AzureCosmosClientFactory
     {
         /// <summary>
         ///     Creates a CosmosClient with out default CosmosClientOptions like camel case
@@ -24,7 +25,7 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Factories
                 {
                     IgnoreNullValues = true,
                     PropertyNamingPolicy = CosmosPropertyNamingPolicy.CamelCase
-                }
+                },
             };
 
             if (insecureDevelopmentMode)

@@ -35,7 +35,7 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Factories
         }
 
         public IDatabaseClient<TEntity> CreateClient<TEntity>(DatabaseRepositoryOptions databaseRepositoryOptions)
-            where TEntity : class, IEntityBase
+            where TEntity : class
         {
             var options = new CosmosDatabaseClientOptions(
                 _databaseName,

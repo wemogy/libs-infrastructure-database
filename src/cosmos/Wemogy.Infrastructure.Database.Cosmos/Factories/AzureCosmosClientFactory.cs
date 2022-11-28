@@ -25,7 +25,7 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Factories
                 {
                     IgnoreNullValues = true,
                     PropertyNamingPolicy = CosmosPropertyNamingPolicy.CamelCase
-                }
+                },
             };
 
             if (insecureDevelopmentMode)

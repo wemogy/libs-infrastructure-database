@@ -9,7 +9,7 @@ using Wemogy.Infrastructure.Database.Core.ValueObjects;
 namespace Wemogy.Infrastructure.Database.Core.Repositories;
 
 public partial class DatabaseRepository<TEntity>
-    where TEntity : IEntityBase
+    where TEntity : class, IEntityBase
 {
     public async Task<List<TEntity>> QueryAsync(
         Expression<Func<TEntity, bool>> predicate,

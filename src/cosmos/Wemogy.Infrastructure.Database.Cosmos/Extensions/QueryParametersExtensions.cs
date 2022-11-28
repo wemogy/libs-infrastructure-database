@@ -8,7 +8,6 @@ using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Wemogy.Core.Extensions;
-using Wemogy.Infrastructure.Database.Core.Abstractions;
 using Wemogy.Infrastructure.Database.Core.Enums;
 using Wemogy.Infrastructure.Database.Core.ValueObjects;
 using Wemogy.Infrastructure.Database.Cosmos.Helpers;
@@ -715,7 +714,7 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Extensions
             MappingMetadata mappingMetadata,
             IQueryable<T> generalFilter,
             ILogger? logger)
-            where T : IEntityBase
+            where T : class
         {
             var queryDefinition = container.GetQueryDefinition(
                 "SELECT VALUE c",

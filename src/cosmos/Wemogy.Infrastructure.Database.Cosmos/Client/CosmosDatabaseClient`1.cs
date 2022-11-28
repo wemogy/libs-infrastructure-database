@@ -17,7 +17,7 @@ using Wemogy.Infrastructure.Database.Cosmos.Models;
 namespace Wemogy.Infrastructure.Database.Cosmos.Client
 {
     public class CosmosDatabaseClient<TEntity> : DatabaseClientBase<TEntity>, IDatabaseClient<TEntity>
-        where TEntity : class, IEntityBase
+        where TEntity : class
     {
         private readonly ILogger? _logger;
         private readonly Container _container;
@@ -105,7 +105,7 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Client
                 {
                     throw Error.Conflict(
                         "AlreadyExists",
-                        $"Entity with id {entity.Id} already exists");
+                        $"Entity with id {ResolveIdValue(entity)} already exists");
                 }
 
                 throw;
@@ -116,10 +116,11 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Client
         {
             try
             {
+                var id = ResolveIdValue(entity);
                 var partitionKey = ResolvePartitionKey(entity);
                 var replaceResponse = await _container.ReplaceItemAsync(
                     entity,
-                    entity.Id,
+                    id,
                     partitionKey.CosmosPartitionKey);
 
                 return replaceResponse.Resource;
@@ -129,7 +130,7 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Client
                 if (cosmosException.StatusCode == HttpStatusCode.NotFound)
                 {
                     throw DatabaseError.EntityNotFound(
-                        entity.Id,
+                        ResolveIdValue(entity),
                         ResolvePartitionKeyValue(entity));
                 }
 
@@ -150,9 +151,10 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Client
                 predicate,
                 async entity =>
                 {
+                    var id = ResolveIdValue(entity);
                     var partitionKey = ResolvePartitionKey(entity);
                     await DeleteAsync(
-                        entity.Id,
+                        id,
                         partitionKey);
                 });
         }

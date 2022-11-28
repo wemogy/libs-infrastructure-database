@@ -8,7 +8,7 @@ using Wemogy.Infrastructure.Database.Core.Errors;
 namespace Wemogy.Infrastructure.Database.Core.Repositories;
 
 public partial class DatabaseRepository<TEntity>
-    where TEntity : IEntityBase
+    where TEntity : class, IEntityBase
 {
     public async Task EnsureExistsAsync(
         string id,

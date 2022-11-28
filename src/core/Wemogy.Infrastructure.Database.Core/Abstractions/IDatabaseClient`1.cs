@@ -7,7 +7,7 @@ using Wemogy.Infrastructure.Database.Core.ValueObjects;
 namespace Wemogy.Infrastructure.Database.Core.Abstractions;
 
 public interface IDatabaseClient<TEntity> : IDatabaseClient
-    where TEntity : IEntityBase
+    where TEntity : class
 {
     Task<TEntity> GetAsync(string id, string partitionKey, CancellationToken cancellationToken);
 

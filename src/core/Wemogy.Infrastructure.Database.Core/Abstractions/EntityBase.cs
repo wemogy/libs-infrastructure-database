@@ -5,6 +5,11 @@ namespace Wemogy.Infrastructure.Database.Core.Abstractions;
 
 public abstract class EntityBase : IEntityBase
 {
+    protected EntityBase()
+        : this(Guid.NewGuid().ToString())
+    {
+    }
+
     protected EntityBase(string id)
     {
         Id = id;

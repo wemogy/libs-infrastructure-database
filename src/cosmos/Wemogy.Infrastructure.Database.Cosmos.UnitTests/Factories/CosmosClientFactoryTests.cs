@@ -12,7 +12,7 @@ public class CosmosClientFactoryTests : CosmosUnitTestBase
         // Arrange
 
         // Act
-        var cosmosClient = CosmosClientFactory.FromConnectionString(
+        var cosmosClient = AzureCosmosClientFactory.FromConnectionString(
             ConnectionString,
             true);
 

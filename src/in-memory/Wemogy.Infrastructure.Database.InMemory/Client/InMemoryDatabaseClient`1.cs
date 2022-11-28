@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Linq.Dynamic.Core;
 using System.Linq.Expressions;
 using System.Threading;
 using System.Threading.Tasks;
@@ -14,7 +15,7 @@ using Wemogy.Infrastructure.Database.InMemory.Extensions;
 namespace Wemogy.Infrastructure.Database.InMemory.Client
 {
     public class InMemoryDatabaseClient<TEntity> : DatabaseClientBase<TEntity>, IDatabaseClient<TEntity>
-        where TEntity : IEntityBase
+        where TEntity : class
     {
         private static readonly Dictionary<Type, Dictionary<string, List<TEntity>>> Database =
             new Dictionary<Type, Dictionary<string, List<TEntity>>>();
@@ -45,7 +46,7 @@ namespace Wemogy.Infrastructure.Database.InMemory.Client
                     partitionKey);
             }
 
-            var entity = entities.FirstOrDefault(e => e.Id.Equals(id));
+            TEntity entity = entities.AsQueryable().FirstOrDefault("e => e.Id.Equals(@0)", id);
 
             if (entity == null)
             {
@@ -102,6 +103,7 @@ namespace Wemogy.Infrastructure.Database.InMemory.Client
 
         public Task<TEntity> CreateAsync(TEntity entity)
         {
+            var id = ResolveIdValue(entity);
             var partitionKeyValue = ResolvePartitionKeyValue(entity);
 
             if (!EntityPartitions.TryGetValue(
@@ -114,11 +116,11 @@ namespace Wemogy.Infrastructure.Database.InMemory.Client
                     entities);
             }
 
-            if (entities.Any(x => x.Id.Equals(entity.Id)))
+            if (entities.AsQueryable().Any("x => x.Id.Equals(@0)", id))
             {
                 throw Error.Conflict(
                     "AlreadyExists",
-                    $"Entity with id {entity.Id} already exists");
+                    $"Entity with id {id} already exists");
             }
 
             entities.Add(entity.Clone());
@@ -127,6 +129,7 @@ namespace Wemogy.Infrastructure.Database.InMemory.Client
 
         public Task<TEntity> ReplaceAsync(TEntity entity)
         {
+            var id = ResolveIdValue(entity);
             var partitionKeyValue = ResolvePartitionKeyValue(entity);
 
             if (!EntityPartitions.TryGetValue(
@@ -134,16 +137,16 @@ namespace Wemogy.Infrastructure.Database.InMemory.Client
                     out var entities))
             {
                 throw DatabaseError.EntityNotFound(
-                    entity.Id,
+                    id,
                     partitionKeyValue);
             }
 
-            var existingEntity = entities.FirstOrDefault(e => e.Id.Equals(entity.Id));
+            var existingEntity = entities.AsQueryable().FirstOrDefault("e => e.Id.Equals(@0)", id);
 
             if (existingEntity == null)
             {
                 throw DatabaseError.EntityNotFound(
-                    entity.Id,
+                    id,
                     partitionKeyValue);
             }
 
@@ -164,7 +167,7 @@ namespace Wemogy.Infrastructure.Database.InMemory.Client
                     partitionKey);
             }
 
-            var entity = entities.FirstOrDefault(e => e.Id.Equals(id));
+            var entity = entities.AsQueryable().FirstOrDefault("e => e.Id.Equals(@0)", id);
 
             if (entity == null)
             {

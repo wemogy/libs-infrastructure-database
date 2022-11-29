@@ -27,8 +27,9 @@ public partial class MultiTenantDatabaseRepository<TEntity>
         Expression<Func<TEntity, bool>> predicate,
         CancellationToken cancellationToken = default)
     {
+        predicate = BuildComposedPartitionKeyPredicate(predicate);
         return _databaseRepository.ExistsAsync(
-            PartitionKeyPredicate.And(predicate),
+            predicate,
             cancellationToken);
     }
 }

@@ -20,8 +20,8 @@ public partial class MultiTenantDatabaseRepositoryTestsBase
         await MicrosoftUserRepository.CreateAsync(user1);
         await AppleUserRepository.CreateAsync(user2);
 
-        var msUser = await MicrosoftUserRepository.GetAllAsync();
-        msUser.First().Should().BeEquivalentTo(user1);
+        var msUsers = await MicrosoftUserRepository.GetAllAsync();
+        msUsers.First().Should().BeEquivalentTo(user1);
         var appleUser = await AppleUserRepository.GetAllAsync();
         appleUser.First().Should().BeEquivalentTo(user2);
 
@@ -34,8 +34,9 @@ public partial class MultiTenantDatabaseRepositoryTestsBase
 
         // Assert
         msFinalUser.Should().BeEquivalentTo(updatedUser);
-        msUser = await MicrosoftUserRepository.GetAllAsync();
-        msUser.First().Should().BeEquivalentTo(updatedUser);
+        msUsers = await MicrosoftUserRepository.GetAllAsync();
+        msUsers.Count.Should().Be(1);
+        msUsers.First().Should().BeEquivalentTo(updatedUser);
 
         appleUser = await AppleUserRepository.GetAllAsync();
         appleUser.First().Should().BeEquivalentTo(user2); // should not update

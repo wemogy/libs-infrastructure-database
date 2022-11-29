@@ -23,4 +23,21 @@ public abstract partial class MultiTenantDatabaseRepositoryTestsBase
         msExists.Should().BeTrue();
         appleExists.Should().BeFalse();
     }
+
+    [Fact]
+    public async Task ExistsByPredicate_ShouldWork()
+    {
+        // Arrange
+        await ResetAsync();
+        var user = User.Faker.Generate();
+        await MicrosoftUserRepository.CreateAsync(user);
+
+        // Act
+        var msExists = await MicrosoftUserRepository.ExistsAsync(x => x.Id == user.Id && x.TenantId == user.TenantId);
+        var appleExists = await AppleUserRepository.ExistsAsync(x => x.Id == user.Id && x.TenantId == user.TenantId);
+
+        // Assert
+        msExists.Should().BeTrue();
+        appleExists.Should().BeFalse();
+    }
 }

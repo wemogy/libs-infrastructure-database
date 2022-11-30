@@ -25,4 +25,11 @@ public static class DatabaseError
             "EntityNotFound",
             $"Entity with id {id} was not found in partition {partitionKey}");
     }
+
+    public static PreconditionFailedErrorException UnexpectedMultipleResults()
+    {
+        return Error.PreconditionFailed(
+            "UnexpectedMultipleResults",
+            "Querying for a single result returned more than one");
+    }
 }

@@ -106,7 +106,7 @@ public partial class RepositoryTestBase
     }
 
     [Fact]
-    public async Task GetAsync_ShouldReturnSoftDeletedItemByPredicateWhenSoftDeleteIsDisabled()
+    public async Task QuerySingleAsync_ShouldReturnSoftDeletedItemByPredicateWhenSoftDeleteIsDisabled()
     {
         MicrosoftUserRepository.SoftDeleteState.Enable();
 
@@ -122,7 +122,7 @@ public partial class RepositoryTestBase
         MicrosoftUserRepository.SoftDeleteState.Disable();
 
         // Assert
-        var userFromDb = await MicrosoftUserRepository.GetAsync(
+        var userFromDb = await MicrosoftUserRepository.QuerySingleAsync(
             i => i.Id == user.Id
                  && i.TenantId == user.TenantId);
 

@@ -69,7 +69,7 @@ public abstract partial class MultiTenantDatabaseRepositoryTestsBase
         var user = User.Faker.Generate();
         await MicrosoftUserRepository.CreateAsync(user);
 
-        // Act - TODO: Predicate does not support the PartitionKey
+        // Act
         var exception =
             await Record.ExceptionAsync(
                 () => MicrosoftUserRepository.EnsureExistsAsync(u => u.TenantId == user.TenantId));

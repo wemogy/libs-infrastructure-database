@@ -26,36 +26,6 @@ public partial class RepositoryTestBase
     }
 
     [Fact]
-    public async Task GetAsync_ShouldGetAnExistingItemByIdWithExpression()
-    {
-        // Arrange
-        await ResetAsync();
-        var user = User.Faker.Generate();
-        await MicrosoftUserRepository.CreateAsync(user);
-
-        // Act
-        var userFromDb = await MicrosoftUserRepository.GetAsync(x => x.Id == user.Id);
-
-        // Assert
-        userFromDb.Should().BeEquivalentTo(user);
-    }
-
-    [Fact]
-    public async Task GetAsync_ShouldGetAnExistingItemByIdAndPartitionKeyWithExpression()
-    {
-        // Arrange
-        await ResetAsync();
-        var user = User.Faker.Generate();
-        await MicrosoftUserRepository.CreateAsync(user);
-
-        // Act
-        var userFromDb = await MicrosoftUserRepository.GetAsync(x => x.Id == user.Id && x.TenantId == user.TenantId);
-
-        // Assert
-        userFromDb.Should().BeEquivalentTo(user);
-    }
-
-    [Fact]
     public async Task GetAsync_ShouldThrowIfItemNotFound()
     {
         // Arrange

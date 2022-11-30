@@ -38,6 +38,6 @@ public partial interface IDatabaseRepository<TEntity>
     ///     ATTENTION: Including a filter for the partitionKey in the predicate improves performance drastically.
     /// </summary>
     /// <param name="predicate">The predicate to filter for the corresponding entity to delete.</param>
-    /// <returns>The number of (soft-)deleted entities</returns>
+    /// <returns>The number of (soft-)deleted entities, 0 if none</returns>
     Task<int> DeleteAsync(Expression<Func<TEntity, bool>> predicate);
 }

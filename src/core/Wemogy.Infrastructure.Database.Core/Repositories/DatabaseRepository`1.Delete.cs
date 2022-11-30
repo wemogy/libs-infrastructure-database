@@ -1,16 +1,24 @@
 using System;
 using System.Linq.Expressions;
 using System.Threading.Tasks;
+using Wemogy.Core.Errors.Exceptions;
 using Wemogy.Infrastructure.Database.Core.Abstractions;
+using Wemogy.Infrastructure.Database.Core.Errors;
 
 namespace Wemogy.Infrastructure.Database.Core.Repositories;
 
 public partial class DatabaseRepository<TEntity>
     where TEntity : class, IEntityBase
 {
-    public Task DeleteAsync(string id)
+    public async Task DeleteAsync(string id)
     {
-        return _database.DeleteAsync(x => id == x.Id.ToString());
+        var isDeleted = await _database.DeleteAsync(x => id == x.Id.ToString());
+        if (isDeleted == 1)
+        {
+            return;
+        }
+
+        throw DatabaseError.EntityNotFound(id);
     }
 
     public Task DeleteAsync(string id, string partitionKey)

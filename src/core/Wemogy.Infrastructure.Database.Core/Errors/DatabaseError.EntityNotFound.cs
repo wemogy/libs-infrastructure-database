@@ -3,7 +3,7 @@ using Wemogy.Core.Errors.Exceptions;
 
 namespace Wemogy.Infrastructure.Database.Core.Errors;
 
-public static class DatabaseError
+public static partial class DatabaseError
 {
     public static NotFoundErrorException EntityNotFound()
     {

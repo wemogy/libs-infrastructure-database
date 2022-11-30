@@ -37,5 +37,5 @@ public interface IDatabaseClient<TEntity> : IDatabaseClient
 
     Task DeleteAsync(string id, string partitionKey);
 
-    Task DeleteAsync(Expression<Func<TEntity, bool>> predicate);
+    Task<int> DeleteAsync(Expression<Func<TEntity, bool>> predicate);
 }

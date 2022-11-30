@@ -15,7 +15,7 @@ public partial class DatabaseRepository<TEntity>
         Func<TEntity, Task> callback,
         CancellationToken cancellationToken = default)
     {
-        if (SoftDelete.IsEnabled)
+        if (SoftDeleteState.IsEnabled)
         {
             predicate = predicate.And(_softDeleteFilterExpression);
         }
@@ -35,7 +35,7 @@ public partial class DatabaseRepository<TEntity>
     {
         Expression<Func<TEntity, bool>>? predicate = null;
 
-        if (SoftDelete.IsEnabled)
+        if (SoftDeleteState.IsEnabled)
         {
             predicate = _softDeleteFilterExpression;
         }

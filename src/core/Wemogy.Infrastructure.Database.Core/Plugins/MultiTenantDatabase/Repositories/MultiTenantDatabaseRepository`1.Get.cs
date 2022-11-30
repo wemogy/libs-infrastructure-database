@@ -1,5 +1,4 @@
 using System;
-using System.Linq.Expressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Wemogy.Core.Errors.Exceptions;
@@ -38,7 +37,7 @@ public partial class MultiTenantDatabaseRepository<TEntity>
     {
         try
         {
-            var entity = await _databaseRepository.GetAsync(
+            var entity = await _databaseRepository.QuerySingleAsync(
                 IdAndPartitionKeyPrefixedPredicate(id),
                 cancellationToken);
 
@@ -49,29 +48,6 @@ public partial class MultiTenantDatabaseRepository<TEntity>
         catch (NotFoundErrorException)
         {
             throw DatabaseError.EntityNotFound(id);
-        }
-        catch (Exception e)
-        {
-            CleanupException(e);
-            throw;
-        }
-    }
-
-    public async Task<TEntity> GetAsync(
-        Expression<Func<TEntity, bool>> predicate,
-        CancellationToken cancellationToken = default)
-    {
-        try
-        {
-            predicate = BuildComposedPartitionKeyPredicate(predicate);
-
-            var entity = await _databaseRepository.GetAsync(
-                predicate,
-                cancellationToken);
-
-            RemovePartitionKeyPrefix(entity);
-
-            return entity;
         }
         catch (Exception e)
         {

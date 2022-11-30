@@ -27,7 +27,7 @@ public partial class MultiTenantDatabaseRepository<TEntity> : IDatabaseRepositor
 
     private Expression<Func<TEntity, bool>> PartitionKeyPredicate { get; }
 
-    public IEnabledState SoftDelete { get; }
+    public IEnabledState SoftDeleteState { get; }
 
     public MultiTenantDatabaseRepository(
         IDatabaseRepository<TEntity> databaseRepository,
@@ -35,7 +35,7 @@ public partial class MultiTenantDatabaseRepository<TEntity> : IDatabaseRepositor
     {
         _databaseRepository = databaseRepository;
         _databaseTenantProvider = databaseTenantProvider;
-        SoftDelete = databaseRepository.SoftDelete;
+        SoftDeleteState = databaseRepository.SoftDeleteState;
         _partitionKeyProperty = typeof(TEntity).GetPropertyByCustomAttribute<PartitionKeyAttribute>() !;
         if (_partitionKeyProperty == null)
         {

@@ -122,20 +122,19 @@ public abstract partial class MultiTenantDatabaseRepositoryTestsBase
         await MicrosoftUserRepository.CreateAsync(user2);
 
         // Act
-        await MicrosoftUserRepository.DeleteAsync(u => u.TenantId == user2.TenantId && u.Id == user2.Id);
+        var count = await MicrosoftUserRepository.DeleteAsync(u => u.TenantId == user2.TenantId && u.Id == user2.Id);
 
         // Assert
         var msEntities = await MicrosoftUserRepository.GetAllAsync();
 
         msEntities.Should().HaveCount(1);
         msEntities.Should().ContainSingle(u => u.Id == user1.Id);
+        count.Should().Be(1);
     }
 
     [Fact]
-    public async Task DeleteShouldThrowIfNotExists()
+    public async Task DeleteByIdAndPartitionKeyShouldThrowIfNotExists()
     {
-        // TODO: This is inconsistent to the other DeleteAsync behaviours -> DeleteAsync(id) does not throw.
-
         // Arrange
         await ResetAsync();
 
@@ -148,5 +147,44 @@ public abstract partial class MultiTenantDatabaseRepositoryTestsBase
         // Assert
         exception1.Should().BeOfType<NotFoundErrorException>();
         AssertExceptionMessageDoesNotContainPrefix(exception1);
+    }
+
+    [Fact]
+    public async Task DeleteByIdShouldThrowIfNotExists()
+    {
+        // Arrange
+        await ResetAsync();
+
+        // Act
+        var exception1 = await Record.ExceptionAsync(
+            () => MicrosoftUserRepository.DeleteAsync("123"));
+
+        // Assert
+        exception1.Should().BeOfType<NotFoundErrorException>();
+        AssertExceptionMessageDoesNotContainPrefix(exception1);
+    }
+
+    [Fact]
+    public async Task MultitenantDeleteAllAsync_ShouldWork()
+    {
+        // Arrange
+        await ResetAsync();
+        await AppleUserRepository.CreateAsync(User.Faker.Generate());
+        await AppleUserRepository.CreateAsync(User.Faker.Generate());
+        await MicrosoftUserRepository.CreateAsync(User.Faker.Generate());
+        await MicrosoftUserRepository.CreateAsync(User.Faker.Generate());
+        await MicrosoftUserRepository.CreateAsync(User.Faker.Generate());
+        await MicrosoftUserRepository.CreateAsync(User.Faker.Generate());
+
+        // Act
+        var count = await MicrosoftUserRepository.DeleteAsync(x => true);
+
+        // Assert
+        var entities = await MicrosoftUserRepository.QueryAsync(x => true);
+        entities.Should().BeEmpty();
+        count.Should().Be(4);
+
+        var appleEntities = await AppleUserRepository.QueryAsync(x => true);
+        appleEntities.Count.Should().Be(2);
     }
 }

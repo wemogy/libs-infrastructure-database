@@ -145,9 +145,10 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Client
                 new PartitionKey<string>(partitionKey));
         }
 
-        public Task DeleteAsync(Expression<Func<TEntity, bool>> predicate)
+        public async Task<int> DeleteAsync(Expression<Func<TEntity, bool>> predicate)
         {
-            return IterateAsync(
+            var count = 0;
+            await IterateAsync(
                 predicate,
                 async entity =>
                 {
@@ -156,7 +157,10 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Client
                     await DeleteAsync(
                         id,
                         partitionKey);
+                    count++;
                 });
+
+            return count;
         }
 
         private async Task DeleteAsync(string id, PartitionKey<string> partitionKey)

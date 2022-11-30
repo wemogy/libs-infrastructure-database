@@ -34,12 +34,12 @@ public partial class MultiTenantDatabaseRepository<TEntity>
         }
     }
 
-    public async Task DeleteAsync(Expression<Func<TEntity, bool>> predicate)
+    public async Task<int> DeleteAsync(Expression<Func<TEntity, bool>> predicate)
     {
         try
         {
             predicate = BuildComposedPartitionKeyPredicate(predicate);
-            await _databaseRepository.DeleteAsync(predicate);
+            return await _databaseRepository.DeleteAsync(predicate);
         }
         catch (Exception e)
         {

@@ -46,7 +46,9 @@ namespace Wemogy.Infrastructure.Database.InMemory.Client
                     partitionKey);
             }
 
-            TEntity entity = entities.AsQueryable().FirstOrDefault("e => e.Id.Equals(@0)", id);
+            TEntity entity = entities.AsQueryable().FirstOrDefault(
+                "e => e.Id.Equals(@0)",
+                id);
 
             if (entity == null)
             {
@@ -116,7 +118,9 @@ namespace Wemogy.Infrastructure.Database.InMemory.Client
                     entities);
             }
 
-            if (entities.AsQueryable().Any("x => x.Id.Equals(@0)", id))
+            if (entities.AsQueryable().Any(
+                    "x => x.Id.Equals(@0)",
+                    id))
             {
                 throw Error.Conflict(
                     "AlreadyExists",
@@ -141,7 +145,9 @@ namespace Wemogy.Infrastructure.Database.InMemory.Client
                     partitionKeyValue);
             }
 
-            var existingEntity = entities.AsQueryable().FirstOrDefault("e => e.Id.Equals(@0)", id);
+            var existingEntity = entities.AsQueryable().FirstOrDefault(
+                "e => e.Id.Equals(@0)",
+                id);
 
             if (existingEntity == null)
             {
@@ -167,7 +173,9 @@ namespace Wemogy.Infrastructure.Database.InMemory.Client
                     partitionKey);
             }
 
-            var entity = entities.AsQueryable().FirstOrDefault("e => e.Id.Equals(@0)", id);
+            var entity = entities.AsQueryable().FirstOrDefault(
+                "e => e.Id.Equals(@0)",
+                id);
 
             if (entity == null)
             {
@@ -180,8 +188,9 @@ namespace Wemogy.Infrastructure.Database.InMemory.Client
             return Task.CompletedTask;
         }
 
-        public Task DeleteAsync(Expression<Func<TEntity, bool>> predicate)
+        public Task<int> DeleteAsync(Expression<Func<TEntity, bool>> predicate)
         {
+            int count = 0;
             var compiledPredicate = predicate.Compile();
             foreach (var entityPartition in EntityPartitions)
             {
@@ -190,10 +199,11 @@ namespace Wemogy.Infrastructure.Database.InMemory.Client
                 foreach (var entity in entities)
                 {
                     entityPartition.Value.Remove(entity);
+                    count++;
                 }
             }
 
-            return Task.CompletedTask;
+            return Task.FromResult(count);
         }
     }
 }

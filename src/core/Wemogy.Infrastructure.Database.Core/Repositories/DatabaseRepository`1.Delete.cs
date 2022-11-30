@@ -20,7 +20,7 @@ public partial class DatabaseRepository<TEntity>
             partitionKey);
     }
 
-    public Task DeleteAsync(Expression<Func<TEntity, bool>> predicate)
+    public Task<int> DeleteAsync(Expression<Func<TEntity, bool>> predicate)
     {
         return _database.DeleteAsync(predicate);
     }

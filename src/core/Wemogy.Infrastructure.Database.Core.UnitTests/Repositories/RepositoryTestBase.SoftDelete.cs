@@ -121,8 +121,7 @@ public partial class RepositoryTestBase
 
         // Assert
         var userFromDb = await MicrosoftUserRepository.QuerySingleAsync(
-            i => i.Id == user.Id
-                 && i.TenantId == user.TenantId);
+            i => i.Id == user.Id && i.TenantId == user.TenantId);
 
         userFromDb.Should().BeEquivalentTo(
             user,

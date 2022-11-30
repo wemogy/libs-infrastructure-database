@@ -10,7 +10,7 @@ using Wemogy.Infrastructure.Database.Core.Setup;
 
 namespace Wemogy.Infrastructure.Database.Core.Factories;
 
-public partial class DatabaseRepositoryFactory
+public class DatabaseRepositoryFactory
 {
     private readonly IDatabaseClientFactory _databaseClientFactory;
     private readonly DatabaseRepositoryFactoryFactory _repositoryFactoryFactory;

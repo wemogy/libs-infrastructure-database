@@ -28,6 +28,8 @@ public partial class RepositoryTestBase
     [Fact]
     public async Task GetAllAsync_ShouldRespectSoftDeleteReturnAllItems()
     {
+        MicrosoftUserRepository.SoftDeleteState.Enable();
+
         // Arrange
         await ResetAsync();
         var users = User.Faker.Generate(20);

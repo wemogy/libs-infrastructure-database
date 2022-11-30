@@ -23,7 +23,7 @@ public partial class DatabaseRepository<TEntity>
             cancellationToken);
 
         // Throw exception if soft delete is enabled and entity is deleted
-        if (SoftDelete.IsEnabled && IsSoftDeleted(entity))
+        if (SoftDeleteState.IsEnabled && IsSoftDeleted(entity))
         {
             throw DatabaseError.EntityNotFound(
                 id,
@@ -75,7 +75,7 @@ public partial class DatabaseRepository<TEntity>
         var entity = items.First();
 
         // Throw exception if soft delete is enabled and entity is deleted
-        if (SoftDelete.IsEnabled && IsSoftDeleted(entity))
+        if (SoftDeleteState.IsEnabled && IsSoftDeleted(entity))
         {
             throw DatabaseError.EntityNotFound(predicate.ToString());
         }

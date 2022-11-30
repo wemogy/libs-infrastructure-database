@@ -47,7 +47,7 @@ public partial class DatabaseRepository<TEntity> : IDatabaseRepository<TEntity>
     {
         _database = database;
         _readFilters = readFilters;
-        SoftDelete = softDeleteState;
+        SoftDeleteState = softDeleteState;
         PropertyFilters = new PropertyFiltersState<TEntity>(
             true,
             propertyFilters);
@@ -87,7 +87,7 @@ public partial class DatabaseRepository<TEntity> : IDatabaseRepository<TEntity>
     }
 
     public PropertyFiltersState<TEntity> PropertyFilters { get; }
-    public IEnabledState SoftDelete { get; }
+    public IEnabledState SoftDeleteState { get; }
 
     private bool IsSoftDeleted(TEntity entity)
     {
@@ -97,6 +97,18 @@ public partial class DatabaseRepository<TEntity> : IDatabaseRepository<TEntity>
         }
 
         return (bool)_softDeleteFlagProperty.GetValue(entity);
+    }
+
+    private void SoftDelete(TEntity entity)
+    {
+        if (_softDeleteFlagProperty == null)
+        {
+            return;
+        }
+
+        _softDeleteFlagProperty.SetValue(
+            entity,
+            true);
     }
 
     private async Task<Func<TEntity, bool>> GetReadFilter()

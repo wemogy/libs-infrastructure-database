@@ -28,6 +28,8 @@ public partial class RepositoryTestBase
     [Fact]
     public async Task QueryAsync_ShouldReturnAllNotDeletedItemsIfEmptyQueryParameters()
     {
+        MicrosoftUserRepository.SoftDeleteState.Enable();
+
         // Arrange
         await ResetAsync();
         var queryParameters = new QueryParameters();

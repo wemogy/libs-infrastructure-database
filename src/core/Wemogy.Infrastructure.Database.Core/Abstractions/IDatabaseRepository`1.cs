@@ -13,5 +13,5 @@ public partial interface IDatabaseRepository<TEntity> : IDatabaseRepositoryBase
     /// <summary>
     ///     Defines if soft-deletion is supported for the corresponding entity.
     /// </summary>
-    IEnabledState SoftDelete { get; }
+    IEnabledState SoftDeleteState { get; }
 }

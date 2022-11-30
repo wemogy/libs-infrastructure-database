@@ -67,8 +67,7 @@ public partial class RepositoryTestBase
 
         // Act
         await MicrosoftUserRepository.DeleteAsync(
-            i => i.Id == user.Id
-                 && i.TenantId == user.TenantId);
+            i => i.Id == user.Id && i.TenantId == user.TenantId);
 
         // Assert
         var exception = await Record.ExceptionAsync(
@@ -117,8 +116,7 @@ public partial class RepositoryTestBase
 
         // Act
         await MicrosoftUserRepository.DeleteAsync(
-            i => i.Id == user.Id
-                 && i.TenantId == user.TenantId);
+            i => i.Id == user.Id && i.TenantId == user.TenantId);
         MicrosoftUserRepository.SoftDeleteState.Disable();
 
         // Assert
@@ -195,8 +193,7 @@ public partial class RepositoryTestBase
         // Act
         var exception = await Record.ExceptionAsync(
             () => MicrosoftUserRepository.DeleteAsync(
-                i => i.Id == Guid.NewGuid().ToString()
-                     && i.TenantId == Guid.NewGuid().ToString()));
+                i => i.Id == Guid.NewGuid().ToString() && i.TenantId == Guid.NewGuid().ToString()));
 
         // Assert
         exception.Should().BeNull();

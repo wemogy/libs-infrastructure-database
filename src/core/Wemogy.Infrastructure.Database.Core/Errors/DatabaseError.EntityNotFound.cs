@@ -3,7 +3,7 @@ using Wemogy.Core.Errors.Exceptions;
 
 namespace Wemogy.Infrastructure.Database.Core.Errors;
 
-public static class DatabaseError
+public static partial class DatabaseError
 {
     public static NotFoundErrorException EntityNotFound()
     {
@@ -24,12 +24,5 @@ public static class DatabaseError
         return Error.NotFound(
             "EntityNotFound",
             $"Entity with id {id} was not found in partition {partitionKey}");
-    }
-
-    public static PreconditionFailedErrorException UnexpectedMultipleResults()
-    {
-        return Error.PreconditionFailed(
-            "UnexpectedMultipleResults",
-            "Querying for a single result returned more than one");
     }
 }

@@ -18,11 +18,9 @@ public abstract partial class MultiTenantDatabaseRepositoryTestsBase : Repositor
         : base(multiTenantUserRepositoryFactory1)
     {
         AppleUserRepository = multiTenantUserRepositoryFactory2();
-        MultiTenantUserRepository2Factory = multiTenantUserRepositoryFactory2;
     }
 
     protected IDatabaseRepository<User> AppleUserRepository { get; }
-    private Func<IDatabaseRepository<User>> MultiTenantUserRepository2Factory { get; }
 
     protected override async Task ResetAsync()
     {

@@ -27,7 +27,8 @@ public partial class DatabaseRepository<TEntity>
         {
             throw DatabaseError.EntityNotFound(
                 id,
-                partitionKey);
+                partitionKey,
+                "Entity is soft deleted");
         }
 
         var filter = await GetReadFilter();
@@ -36,7 +37,8 @@ public partial class DatabaseRepository<TEntity>
         {
             throw DatabaseError.EntityNotFound(
                 id,
-                partitionKey);
+                partitionKey,
+                "Entity does not match read filter");
         }
 
         await PropertyFilters.ApplyAsync(entity);

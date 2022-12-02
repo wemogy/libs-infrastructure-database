@@ -19,10 +19,15 @@ public static class DatabaseError
             $"Entity with id {id} not found");
     }
 
-    public static NotFoundErrorException EntityNotFound(string id, string partitionKey)
+    public static NotFoundErrorException EntityNotFound(string id, string partitionKey, string hint = "")
     {
+        if (hint != string.Empty)
+        {
+            hint = $" ({hint})";
+        }
+
         return Error.NotFound(
             "EntityNotFound",
-            $"Entity with id {id} was not found in partition {partitionKey}");
+            $"Entity with id {id} was not found in partition {partitionKey}{hint}");
     }
 }

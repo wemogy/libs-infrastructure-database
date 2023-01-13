@@ -33,7 +33,7 @@ public partial class DatabaseRepository<TEntity>
 
         var filter = await GetReadFilter();
 
-        if (!filter(entity))
+        if (!filter.Compile()(entity))
         {
             throw DatabaseError.EntityNotFound(
                 id,

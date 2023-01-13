@@ -10,7 +10,7 @@ namespace Wemogy.Infrastructure.Database.Core.Repositories;
 public partial class DatabaseRepository<TEntity>
     where TEntity : class, IEntityBase
 {
-    public Task IterateAsync(
+    public async Task IterateAsync(
         Expression<Func<TEntity, bool>> predicate,
         Func<TEntity, Task> callback,
         CancellationToken cancellationToken = default)
@@ -20,9 +20,12 @@ public partial class DatabaseRepository<TEntity>
             predicate = predicate.And(_softDeleteFilterExpression);
         }
 
+        var filter = await GetReadFilter();
+        predicate = predicate.And(filter);
+
         callback = PropertyFilters.Wrap(callback);
 
-        return _database.IterateAsync(
+        await _database.IterateAsync(
             predicate,
             callback,
             cancellationToken);

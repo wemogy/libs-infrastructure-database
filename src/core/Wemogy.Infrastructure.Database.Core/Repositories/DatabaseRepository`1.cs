@@ -99,7 +99,7 @@ public partial class DatabaseRepository<TEntity> : IDatabaseRepository<TEntity>
         return (bool)_softDeleteFlagProperty.GetValue(entity);
     }
 
-    private async Task<Func<TEntity, bool>> GetReadFilter()
+    private async Task<Expression<Func<TEntity, bool>>> GetReadFilter()
     {
         Expression<Func<TEntity, bool>> defaultFilter = x => true;
         var combinedExpressionBody = defaultFilter;
@@ -110,7 +110,7 @@ public partial class DatabaseRepository<TEntity> : IDatabaseRepository<TEntity>
         }
 
         // var lambda = Expression.Lambda<Func<TEntity, bool>>(combinedExpressionBody, defaultFilter.Parameters[0]);
-        return combinedExpressionBody.Compile();
+        return combinedExpressionBody;
     }
 
     internal IDatabaseClient<TEntity> GetDatabaseClient()

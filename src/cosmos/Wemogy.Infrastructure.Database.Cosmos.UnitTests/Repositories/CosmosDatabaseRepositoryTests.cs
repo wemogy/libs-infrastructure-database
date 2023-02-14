@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using Wemogy.Infrastructure.Database.Core.UnitTests.DatabaseRepositories;
 using Wemogy.Infrastructure.Database.Core.UnitTests.Repositories;
 using Wemogy.Infrastructure.Database.Cosmos.Factories;
@@ -13,6 +14,7 @@ public class CosmosDatabaseRepositoryTests : RepositoryTestBase
         : base(() => CosmosDatabaseRepositoryFactory.CreateInstance<IUserRepository>(
             TestingConstants.ConnectionString,
             TestingConstants.DatabaseName,
+            new List<string> { "animals", "files", "users" },
             true,
             true))
     {

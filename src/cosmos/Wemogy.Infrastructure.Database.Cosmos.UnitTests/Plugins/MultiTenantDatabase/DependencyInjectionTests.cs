@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using Microsoft.Extensions.DependencyInjection;
 using Wemogy.Infrastructure.Database.Core.Setup;
 using Wemogy.Infrastructure.Database.Core.UnitTests.DatabaseRepositories;
@@ -15,7 +16,8 @@ public class DependencyInjectionTests : CosmosUnitTestBase
         // Arrange
         var cosmosDatabaseClientFactory = new CosmosDatabaseClientFactory(
             ConnectionString,
-            DatabaseName);
+            DatabaseName,
+            new List<string> { "animals", "files", "users" });
         ServiceCollection
             .AddDatabase(cosmosDatabaseClientFactory)
             .AddRepository<IUserRepository>();

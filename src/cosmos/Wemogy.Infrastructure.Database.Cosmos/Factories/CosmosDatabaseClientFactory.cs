@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+using System.Linq;
 using Microsoft.Azure.Cosmos;
 using Microsoft.Extensions.Logging;
 using Wemogy.Infrastructure.Database.Core.Abstractions;
@@ -16,11 +18,16 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Factories
         public CosmosDatabaseClientFactory(
             string connectionString,
             string databaseName,
+            List<string> containerNames,
             bool insecureDevelopmentMode = false,
             bool enableLogging = false)
         {
+            var containers = containerNames.Select(c => (databaseName, c)).ToList();
+
             _cosmosClient = AzureCosmosClientFactory.FromConnectionString(
                 connectionString,
+                databaseName,
+                containers,
                 insecureDevelopmentMode);
             _databaseName = databaseName;
 

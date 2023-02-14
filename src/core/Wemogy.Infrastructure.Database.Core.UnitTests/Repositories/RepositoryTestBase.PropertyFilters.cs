@@ -38,4 +38,20 @@ public partial class RepositoryTestBase
         // Assert
         result.Should().AllSatisfy(x => x.PrivateNote.Should().BeEmpty());
     }
+
+    [Fact]
+    public async Task GetAllAsync_ShouldUsePropertyFilter()
+    {
+        // Arrange
+        await ResetAsync();
+        var user = User.Faker.Generate();
+        user.PrivateNote = "private note";
+        await MicrosoftUserRepository.CreateAsync(user);
+
+        // Act
+        var result = await MicrosoftUserRepository.GetAllAsync();
+
+        // Assert
+        result.Should().AllSatisfy(x => x.PrivateNote.Should().BeEmpty());
+    }
 }

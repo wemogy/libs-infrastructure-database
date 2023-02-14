@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using Wemogy.Infrastructure.Database.Cosmos.Factories;
 using Wemogy.Infrastructure.Database.Cosmos.UnitTests.Abstractions;
 using Xunit;
@@ -14,6 +15,8 @@ public class CosmosClientFactoryTests : CosmosUnitTestBase
         // Act
         var cosmosClient = AzureCosmosClientFactory.FromConnectionString(
             ConnectionString,
+            "test",
+            new List<(string, string)> { ("test", "test") },
             true);
 
         // Assert

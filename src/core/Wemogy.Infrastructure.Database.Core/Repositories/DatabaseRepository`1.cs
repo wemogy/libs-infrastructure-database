@@ -4,6 +4,7 @@ using System.Linq.Expressions;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
+using FastExpressionCompiler;
 using Wemogy.Core.Extensions;
 using Wemogy.Core.ValueObjects.Abstractions;
 using Wemogy.Infrastructure.Database.Core.Abstractions;
@@ -110,7 +111,7 @@ public partial class DatabaseRepository<TEntity> : IDatabaseRepository<TEntity>
         }
 
         // var lambda = Expression.Lambda<Func<TEntity, bool>>(combinedExpressionBody, defaultFilter.Parameters[0]);
-        return combinedExpressionBody.Compile();
+        return combinedExpressionBody.CompileFast();
     }
 
     internal IDatabaseClient<TEntity> GetDatabaseClient()

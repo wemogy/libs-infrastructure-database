@@ -47,4 +47,27 @@ public partial class RepositoryTestBase
         // Assert
         usersFromDb.Should().HaveCount(10);
     }
+
+    [Fact]
+    public async Task GetAllAsync_XXX()
+    {
+        // Arrange
+        await ResetAsync();
+        var dataCenters = DataCenter.Faker.Generate(20);
+        foreach (var user in dataCenters)
+        {
+            //if (dataCenters.IndexOf(user) % 2 == 0)
+            //{
+            //    user.IsDeleted = true;
+            //}
+
+            await DataCenterRepository.CreateAsync(user);
+        }
+
+        // Act
+        var usersFromDb = await MicrosoftUserRepository.GetAllAsync();
+
+        // Assert
+        usersFromDb.Should().HaveCount(10);
+    }
 }

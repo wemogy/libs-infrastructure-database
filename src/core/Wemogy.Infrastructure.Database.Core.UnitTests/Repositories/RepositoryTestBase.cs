@@ -9,14 +9,16 @@ namespace Wemogy.Infrastructure.Database.Core.UnitTests.Repositories;
 
 public abstract partial class RepositoryTestBase
 {
-    protected RepositoryTestBase(Func<IDatabaseRepository<User>> userRepositoryFactory)
+    protected RepositoryTestBase(Func<IDatabaseRepository<User>> userRepositoryFactory, Func<IDatabaseRepository<DataCenter>> dataCenterRepositoryFactory)
     {
         MicrosoftUserRepository = userRepositoryFactory();
         UserRepositoryFactory = userRepositoryFactory;
+        DataCenterRepository = dataCenterRepositoryFactory();
         DatabaseRepositoryFactoryFactory.DatabaseClientProxy = null;
     }
 
     protected IDatabaseRepository<User> MicrosoftUserRepository { get; set; }
+    protected IDatabaseRepository<DataCenter> DataCenterRepository { get; set; }
     private Func<IDatabaseRepository<User>> UserRepositoryFactory { get; }
 
     protected virtual async Task ResetAsync()

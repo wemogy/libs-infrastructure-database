@@ -17,12 +17,13 @@ public class CosmosMultiTenantDatabaseRepositoryTests : MultiTenantDatabaseRepos
 {
     public CosmosMultiTenantDatabaseRepositoryTests()
         : base(
-            GetFactory(new MicrosoftTenantProvider()),
-            GetFactory(new AppleTenantProvider()))
+            GetFactoryUser(new MicrosoftTenantProvider()),
+            GetFactoryUser(new AppleTenantProvider()),
+            GetFactoryDataCenter(new DataCenterTenantProvider()))
     {
     }
 
-    private static Func<IDatabaseRepository<User>> GetFactory(IDatabaseTenantProvider provider)
+    private static Func<IDatabaseRepository<User>> GetFactoryUser(IDatabaseTenantProvider provider)
     {
         return () =>
         {
@@ -34,6 +35,23 @@ public class CosmosMultiTenantDatabaseRepositoryTests : MultiTenantDatabaseRepos
             var multiTenantRepository = new MultiTenantDatabaseRepositoryFactory(
                 cosmosDatabaseClientFactory,
                 provider).CreateInstance<IUserRepository>();
+
+            return multiTenantRepository;
+        };
+    }
+
+    private static Func<IDatabaseRepository<DataCenter>> GetFactoryDataCenter(IDatabaseTenantProvider provider)
+    {
+        return () =>
+        {
+            var cosmosDatabaseClientFactory = new CosmosDatabaseClientFactory(
+                TestingConstants.ConnectionString,
+                TestingConstants.DatabaseName,
+                true);
+
+            var multiTenantRepository = new MultiTenantDatabaseRepositoryFactory(
+                cosmosDatabaseClientFactory,
+                provider).CreateInstance<IDataCenterRepository>();
 
             return multiTenantRepository;
         };

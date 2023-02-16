@@ -1,5 +1,6 @@
 using System;
 using FluentAssertions;
+using Wemogy.Core.Errors.Exceptions;
 using Wemogy.Infrastructure.Database.Core.Attributes;
 using Wemogy.Infrastructure.Database.Core.Extensions;
 using Xunit;
@@ -18,13 +19,21 @@ public class TypeExtensionsTests
     [InlineData(
         typeof(SoftDeletableClassSubClass),
         true)]
-    public void IsSoftDeletableShouldWork(Type type, bool expectedToBeSoftDeletable)
+    public void ThrowIfNotSoftDeletableShouldWork(Type type, bool expectedToBeSoftDeletable)
     {
         // Act
-        var isSoftDeletable = type.IsSoftDeletable();
+        var exception = Record.Exception(() => type.ThrowIfNotSoftDeletable());
 
         // Assert
-        isSoftDeletable.Should().Be(expectedToBeSoftDeletable);
+        if (expectedToBeSoftDeletable)
+        {
+            exception.Should().BeNull();
+        }
+        else
+        {
+            exception.Should().NotBeNull();
+            exception.Should().BeOfType<UnexpectedErrorException>();
+        }
     }
 
     private class NotSoftDeletableClass

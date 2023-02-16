@@ -49,25 +49,25 @@ public partial class RepositoryTestBase
     }
 
     [Fact]
-    public async Task GetAllAsync_XXX()
+    public async Task GetAllAsync_SoftDeleteShouldNotEnableByDefault()
     {
         // Arrange
         await ResetAsync();
         var dataCenters = DataCenter.Faker.Generate(20);
-        foreach (var user in dataCenters)
+        foreach (var dataCenter in dataCenters)
         {
-            //if (dataCenters.IndexOf(user) % 2 == 0)
-            //{
-            //    user.IsDeleted = true;
-            //}
+            if (dataCenters.IndexOf(dataCenter) % 2 == 0)
+            {
+                dataCenter.IsDeleted = true;
+            }
 
-            await DataCenterRepository.CreateAsync(user);
+            await DataCenterRepository.CreateAsync(dataCenter);
         }
 
         // Act
-        var usersFromDb = await MicrosoftUserRepository.GetAllAsync();
+        var result = await DataCenterRepository.GetAllAsync();
 
         // Assert
-        usersFromDb.Should().HaveCount(10);
+        result.Should().HaveCount(20);
     }
 }

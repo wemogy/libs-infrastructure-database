@@ -17,7 +17,7 @@ public static class TypeExtensions
         }
     }
 
-    public static bool IsSoftDeletable(this Type entityType)
+    private static bool IsSoftDeletable(this Type entityType)
     {
         var softDeleteFlagAttributeType = typeof(SoftDeleteFlagAttribute);
         return entityType

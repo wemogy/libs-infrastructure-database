@@ -1,7 +1,7 @@
+using System;
 using Bogus;
 using Wemogy.Infrastructure.Database.Core.Abstractions;
 using Wemogy.Infrastructure.Database.Core.Attributes;
-using Wemogy.Infrastructure.Database.Core.Constants;
 
 namespace Wemogy.Infrastructure.Database.Core.UnitTests.Fakes.Entities
 {
@@ -10,12 +10,13 @@ namespace Wemogy.Infrastructure.Database.Core.UnitTests.Fakes.Entities
         public string Location { get; set; }
 
         [PartitionKey]
-        public string PartitionKey { get; } = PartitionKeyDefaults.GlobalPartition;
+        public string PartitionKey { get; set; }
 
         public DataCenter()
-            : base(string.Empty)
+            : base(Guid.NewGuid().ToString())
         {
             Location = string.Empty;
+            PartitionKey = string.Empty;
         }
 
         public static Faker<DataCenter> Faker
@@ -28,7 +29,7 @@ namespace Wemogy.Infrastructure.Database.Core.UnitTests.Fakes.Entities
                         f => f.Random.Guid().ToString())
                     .RuleFor(
                         x => x.Location,
-                        f => f.Address.County());
+                        f => f.Address.Country());
             }
         }
     }

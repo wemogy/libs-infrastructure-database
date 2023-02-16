@@ -56,7 +56,8 @@ public partial class DatabaseRepositoryFactory
             typeMetadata.DatabaseRepositoryType.GetCustomAttribute<RepositoryOptionsAttribute>();
         var databaseRepositoryOptions = new DatabaseRepositoryOptions(
             repositoryOptionsAttribute?.CollectionName ?? $"{typeMetadata.EntityType.Name.ToLower()}s",
-            repositoryOptionsAttribute?.EnableSoftDelete ?? typeMetadata.EntityType.IsSoftDeletable());
+            //repositoryOptionsAttribute?.EnableSoftDelete ?? typeMetadata.EntityType.IsSoftDeletable());
+            repositoryOptionsAttribute?.EnableSoftDelete ?? false);
         return databaseRepositoryOptions;
     }
 }

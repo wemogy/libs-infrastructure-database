@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using Wemogy.Infrastructure.Database.Core.Abstractions;
 using Wemogy.Infrastructure.Database.Core.Plugins.MultiTenantDatabase.Abstractions;
 using Wemogy.Infrastructure.Database.Core.Plugins.MultiTenantDatabase.Factories;
@@ -30,7 +29,6 @@ public class CosmosMultiTenantDatabaseRepositoryTests : MultiTenantDatabaseRepos
             var cosmosDatabaseClientFactory = new CosmosDatabaseClientFactory(
                 TestingConstants.ConnectionString,
                 TestingConstants.DatabaseName,
-                new List<string> { "animals", "files", "users" },
                 true);
 
             var multiTenantRepository = new MultiTenantDatabaseRepositoryFactory(

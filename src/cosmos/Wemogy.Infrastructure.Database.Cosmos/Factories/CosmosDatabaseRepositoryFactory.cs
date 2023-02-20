@@ -9,17 +9,17 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Factories
         public static TDatabaseRepository CreateInstance<TDatabaseRepository>(
             string connectionString,
             string databaseName,
-            List<string> containerNames,
             bool insecureDevelopmentMode = false,
-            bool enableLogging = false)
+            bool enableLogging = false,
+            List<string>? containerNames = null)
             where TDatabaseRepository : class, IDatabaseRepositoryBase
         {
             var cosmosClientFactory = new CosmosDatabaseClientFactory(
                 connectionString,
                 databaseName,
-                containerNames,
                 insecureDevelopmentMode,
-                enableLogging);
+                enableLogging,
+                containerNames);
             return new DatabaseRepositoryFactory(cosmosClientFactory)
                 .CreateInstance<TDatabaseRepository>();
         }

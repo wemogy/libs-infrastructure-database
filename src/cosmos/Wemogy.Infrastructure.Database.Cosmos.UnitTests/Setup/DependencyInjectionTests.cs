@@ -17,8 +17,7 @@ public class DependencyInjectionTests : CosmosUnitTestBase
         // Arrange
         var cosmosDatabaseClientFactory = new CosmosDatabaseClientFactory(
             ConnectionString,
-            DatabaseName,
-            new List<string> { "animals", "files", "users" });
+            DatabaseName);
         ServiceCollection
             .AddDatabase(cosmosDatabaseClientFactory)
             .AddRepository<IUserRepository>();
@@ -36,7 +35,49 @@ public class DependencyInjectionTests : CosmosUnitTestBase
         // Arrange
         var cosmosDatabaseClientFactory = new CosmosDatabaseClientFactory(
             ConnectionString,
+            DatabaseName);
+        ServiceCollection.AddSingleton<AppleTenantProvider>();
+        ServiceCollection
+            .AddDatabase(cosmosDatabaseClientFactory)
+            .AddRepository<IUserRepository, AppleTenantProvider>();
+
+        // Act
+        var userRepository = ServiceCollection.BuildServiceProvider().GetRequiredService<IUserRepository>();
+
+        // Assert
+        Assert.NotNull(userRepository);
+    }
+
+    [Fact]
+    public void AddRepository_InitializesContainers_ShouldWork()
+    {
+        // Arrange
+        var cosmosDatabaseClientFactory = new CosmosDatabaseClientFactory(
+            ConnectionString,
             DatabaseName,
+            false,
+            false,
+            new List<string> { "animals", "files", "users" });
+        ServiceCollection
+            .AddDatabase(cosmosDatabaseClientFactory)
+            .AddRepository<IUserRepository>();
+
+        // Act
+        var userRepository = ServiceCollection.BuildServiceProvider().GetRequiredService<IUserRepository>();
+
+        // Assert
+        Assert.NotNull(userRepository);
+    }
+
+    [Fact]
+    public void AddMultiTenantDatabaseRepository_InitializesContainers_ShouldWork()
+    {
+        // Arrange
+        var cosmosDatabaseClientFactory = new CosmosDatabaseClientFactory(
+            ConnectionString,
+            DatabaseName,
+            false,
+            false,
             new List<string> { "animals", "files", "users" });
         ServiceCollection.AddSingleton<AppleTenantProvider>();
         ServiceCollection

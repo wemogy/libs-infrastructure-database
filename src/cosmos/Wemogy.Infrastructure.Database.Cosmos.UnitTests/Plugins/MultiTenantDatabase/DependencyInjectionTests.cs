@@ -16,7 +16,27 @@ public class DependencyInjectionTests : CosmosUnitTestBase
         // Arrange
         var cosmosDatabaseClientFactory = new CosmosDatabaseClientFactory(
             ConnectionString,
+            DatabaseName);
+        ServiceCollection
+            .AddDatabase(cosmosDatabaseClientFactory)
+            .AddRepository<IUserRepository>();
+
+        // Act
+        var userRepository = ServiceCollection.BuildServiceProvider().GetRequiredService<IUserRepository>();
+
+        // Assert
+        Assert.NotNull(userRepository);
+    }
+
+    [Fact]
+    public void AddRepository_InitializesContainers_ShouldWork()
+    {
+        // Arrange
+        var cosmosDatabaseClientFactory = new CosmosDatabaseClientFactory(
+            ConnectionString,
             DatabaseName,
+            false,
+            false,
             new List<string> { "animals", "files", "users" });
         ServiceCollection
             .AddDatabase(cosmosDatabaseClientFactory)

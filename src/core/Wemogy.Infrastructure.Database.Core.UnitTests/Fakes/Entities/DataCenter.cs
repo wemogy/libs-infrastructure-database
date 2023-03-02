@@ -29,7 +29,10 @@ namespace Wemogy.Infrastructure.Database.Core.UnitTests.Fakes.Entities
                         f => f.Random.Guid().ToString())
                     .RuleFor(
                         x => x.Location,
-                        f => f.Address.Country());
+                        f => f.Address.Country())
+                    .RuleFor(
+                        x => x.IsDeleted,
+                        f => false);
             }
         }
     }

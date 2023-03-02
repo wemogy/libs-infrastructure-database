@@ -1,3 +1,4 @@
+using FastExpressionCompiler;
 using System;
 using System.Linq;
 using System.Linq.Expressions;
@@ -33,7 +34,7 @@ public partial class DatabaseRepository<TEntity>
 
         var filter = await GetReadFilter();
 
-        if (!filter.Compile()(entity))
+        if (!filter.CompileFast()(entity))
         {
             throw DatabaseError.EntityNotFound(
                 id,

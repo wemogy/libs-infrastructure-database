@@ -20,6 +20,8 @@ public partial class MultiTenantDatabaseRepository<TEntity>
             RemovePartitionKeyPrefix(entity);
         }
 
+        predicate = BuildComposedPartitionKeyPredicate(predicate);
+
         return _databaseRepository.IterateAsync(
             predicate.And(
                 PartitionKeyPredicate),
@@ -57,6 +59,8 @@ public partial class MultiTenantDatabaseRepository<TEntity>
             RemovePartitionKeyPrefix(entity);
             return Task.CompletedTask;
         }
+
+        predicate = BuildComposedPartitionKeyPredicate(predicate);
 
         return _databaseRepository.IterateAsync(
             predicate.And(

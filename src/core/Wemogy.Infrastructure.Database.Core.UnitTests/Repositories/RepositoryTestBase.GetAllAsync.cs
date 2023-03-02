@@ -22,7 +22,7 @@ public partial class RepositoryTestBase
         var usersFromDb = await MicrosoftUserRepository.GetAllAsync();
 
         // Assert
-        usersFromDb.Should().HaveCount(19);
+        usersFromDb.Should().HaveCount(20);
     }
 
     [Fact]
@@ -45,6 +45,6 @@ public partial class RepositoryTestBase
         var usersFromDb = await MicrosoftUserRepository.GetAllAsync();
 
         // Assert
-        usersFromDb.Should().HaveCount(9);
+        usersFromDb.Should().HaveCount(10);
     }
 }

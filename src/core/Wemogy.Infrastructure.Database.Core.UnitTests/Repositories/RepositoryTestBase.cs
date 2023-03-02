@@ -2,7 +2,6 @@ using System;
 using System.Threading.Tasks;
 using Wemogy.Infrastructure.Database.Core.Abstractions;
 using Wemogy.Infrastructure.Database.Core.Factories;
-using Wemogy.Infrastructure.Database.Core.UnitTests.DatabaseRepositories;
 using Wemogy.Infrastructure.Database.Core.UnitTests.Fakes.Entities;
 
 namespace Wemogy.Infrastructure.Database.Core.UnitTests.Repositories;
@@ -24,5 +23,6 @@ public abstract partial class RepositoryTestBase
     protected virtual async Task ResetAsync()
     {
         await MicrosoftUserRepository.DeleteAsync(x => true);
+        await DataCenterRepository.DeleteAsync(x => true);
     }
 }

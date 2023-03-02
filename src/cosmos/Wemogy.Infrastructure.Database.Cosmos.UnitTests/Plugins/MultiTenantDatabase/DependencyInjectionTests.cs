@@ -35,9 +35,9 @@ public class DependencyInjectionTests : CosmosUnitTestBase
         var cosmosDatabaseClientFactory = new CosmosDatabaseClientFactory(
             ConnectionString,
             DatabaseName,
+            true,
             false,
-            false,
-            new List<string> { "animals", "files", "users" });
+            new List<string> { "users" });
         ServiceCollection
             .AddDatabase(cosmosDatabaseClientFactory)
             .AddRepository<IUserRepository>();

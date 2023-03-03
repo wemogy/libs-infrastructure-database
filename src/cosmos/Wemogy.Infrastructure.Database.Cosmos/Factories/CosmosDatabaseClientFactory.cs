@@ -23,12 +23,13 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Factories
             List<string>? containerNames = null)
         {
             var containers = containerNames?.Select(c => (databaseName, c))?.ToList();
-
-            _cosmosClient = AzureCosmosClientFactory.FromConnectionString(
+            var task = System.Threading.Tasks.Task.Run(async () => await AzureCosmosClientFactory.FromConnectionStringAsync(
                 connectionString,
                 insecureDevelopmentMode,
                 containers,
-                databaseName);
+                databaseName));
+
+            _cosmosClient = task.Result;
             _databaseName = databaseName;
 
             if (enableLogging)

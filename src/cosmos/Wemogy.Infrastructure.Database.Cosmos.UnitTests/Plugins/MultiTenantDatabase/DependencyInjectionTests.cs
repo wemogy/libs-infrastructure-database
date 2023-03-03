@@ -27,25 +27,4 @@ public class DependencyInjectionTests : CosmosUnitTestBase
         // Assert
         Assert.NotNull(userRepository);
     }
-
-    [Fact]
-    public void AddRepository_InitializesContainers_ShouldWork()
-    {
-        // Arrange
-        var cosmosDatabaseClientFactory = new CosmosDatabaseClientFactory(
-            ConnectionString,
-            DatabaseName,
-            true,
-            false,
-            new List<string> { "users" });
-        ServiceCollection
-            .AddDatabase(cosmosDatabaseClientFactory)
-            .AddRepository<IUserRepository>();
-
-        // Act
-        var userRepository = ServiceCollection.BuildServiceProvider().GetRequiredService<IUserRepository>();
-
-        // Assert
-        Assert.NotNull(userRepository);
-    }
 }

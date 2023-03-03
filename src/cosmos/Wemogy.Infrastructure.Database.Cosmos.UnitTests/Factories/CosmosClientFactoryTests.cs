@@ -32,7 +32,7 @@ public class CosmosClientFactoryTests : CosmosUnitTestBase
             ConnectionString,
             true,
             new List<(string, string)> { (TestingConstants.DatabaseName, "users") },
-            "infrastructure-db");
+            "test-app-name");
 
         // Assert
         Assert.NotNull(cosmosClient);

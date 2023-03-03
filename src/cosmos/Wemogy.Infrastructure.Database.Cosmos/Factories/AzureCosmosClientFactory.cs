@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Net.Http;
+using System.Threading.Tasks;
 using Microsoft.Azure.Cosmos;
 
 namespace Wemogy.Infrastructure.Database.Cosmos.Factories
@@ -53,40 +54,9 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Factories
                 return new CosmosClient(connectionString, options);
             }
 
-            return CosmosClient.CreateAndInitializeAsync(connectionString, containers, options).Result;
-        }
+            var task = Task.Run(() => CosmosClient.CreateAndInitializeAsync(connectionString, containers, options));
 
-        public static async System.Threading.Tasks.Task<CosmosClient> FromConnectionStringAsync(string connectionString, bool insecureDevelopmentMode = false, List<(string, string)>? containers = null, string? applicationName = null)
-        {
-            var options = new CosmosClientOptions
-            {
-                ApplicationName = applicationName,
-                SerializerOptions = new CosmosSerializationOptions
-                {
-                    IgnoreNullValues = true,
-                    PropertyNamingPolicy = CosmosPropertyNamingPolicy.CamelCase
-                },
-            };
-
-            if (insecureDevelopmentMode)
-            {
-                options.ConnectionMode = ConnectionMode.Gateway;
-                options.HttpClientFactory = () =>
-                {
-                    HttpMessageHandler httpMessageHandler = new HttpClientHandler
-                    {
-                        ServerCertificateCustomValidationCallback = (req, cert, chain, errors) => true
-                    };
-                    return new HttpClient(httpMessageHandler);
-                };
-            }
-
-            if (containers == null)
-            {
-                return new CosmosClient(connectionString, options);
-            }
-
-            return await CosmosClient.CreateAndInitializeAsync(connectionString, containers, options);
+            return task.Result;
         }
     }
 }

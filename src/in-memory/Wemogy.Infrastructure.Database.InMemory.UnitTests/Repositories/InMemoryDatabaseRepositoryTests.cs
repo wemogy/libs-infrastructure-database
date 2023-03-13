@@ -9,7 +9,7 @@ namespace Wemogy.Infrastructure.Database.InMemory.UnitTests.Repositories;
 public class InMemoryDatabaseRepositoryTests : RepositoryTestBase
 {
     public InMemoryDatabaseRepositoryTests()
-        : base(InMemoryDatabaseRepositoryFactory.CreateInstance<IUserRepository>)
+        : base(InMemoryDatabaseRepositoryFactory.CreateInstance<IUserRepository>, InMemoryDatabaseRepositoryFactory.CreateInstance<IDataCenterRepository>)
     {
     }
 }

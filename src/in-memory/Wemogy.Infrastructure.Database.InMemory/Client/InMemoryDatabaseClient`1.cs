@@ -5,6 +5,7 @@ using System.Linq.Dynamic.Core;
 using System.Linq.Expressions;
 using System.Threading;
 using System.Threading.Tasks;
+using FastExpressionCompiler;
 using Wemogy.Core.Errors;
 using Wemogy.Core.Extensions;
 using Wemogy.Infrastructure.Database.Core.Abstractions;
@@ -64,10 +65,10 @@ namespace Wemogy.Infrastructure.Database.InMemory.Client
             Func<TEntity, Task> callback,
             CancellationToken cancellationToken)
         {
-            var predicate = generalFilterPredicate?.Compile() ?? (x => true);
+            var predicate = generalFilterPredicate?.CompileFast() ?? (x => true);
             var queryCondition = queryParameters.GetLambdaExpression<TEntity>();
 
-            var compiledQueryCondition = queryCondition.Compile();
+            var compiledQueryCondition = queryCondition.CompileFast();
             var predicate1 = predicate;
             predicate = x => predicate1(x) && compiledQueryCondition(x);
 
@@ -91,7 +92,7 @@ namespace Wemogy.Infrastructure.Database.InMemory.Client
             Func<TEntity, Task> callback,
             CancellationToken cancellationToken)
         {
-            var compiledPredicate = predicate.Compile();
+            var compiledPredicate = predicate.CompileFast();
             foreach (var entityPartition in EntityPartitions)
             {
                 foreach (var entity in entityPartition.Value.Where(compiledPredicate))
@@ -182,7 +183,7 @@ namespace Wemogy.Infrastructure.Database.InMemory.Client
 
         public Task DeleteAsync(Expression<Func<TEntity, bool>> predicate)
         {
-            var compiledPredicate = predicate.Compile();
+            var compiledPredicate = predicate.CompileFast();
             foreach (var entityPartition in EntityPartitions)
             {
                 var entities = entityPartition.Value.Where(compiledPredicate).ToList();

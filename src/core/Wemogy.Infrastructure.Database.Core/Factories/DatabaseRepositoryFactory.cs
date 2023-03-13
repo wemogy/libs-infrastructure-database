@@ -4,7 +4,6 @@ using Wemogy.Core.Extensions;
 using Wemogy.Infrastructure.Database.Core.Abstractions;
 using Wemogy.Infrastructure.Database.Core.Attributes;
 using Wemogy.Infrastructure.Database.Core.Delegates;
-using Wemogy.Infrastructure.Database.Core.Extensions;
 using Wemogy.Infrastructure.Database.Core.Models;
 using Wemogy.Infrastructure.Database.Core.Setup;
 
@@ -56,7 +55,7 @@ public partial class DatabaseRepositoryFactory
             typeMetadata.DatabaseRepositoryType.GetCustomAttribute<RepositoryOptionsAttribute>();
         var databaseRepositoryOptions = new DatabaseRepositoryOptions(
             repositoryOptionsAttribute?.CollectionName ?? $"{typeMetadata.EntityType.Name.ToLower()}s",
-            repositoryOptionsAttribute?.EnableSoftDelete ?? typeMetadata.EntityType.IsSoftDeletable());
+            repositoryOptionsAttribute?.EnableSoftDelete ?? false);
         return databaseRepositoryOptions;
     }
 }

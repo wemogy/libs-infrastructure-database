@@ -1,4 +1,6 @@
+using System.Collections.Generic;
 using System.Net.Http;
+using System.Threading.Tasks;
 using Microsoft.Azure.Cosmos;
 
 namespace Wemogy.Infrastructure.Database.Cosmos.Factories
@@ -16,11 +18,17 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Factories
         ///     Skips Certificate checks and uses ConnectionMode.Gateway to enable communication
         ///     with test databases like the CosmosDb Emulator
         /// </param>
+        /// <param name="containers">
+        ///     The list of pairs of Database and Container, which should identify which is/are the container/s your current application will commonly interact with during its lifetime.
+        ///     This could be all or a subset of the containers in your Cosmos DB account. Set this to improve Cosmos DB initialization performance.
+        /// </param>
+        /// <param name="applicationName">The name of application using Azure Monitor or Diagnostics Logs.</param>
         /// <returns>A CosmosClient instance</returns>
-        public static CosmosClient FromConnectionString(string connectionString, bool insecureDevelopmentMode = false)
+        public static CosmosClient FromConnectionString(string connectionString, bool insecureDevelopmentMode = false, List<(string, string)>? containers = null, string? applicationName = null)
         {
             var options = new CosmosClientOptions
             {
+                ApplicationName = applicationName,
                 SerializerOptions = new CosmosSerializationOptions
                 {
                     IgnoreNullValues = true,
@@ -41,9 +49,14 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Factories
                 };
             }
 
-            return new CosmosClient(
-                connectionString,
-                options);
+            if (containers == null)
+            {
+                return new CosmosClient(connectionString, options);
+            }
+
+            var task = Task.Run(() => CosmosClient.CreateAndInitializeAsync(connectionString, containers, options));
+
+            return task.Result;
         }
     }
 }

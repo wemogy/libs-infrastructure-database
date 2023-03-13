@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using Microsoft.Extensions.DependencyInjection;
 using Wemogy.Infrastructure.Database.Core.Setup;
 using Wemogy.Infrastructure.Database.Cosmos.Factories;
@@ -11,13 +12,15 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Setup
             string connectionString,
             string databaseName,
             bool insecureDevelopmentMode = false,
-            bool enableLogging = false)
+            bool enableLogging = false,
+            List<string>? containerNames = null)
         {
             var cosmosDatabaseClientFactory = new CosmosDatabaseClientFactory(
                 connectionString,
                 databaseName,
                 insecureDevelopmentMode,
-                enableLogging);
+                enableLogging,
+                containerNames);
 
             return serviceCollection
                 .AddDatabase(cosmosDatabaseClientFactory);

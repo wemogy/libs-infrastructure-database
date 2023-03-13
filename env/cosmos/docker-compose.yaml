@@ -21,6 +21,6 @@ services:
     network_mode: host
     image: robinmanuelthiel/cosmos-db-setup:2.0.0
     command:
-      - "{\"databaseName\": \"infrastructuredbtests\", \"containers\": [{\"name\": \"users\", \"partitionKey\": \"/tenantId\"}]}"
+      - "{\"databaseName\": \"infrastructuredbtests\", \"containers\": [{\"name\": \"users\", \"partitionKey\": \"/tenantId\"}, {\"name\": \"datacenters\", \"partitionKey\": \"/partitionKey\"}]}"
     depends_on:
       - cosmosdb

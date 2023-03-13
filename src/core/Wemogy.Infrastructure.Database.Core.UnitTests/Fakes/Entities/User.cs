@@ -45,7 +45,8 @@ public class User : EntityBase
                     f => f.Name.FirstName())
                 .RuleFor(
                     x => x.Lastname,
-                    f => f.Name.LastName());
+                    f => f.Name.LastName())
+                .RuleFor(x => x.IsDeleted, f => false);
         }
     }
 }

@@ -14,9 +14,9 @@ public class QueryParameters
     }
 
     public int? Take { get; set; }
-    public List<QueryFilter> Filters { get; set; } = new ();
+    public List<QueryFilter> Filters { get; set; } = new();
 
-    public List<QuerySorting> Sortings { get; set; } = new ();
+    public List<QuerySorting> Sortings { get; set; } = new();
 
     public bool ContainsFilters => Filters.Any();
 

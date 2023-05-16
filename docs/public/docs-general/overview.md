@@ -38,7 +38,7 @@ classDiagram
   InMemoryDatabaseClient --|> IDatabaseClient : implements
 
   class IDatabaseClient {
-     <<interface>>
+    <<interface>>
   }
 
   IDatabaseClient <.. DatabaseRepository: use

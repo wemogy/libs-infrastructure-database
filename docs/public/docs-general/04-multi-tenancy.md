@@ -9,7 +9,7 @@ The idea is that the migration takes place by prefixing all partition keys by an
 
 #### Secure by default
 
-Using this approach the repository implementation, which automatically prefix the `GetTenantId()` result of the `IDatabaseTenantProvider`, makes it **impossible to access the data** of another database tenant accidentally. 
+Using this approach the repository implementation, which automatically prefix the `GetTenantId()` result of the `IDatabaseTenantProvider`, makes it **impossible to access the data** of another database tenant accidentally.
 
 ## How to Use
 

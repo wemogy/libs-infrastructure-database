@@ -14,7 +14,6 @@ runs:
     - uses: actions/setup-dotnet@v1
       with:
         dotnet-version: 6.0.x
-        source-url: https://nuget.pkg.github.com/wemogy/index.json
     - name: Restore dependencies
       working-directory: src
       shell: bash

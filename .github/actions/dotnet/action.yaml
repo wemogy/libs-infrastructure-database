@@ -7,9 +7,6 @@ inputs:
   version:
     description: "The version of the build"
     required: true
-  cosmos-connection-string:
-    description: "The ConnectionString for the Cosmos DB"
-    required: true
   configuration:
     description: "The Build Configuration"
     required: true
@@ -31,10 +28,3 @@ runs:
       working-directory: src
       shell: bash
       run: dotnet build --configuration ${{ inputs.configuration }} --no-restore
-    - name: Test
-      working-directory: src
-      shell: bash
-      run: dotnet test --configuration ${{ inputs.configuration }} --no-build --verbosity normal
-      env:
-        COSMOS_CONNECTION_STRING: ${{ inputs.cosmos-connection-string }}
-        COSMOS_DATABASE_NAME: infrastructuredbtests

@@ -19,7 +19,7 @@ jobs:
     steps:
       - name: Get version for next release
         if: ${{ github.event.inputs.version == '' }}
-        uses: wemogy/next-version-action@2.0.2
+        uses: wemogy/next-version-action@2.0.3
         id: release-version
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
@@ -37,7 +37,7 @@ jobs:
         run: dotnet pack --configuration Release /p:VersionPrefix=${{ steps.release-version.outputs.next-version }}${{ github.event.inputs.version && 'pre' || '' }}
         working-directory: src
       - name: Publish Nuget package(s)
-        run: dotnet nuget push **/*.nupkg --skip-duplicate --source https://nuget.pkg.github.com/${{ github.repository_owner }} --api-key ${{ secrets.GITHUB_TOKEN }}
+        run: dotnet nuget push **/**/*.nupkg --skip-duplicate --source https://api.nuget.org/v3/index.json --api-key ${{ secrets.PUBLIC_NUGET_TOKEN }}
         working-directory: src
 
       # GitHub

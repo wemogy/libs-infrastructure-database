@@ -30,7 +30,6 @@ jobs:
       - name: Build .NET
         uses: ./.github/actions/dotnet
         with:
-          wemogy-packages-token: ${{ secrets.WEMOGY_PACKAGES_TOKEN }}
           version: ${{ steps.release-version.outputs.next-version }}${{ github.event.inputs.version && 'pre' || '' }}
           cosmos-connection-string: ${{ secrets.COSMOS_CONNECTION_STRING }}
       - name: Create Nuget package(s)

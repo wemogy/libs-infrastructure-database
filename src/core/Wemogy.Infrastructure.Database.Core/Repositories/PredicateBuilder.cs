@@ -20,7 +20,7 @@ public static class PredicateBuilder
 
         Expression body = Expression.AndAlso(
             a.Body,
-            visitor.Visit(b.Body) !);
+            visitor.Visit(b.Body)!);
         return Expression.Lambda<Func<T, bool>>(
             body,
             p);
@@ -40,7 +40,7 @@ public static class PredicateBuilder
 
         Expression body = Expression.OrElse(
             a.Body,
-            visitor.Visit(b.Body) !);
+            visitor.Visit(b.Body)!);
         return Expression.Lambda<Func<T, bool>>(
             body,
             p);

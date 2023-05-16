@@ -36,7 +36,7 @@ public partial class MultiTenantDatabaseRepository<TEntity> : IDatabaseRepositor
         _databaseRepository = databaseRepository;
         _databaseTenantProvider = databaseTenantProvider;
         SoftDelete = databaseRepository.SoftDelete;
-        _partitionKeyProperty = typeof(TEntity).GetPropertyByCustomAttribute<PartitionKeyAttribute>() !;
+        _partitionKeyProperty = typeof(TEntity).GetPropertyByCustomAttribute<PartitionKeyAttribute>()!;
         if (_partitionKeyProperty == null)
         {
             throw Error.Unexpected(
@@ -122,7 +122,7 @@ public partial class MultiTenantDatabaseRepository<TEntity> : IDatabaseRepositor
         // 4. Define the method to use
         var methodInfo = typeof(string).GetMethod(
             nameof(string.StartsWith),
-            new[] { typeof(string) }) !;
+            new[] { typeof(string) })!;
 
         // 5. Call the expression builder
         Expression call = Expression.Call(

@@ -48,7 +48,7 @@ namespace Wemogy.Infrastructure.Database.InMemory.Extensions
                     new[] { typeof(string) });
                 var guidToStringMethod = propertyType.GetMethod(
                     nameof(string.ToString),
-                    Type.EmptyTypes) !;
+                    Type.EmptyTypes)!;
                 propertyExpression = Expression.Call(
                     propertyExpression,
                     guidToStringMethod);
@@ -67,7 +67,7 @@ namespace Wemogy.Infrastructure.Database.InMemory.Extensions
                     new[] { typeof(string) });
                 var jValueToStringMethod = typeof(JValue).GetMethod(
                     nameof(string.ToString),
-                    Type.EmptyTypes) !;
+                    Type.EmptyTypes)!;
                 propertyExpression = Expression.Call(
                     propertyExpression,
                     jValueToStringMethod);
@@ -107,26 +107,26 @@ namespace Wemogy.Infrastructure.Database.InMemory.Extensions
 
             return myLambda;
 
-/*
-            var propertyName = querySorting.OrderBy.ToPascalCase();
+            /*
+                        var propertyName = querySorting.OrderBy.ToPascalCase();
 
-            // x =>
-            var param = Expression.Parameter(typeof(T), "x");
+                        // x =>
+                        var param = Expression.Parameter(typeof(T), "x");
 
-            // x.PropertyNameA.PropertyNameB
-            var prop = GetPropertyExpression(propertyName, param);
+                        // x.PropertyNameA.PropertyNameB
+                        var prop = GetPropertyExpression(propertyName, param);
 
-            var propertyType = ResolvePropertyType<T>(propertyName);
+                        var propertyType = ResolvePropertyType<T>(propertyName);
 
-            var searchAfterValue = JsonConvert.DeserializeObject(querySorting.SearchAfter, typeof(string));
+                        var searchAfterValue = JsonConvert.DeserializeObject(querySorting.SearchAfter, typeof(string));
 
-            Expression searchExpr = Expression.GreaterThanOrEqual(prop, Expression.Constant(searchAfterValue));
+                        Expression searchExpr = Expression.GreaterThanOrEqual(prop, Expression.Constant(searchAfterValue));
 
 
-            Expression<Func<T, bool>> myLambda =
-                Expression.Lambda<Func<T, bool>>(searchExpr, param);
+                        Expression<Func<T, bool>> myLambda =
+                            Expression.Lambda<Func<T, bool>>(searchExpr, param);
 
-            return myLambda;*/
+                        return myLambda;*/
         }
 
         public static Expression<Func<T, object>> GetOrderByExpression<T>(this QuerySorting querySorting)
@@ -474,7 +474,7 @@ namespace Wemogy.Infrastructure.Database.InMemory.Extensions
                     pathToTheComplexProperty,
                     parameterExpression);
                 var complexPropertyType =
-                    typeof(T).ResolvePropertyTypeOfPropertyPath(pathToTheComplexProperty) !; // will be a list for now
+                    typeof(T).ResolvePropertyTypeOfPropertyPath(pathToTheComplexProperty)!; // will be a list for now
                 var innerParameterExpressionType =
                     complexPropertyType.GenericTypeArguments.First(); // List<Version> ==> Version
 
@@ -493,7 +493,7 @@ namespace Wemogy.Infrastructure.Database.InMemory.Extensions
                     .GetMethod(nameof(GetQueryFilterExpression))?.MakeGenericMethod(innerParameterExpressionType)
                     .Invoke(
                         null,
-                        new object[] { innerQueryFilter, innerParameterExpression }) !;
+                        new object[] { innerQueryFilter, innerParameterExpression })!;
 
                 Expression predicateExpression = Expression.Lambda(
                     innerExpression,

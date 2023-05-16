@@ -5,7 +5,7 @@ namespace Wemogy.Infrastructure.Database.Core.Repositories;
 
 internal class SubstExpressionVisitor : ExpressionVisitor
 {
-    internal Dictionary<Expression, Expression> Subst { get; } = new ();
+    internal Dictionary<Expression, Expression> Subst { get; } = new();
 
     protected override Expression VisitParameter(ParameterExpression node)
     {

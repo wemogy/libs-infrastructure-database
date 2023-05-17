@@ -25,7 +25,7 @@ Install the [NuGet package](https://www.nuget.org/packages/Wemogy.Infrastructure
 Wemogy.Infrastructure.Database.InMemory
 ```
 
-Checkout th [Documentation](https://libs-core.docs.wemogy.com/) to get information about the available classes and extensions.
+Checkout the [Documentation](https://libs-core.docs.wemogy.com/) to get information about the available classes and extensions.
 
 ## Testing
 

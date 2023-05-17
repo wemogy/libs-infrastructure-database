@@ -1,6 +1,6 @@
 # ![wemogy logo](https://wemogyimages.blob.core.windows.net/logos/wemogy-github-tiny.png) Infrastructure Database Layer
 
-Abstraction Layer for multiple Databse Technologies.
+Abstraction Layer for multiple Database Technologies.
 
 Currently Supported:
 

@@ -79,3 +79,48 @@ public interface IUserRepository : IDatabaseRepository<User>
 {
 }
 ```
+
+## Initializing a Repository
+
+### DatabaseRepositoryFactory
+
+```csharp
+// create database client factory
+IDatabaseClientFactory databaseClientFactory = new CosmosDatabaseClientFactory("CONNECTION_STRING_HERE", "DATABASE_NAME");
+
+// create database repository factory
+var databaseRepositoryFactory = new DatabaseRepositoryFactory(databaseClientFactory);
+
+// initialize a repository instance
+var repository = databaseRepositoryFactory.CreateInstance<IUserRepository>();
+```
+
+#### Shortcuts
+
+##### CosmosDB repository factory
+
+```csharp
+var repository = CosmosDatabaseRepositoryFactory.CreateInstance<IUserRepository>(
+                "CONNECTION_STRING_HERE",
+                "DATABASE_NAME",
+                true);
+```
+
+##### InMemory repository factory
+
+```csharp
+var repository = InMemoryDatabaseRepositoryFactory.CreateInstance<IUserRepository>();
+```
+
+### Dependency Injection
+
+```csharp
+// create database client factory
+IDatabaseClientFactory databaseClientFactory = new CosmosDatabaseClientFactory("CONNECTION_STRING_HERE", "DATABASE_NAME");
+
+// add repository instance to DI
+services
+  .AddDatabase(databaseClientFactory)
+  .AddRepository<IUserRepository>()
+  .AddRepository<ITenantRepository>();
+```

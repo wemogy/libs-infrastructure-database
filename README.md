@@ -6,26 +6,64 @@ Currently Supported:
 
 - Local In Memory Database
 - Azure Cosmos DB
+- MongoDB (coming soon...)
 
 ## Getting started
 
 ### Local In Memory Database
 
-Install the [NuGet package](https://www.nuget.org/packages/Wemogy.Infrastructure.Database.Cosmos) into your project.
+Install the [NuGet package](https://www.nuget.org/packages/Wemogy.Infrastructure.Database.InMemory) into your project.
 
 ```bash
-Wemogy.Infrastructure.Database.Cosmos
+dontet add package Wemogy.Infrastructure.Database.Cosmos
+```
+
+Initialize the Database Client Factory centrally.
+
+```csharp
+var databaseClientFactory = new InMemoryDatabaseClientFactory();
 ```
 
 ### Azure Cosmos DB
 
-Install the [NuGet package](https://www.nuget.org/packages/Wemogy.Infrastructure.Database.InMemory) into your project.
+Install the [NuGet package](https://www.nuget.org/packages/Wemogy.Infrastructure.Database.Cosmos) into your project.
 
 ```bash
-Wemogy.Infrastructure.Database.InMemory
+dontet add package Wemogy.Infrastructure.Database.InMemory
 ```
 
-Checkout the [Documentation](http://libs-infrastructure-database.docs.wemogy.com/) to get information about the available classes and extensions.
+Initialize the Database Client Factory centrally.
+
+```csharp
+var databaseClientFactory = new CosmosDatabaseClientFactory("<CONNECTION_STRING>", "bar");
+```
+
+## Define and register Repositories
+
+Each repository needs to implement the `IDatabaseRepository<T>` interface.
+
+```csharp
+public interface IFooRepository : IDatabaseRepository<Foo>
+{
+}
+```
+
+Register the Database Client Factory and the Repositories centrally at the Dependency Injection Container (for example in `Startup.cs`).
+
+```csharp
+var databaseClientFactory = new // ...
+
+services
+    .AddDatabase(databaseClientFactory)
+    .AddRepository<IFooRepository>()
+    .AddRepository<IBarRepository>();
+```
+
+---
+
+Checkout the full [Documentation](http://libs-infrastructure-database.docs.wemogy.com/) to get information about the available classes and extensions.
+
+
 
 ## Testing
 

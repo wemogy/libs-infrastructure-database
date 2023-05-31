@@ -72,12 +72,21 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Client
 
         public Task IterateAsync(
             Expression<Func<TEntity, bool>> predicate,
+            PaginationParameters? paginationParameters,
             Func<TEntity, Task> callback,
             CancellationToken cancellationToken = default)
         {
-            var feedIterator = _container.GetItemLinqQueryable<TEntity>()
-                .Where(predicate)
-                .ToFeedIterator();
+            var queryable = _container.GetItemLinqQueryable<TEntity>()
+                .Where(predicate);
+
+            if (paginationParameters != null)
+            {
+                queryable = queryable
+                    .Skip(paginationParameters.Skip)
+                    .Take(paginationParameters.Take);
+            }
+
+            var feedIterator = queryable.ToFeedIterator();
 
             return feedIterator.IterateAsync(
                 callback,
@@ -149,6 +158,7 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Client
         {
             return IterateAsync(
                 predicate,
+                null,
                 async entity =>
                 {
                     var id = ResolveIdValue(entity);

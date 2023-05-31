@@ -10,8 +10,21 @@ namespace Wemogy.Infrastructure.Database.Core.Repositories;
 public partial class DatabaseRepository<TEntity>
     where TEntity : class, IEntityBase
 {
+    public Task IterateAsync(
+        Expression<Func<TEntity, bool>> predicate,
+        Func<TEntity, Task> callback,
+        CancellationToken cancellationToken = default)
+    {
+        return IterateAsync(
+            predicate,
+            null,
+            callback,
+            cancellationToken);
+    }
+
     public async Task IterateAsync(
         Expression<Func<TEntity, bool>> predicate,
+        PaginationParameters? paginationParameters,
         Func<TEntity, Task> callback,
         CancellationToken cancellationToken = default)
     {
@@ -27,6 +40,7 @@ public partial class DatabaseRepository<TEntity>
 
         await _database.IterateAsync(
             predicate,
+            paginationParameters,
             callback,
             cancellationToken);
     }
@@ -59,6 +73,20 @@ public partial class DatabaseRepository<TEntity>
     {
         return IterateAsync(
             predicate,
+            null,
+            callback,
+            cancellationToken);
+    }
+
+    public Task IterateAsync(
+        Expression<Func<TEntity, bool>> predicate,
+        PaginationParameters? paginationParameters,
+        Action<TEntity> callback,
+        CancellationToken cancellationToken = default)
+    {
+        return IterateAsync(
+            predicate,
+            paginationParameters,
             entity =>
             {
                 callback(entity);

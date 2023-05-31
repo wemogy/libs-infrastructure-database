@@ -45,9 +45,9 @@ jobs:
         with:
           node-version: "16.x"
       - run: yarn install
-        working-directory: docs
+        working-directory: docs/public
       - run: yarn build
-        working-directory: docs
+        working-directory: docs/public
       - run: |
           git config --global user.name $GITHUB_ACTOR
           git config --global user.email $GITHUB_ACTOR@users.noreply.github.com

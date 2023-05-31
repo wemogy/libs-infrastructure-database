@@ -18,7 +18,7 @@ Using this approach the repository implementation, which automatically prefix th
 ```csharp title='Example for IDatabaseTenantProvider'
 using System;
 using SpaceBlocks.Libs.Core.Context.Abstractions;
-using Wemogy.Infrastructure.Database.Core.Plugins.ComposedPrimaryKey.Abstractions;
+using Wemogy.Infrastructure.Database.Core.Plugins.MultiTenantDatabase.Abstractions;
 
 namespace Wemogy.Subscriptions.Webservices.Main.Core
 {
@@ -27,7 +27,6 @@ namespace Wemogy.Subscriptions.Webservices.Main.Core
         public string GetTenantId() => "apple_production";
     }
 }
-
 ```
 
 2. Adapt your DI container to use the provider above (unit-test example):

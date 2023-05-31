@@ -1,6 +1,8 @@
+using System;
 using System.Threading.Tasks;
 using FluentAssertions;
 using Wemogy.Infrastructure.Database.Core.UnitTests.Fakes.Entities;
+using Wemogy.Infrastructure.Database.Core.ValueObjects;
 using Xunit;
 
 namespace Wemogy.Infrastructure.Database.Core.UnitTests.Repositories;
@@ -64,5 +66,44 @@ public partial class RepositoryTestBase
 
         // Assert
         count.Should().Be(1);
+    }
+
+    [Fact]
+    public async Task IterateAsync_ShouldSupportPagination()
+    {
+        // Arrange
+        var take = 5;
+        var tenantId = Guid.NewGuid().ToString();
+        await ResetAsync();
+        for (int i = 0; i < 20; i++)
+        {
+            var user = User.Faker.Generate();
+            user.TenantId = tenantId;
+            await MicrosoftUserRepository.CreateAsync(user);
+        }
+
+        var firstDocumentsCount = 0;
+        var lastDocumentsCount = 0;
+
+        // Act
+        await MicrosoftUserRepository.IterateAsync(
+            x => x.TenantId == tenantId,
+            new PaginationParameters(0, take),
+            x =>
+        {
+            firstDocumentsCount++;
+        });
+
+        await MicrosoftUserRepository.IterateAsync(
+            x => x.TenantId == tenantId,
+            new PaginationParameters(18, take),
+            x =>
+            {
+                lastDocumentsCount++;
+            });
+
+        // Assert
+        firstDocumentsCount.Should().Be(take);
+        lastDocumentsCount.Should().Be(2);
     }
 }

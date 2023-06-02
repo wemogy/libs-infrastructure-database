@@ -183,7 +183,7 @@ namespace Wemogy.Infrastructure.Database.Mongo.Client
         private FilterDefinition<TEntity> GetEntityFilterDefinition(string id, string partitionKey)
         {
             return Builders<TEntity>.Filter.Eq(_idProperty, id) &
-                         Builders<TEntity>.Filter.Eq(_partitionKeyProperty, partitionKey);
+                        Builders<TEntity>.Filter.Eq(_partitionKeyProperty, partitionKey);
         }
 
         private FilterDefinition<TEntity> GetEntityFilterDefinition(TEntity entity)

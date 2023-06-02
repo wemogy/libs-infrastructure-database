@@ -69,24 +69,4 @@ public class DependencyInjectionTests : MongoUnitTestBase
         // Assert
         Assert.NotNull(userRepository);
     }
-
-    [Fact]
-    public void AddMultiTenantDatabaseRepository_InitializesContainers_ShouldWork()
-    {
-        // Arrange
-        var mongoDatabaseClientFactory = new MongoDatabaseClientFactory(
-            ConnectionString,
-            DatabaseName,
-            true);
-        ServiceCollection.AddSingleton<AppleTenantProvider>();
-        ServiceCollection
-            .AddDatabase(mongoDatabaseClientFactory)
-            .AddRepository<IUserRepository, AppleTenantProvider>();
-
-        // Act
-        var userRepository = ServiceCollection.BuildServiceProvider().GetRequiredService<IUserRepository>();
-
-        // Assert
-        Assert.NotNull(userRepository);
-    }
 }

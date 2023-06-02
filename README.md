@@ -40,6 +40,20 @@ var databaseClientFactory = new CosmosDatabaseClientFactory("<CONNECTION_STRING>
 
 ## Define and register Repositories
 
+If your Models are stored in a differen class library, install the Core [NuGet package](https://www.nuget.org/packages/Wemogy.Infrastructure.Database.Core) into your project.
+
+```bash
+dontet add package Wemogy.Infrastructure.Database.Core
+```
+
+Define a class that you want to store in a database vie the Repository, and let it inherit from `EntityBase`.
+
+```csharp
+public class Foo : EntityBase
+{
+}
+```
+
 Each repository needs to implement the `IDatabaseRepository<T>` interface.
 
 ```csharp

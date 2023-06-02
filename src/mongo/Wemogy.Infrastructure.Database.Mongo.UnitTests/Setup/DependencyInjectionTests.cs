@@ -1,4 +1,7 @@
+using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
+using Wemogy.Core.Errors.Exceptions;
+using Wemogy.Infrastructure.Database.Core.Constants;
 using Wemogy.Infrastructure.Database.Core.Setup;
 using Wemogy.Infrastructure.Database.Core.UnitTests.DatabaseRepositories;
 using Wemogy.Infrastructure.Database.Core.UnitTests.Providers;
@@ -29,22 +32,24 @@ public class DependencyInjectionTests : MongoUnitTestBase
     }
 
     [Fact]
-    public void AddMultiTenantDatabaseRepository_ShouldWork()
+    public void AddMultiTenantDatabaseRepository_ShouldThrow()
     {
         // Arrange
         var mongoDatabaseClientFactory = new MongoDatabaseClientFactory(
             ConnectionString,
             DatabaseName);
         ServiceCollection.AddSingleton<AppleTenantProvider>();
-        ServiceCollection
-            .AddDatabase(mongoDatabaseClientFactory)
-            .AddRepository<IUserRepository, AppleTenantProvider>();
 
         // Act
-        var userRepository = ServiceCollection.BuildServiceProvider().GetRequiredService<IUserRepository>();
+        var exception = Record.Exception(
+            () => ServiceCollection
+                .AddDatabase(mongoDatabaseClientFactory)
+                .AddRepository<IUserRepository, AppleTenantProvider>());
 
         // Assert
-        Assert.NotNull(userRepository);
+        exception
+            .Should().BeOfType<UnexpectedErrorException>()
+            .Which.Code.Should().Be(ErrorCodes.MultiTenantDatabaseNotSupported);
     }
 
     [Fact]

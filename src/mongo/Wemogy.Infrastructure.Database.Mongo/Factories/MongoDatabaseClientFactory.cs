@@ -49,5 +49,7 @@ namespace Wemogy.Infrastructure.Database.Mongo.Factories
                 options,
                 _logger);
         }
+
+        public bool IsMultiTenantDatabaseSupported => false;
     }
 }

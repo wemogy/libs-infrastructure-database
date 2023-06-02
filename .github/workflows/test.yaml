@@ -13,6 +13,9 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
+      - name: Start containers
+        run: docker-compose -f env/mongo/docker-compose.yaml up -d
+
       # .NET Tests
       - name: Build .NET
         uses: ./.github/actions/dotnet
@@ -26,6 +29,12 @@ jobs:
         env:
           COSMOS_CONNECTION_STRING: ${{ secrets.COSMOS_CONNECTION_STRING }}
           COSMOS_DATABASE_NAME: infrastructuredbtests
+
+      - name: Stop containers
+        # the containers should be stopped regardless of
+        # the test result
+        if: always()
+        run: docker-compose -f env/mongo/docker-compose.yaml down
 
       - name: Code Coverage Summary Report
         uses: irongut/CodeCoverageSummary@v1.0.2

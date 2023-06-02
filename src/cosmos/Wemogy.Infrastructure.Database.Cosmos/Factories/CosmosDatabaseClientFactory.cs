@@ -53,5 +53,7 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Factories
                 options,
                 _logger);
         }
+
+        public bool IsMultiTenantDatabaseSupported => true;
     }
 }

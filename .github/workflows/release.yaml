@@ -45,14 +45,14 @@ jobs:
         with:
           node-version: "16.x"
       - run: yarn install
-        working-directory: docs
+        working-directory: docs/public
       - run: yarn build
-        working-directory: docs
+        working-directory: docs/public
       - run: |
           git config --global user.name $GITHUB_ACTOR
           git config --global user.email $GITHUB_ACTOR@users.noreply.github.com
           yarn deploy --skip-build
-        working-directory: docs
+        working-directory: docs/public
         env:
           GIT_USER: $GITHUB_ACTOR
           GIT_PASS: ${{ secrets.GITHUB_TOKEN }}

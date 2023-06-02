@@ -14,6 +14,8 @@ public partial class DatabaseRepositoryFactory
     private readonly IDatabaseClientFactory _databaseClientFactory;
     private readonly DatabaseRepositoryFactoryFactory _repositoryFactoryFactory;
 
+    public bool IsMultiTenantDatabaseSupported => _databaseClientFactory.IsMultiTenantDatabaseSupported;
+
     public DatabaseRepositoryFactory(IDatabaseClientFactory databaseClientFactory)
     {
         _databaseClientFactory = databaseClientFactory;

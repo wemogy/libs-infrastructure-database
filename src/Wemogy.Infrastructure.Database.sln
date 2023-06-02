@@ -21,6 +21,12 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Wemogy.Infrastructure.Datab
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Wemogy.Infrastructure.Database.InMemory.UnitTests", "in-memory\Wemogy.Infrastructure.Database.InMemory.UnitTests\Wemogy.Infrastructure.Database.InMemory.UnitTests.csproj", "{61AB84FA-D4F6-4B78-8E82-6749A3EC9C1C}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "mongo", "mongo", "{60C0C4FB-9717-473E-B2C6-D6FCF373EE50}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Wemogy.Infrastructure.Database.Mongo", "mongo\Wemogy.Infrastructure.Database.Mongo\Wemogy.Infrastructure.Database.Mongo.csproj", "{73C3C85F-E314-44CB-8E7D-4FDAAE541CDE}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Wemogy.Infrastructure.Database.Mongo.UnitTests", "mongo\Wemogy.Infrastructure.Database.Mongo.UnitTests\Wemogy.Infrastructure.Database.Mongo.UnitTests.csproj", "{19A4107F-EB40-4209-A3A0-57943FBE9843}"
+EndProject
 Global
   GlobalSection(SolutionConfigurationPlatforms) = preSolution
     Debug|Any CPU = Debug|Any CPU
@@ -106,6 +112,30 @@ Global
     {61AB84FA-D4F6-4B78-8E82-6749A3EC9C1C}.Release|x64.Build.0 = Release|Any CPU
     {61AB84FA-D4F6-4B78-8E82-6749A3EC9C1C}.Release|x86.ActiveCfg = Release|Any CPU
     {61AB84FA-D4F6-4B78-8E82-6749A3EC9C1C}.Release|x86.Build.0 = Release|Any CPU
+    {73C3C85F-E314-44CB-8E7D-4FDAAE541CDE}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+    {73C3C85F-E314-44CB-8E7D-4FDAAE541CDE}.Debug|Any CPU.Build.0 = Debug|Any CPU
+    {73C3C85F-E314-44CB-8E7D-4FDAAE541CDE}.Debug|x64.ActiveCfg = Debug|Any CPU
+    {73C3C85F-E314-44CB-8E7D-4FDAAE541CDE}.Debug|x64.Build.0 = Debug|Any CPU
+    {73C3C85F-E314-44CB-8E7D-4FDAAE541CDE}.Debug|x86.ActiveCfg = Debug|Any CPU
+    {73C3C85F-E314-44CB-8E7D-4FDAAE541CDE}.Debug|x86.Build.0 = Debug|Any CPU
+    {73C3C85F-E314-44CB-8E7D-4FDAAE541CDE}.Release|Any CPU.ActiveCfg = Release|Any CPU
+    {73C3C85F-E314-44CB-8E7D-4FDAAE541CDE}.Release|Any CPU.Build.0 = Release|Any CPU
+    {73C3C85F-E314-44CB-8E7D-4FDAAE541CDE}.Release|x64.ActiveCfg = Release|Any CPU
+    {73C3C85F-E314-44CB-8E7D-4FDAAE541CDE}.Release|x64.Build.0 = Release|Any CPU
+    {73C3C85F-E314-44CB-8E7D-4FDAAE541CDE}.Release|x86.ActiveCfg = Release|Any CPU
+    {73C3C85F-E314-44CB-8E7D-4FDAAE541CDE}.Release|x86.Build.0 = Release|Any CPU
+    {19A4107F-EB40-4209-A3A0-57943FBE9843}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+    {19A4107F-EB40-4209-A3A0-57943FBE9843}.Debug|Any CPU.Build.0 = Debug|Any CPU
+    {19A4107F-EB40-4209-A3A0-57943FBE9843}.Debug|x64.ActiveCfg = Debug|Any CPU
+    {19A4107F-EB40-4209-A3A0-57943FBE9843}.Debug|x64.Build.0 = Debug|Any CPU
+    {19A4107F-EB40-4209-A3A0-57943FBE9843}.Debug|x86.ActiveCfg = Debug|Any CPU
+    {19A4107F-EB40-4209-A3A0-57943FBE9843}.Debug|x86.Build.0 = Debug|Any CPU
+    {19A4107F-EB40-4209-A3A0-57943FBE9843}.Release|Any CPU.ActiveCfg = Release|Any CPU
+    {19A4107F-EB40-4209-A3A0-57943FBE9843}.Release|Any CPU.Build.0 = Release|Any CPU
+    {19A4107F-EB40-4209-A3A0-57943FBE9843}.Release|x64.ActiveCfg = Release|Any CPU
+    {19A4107F-EB40-4209-A3A0-57943FBE9843}.Release|x64.Build.0 = Release|Any CPU
+    {19A4107F-EB40-4209-A3A0-57943FBE9843}.Release|x86.ActiveCfg = Release|Any CPU
+    {19A4107F-EB40-4209-A3A0-57943FBE9843}.Release|x86.Build.0 = Release|Any CPU
   EndGlobalSection
   GlobalSection(NestedProjects) = preSolution
     {E891674B-721B-4F97-A1CB-2C76F4C542C6} = {0722D2A7-76C6-430F-A238-56685022F264}
@@ -114,5 +144,7 @@ Global
     {C157F2D0-138A-4D4C-AC2A-474500AD73EA} = {6398B935-DFD3-4487-8C59-E23EFC9A4FFE}
     {EE223BF5-26EB-4522-847E-09AC2A87DF98} = {4BEAB657-4568-4391-B0A0-E745F0DAF77C}
     {61AB84FA-D4F6-4B78-8E82-6749A3EC9C1C} = {4BEAB657-4568-4391-B0A0-E745F0DAF77C}
+    {73C3C85F-E314-44CB-8E7D-4FDAAE541CDE} = {60C0C4FB-9717-473E-B2C6-D6FCF373EE50}
+    {19A4107F-EB40-4209-A3A0-57943FBE9843} = {60C0C4FB-9717-473E-B2C6-D6FCF373EE50}
   EndGlobalSection
 EndGlobal

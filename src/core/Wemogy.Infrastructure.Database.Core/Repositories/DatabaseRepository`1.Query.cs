@@ -11,8 +11,19 @@ namespace Wemogy.Infrastructure.Database.Core.Repositories;
 public partial class DatabaseRepository<TEntity>
     where TEntity : class, IEntityBase
 {
+    public Task<List<TEntity>> QueryAsync(
+        Expression<Func<TEntity, bool>> predicate,
+        CancellationToken cancellationToken = default)
+    {
+        return QueryAsync(
+            predicate,
+            null,
+            cancellationToken);
+    }
+
     public async Task<List<TEntity>> QueryAsync(
         Expression<Func<TEntity, bool>> predicate,
+        PaginationParameters? paginationParameters,
         CancellationToken cancellationToken = default)
     {
         var entities = new List<TEntity>();

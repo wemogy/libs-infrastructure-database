@@ -3,6 +3,7 @@ using Bogus;
 using Wemogy.Core.Extensions;
 using Wemogy.Infrastructure.Database.Core.Abstractions;
 using Wemogy.Infrastructure.Database.Core.Attributes;
+using Wemogy.Infrastructure.Database.Core.UnitTests.Extensions;
 
 namespace Wemogy.Infrastructure.Database.Core.UnitTests.Fakes.Entities;
 
@@ -33,10 +34,10 @@ public class User : EntityBase
             return new Faker<User>()
                 .RuleFor(
                     x => x.CreatedAt,
-                    f => f.Date.Past().Clone())
+                    f => f.Date.PastDate().Clone())
                 .RuleFor(
                     x => x.UpdatedAt,
-                    f => f.Date.Past().Clone())
+                    f => f.Date.PastDate().Clone())
                 .RuleFor(
                     x => x.TenantId,
                     f => f.Random.Guid().ToString())

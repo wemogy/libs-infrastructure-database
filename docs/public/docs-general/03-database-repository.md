@@ -36,4 +36,3 @@ The `ReplaceAsync` method can be used to replace an existing entity in the datab
 ## UpdateAsync
 
 The `UpdateAsync` method can be used to update an existing entity in the database, through a given operation.
-

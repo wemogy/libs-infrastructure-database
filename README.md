@@ -86,5 +86,13 @@ Checkout the full [Documentation](http://libs-infrastructure-database.docs.wemog
 #### Initialize & start the cosmos DB emulator
 
 ```bash
-docker-compose -f env/cosmos/docker-compose.yaml up
+docker compose -f env/cosmos/docker-compose.yaml up
+```
+
+### MongoDB
+
+#### Initialize & start the MongoDB emulator
+
+```bash
+docker compose -f env/mongo/docker-compose.yaml up
 ```

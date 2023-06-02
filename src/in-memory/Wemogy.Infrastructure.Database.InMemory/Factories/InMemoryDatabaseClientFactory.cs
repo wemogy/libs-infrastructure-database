@@ -11,5 +11,7 @@ namespace Wemogy.Infrastructure.Database.InMemory.Factories
         {
             return new InMemoryDatabaseClient<TEntity>();
         }
+
+        public bool IsMultiTenantDatabaseSupported => true;
     }
 }

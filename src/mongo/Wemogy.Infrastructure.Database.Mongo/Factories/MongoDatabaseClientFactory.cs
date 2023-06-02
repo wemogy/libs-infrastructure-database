@@ -24,7 +24,6 @@ namespace Wemogy.Infrastructure.Database.Mongo.Factories
             var pack = new ConventionPack { new CamelCaseElementNameConvention() };
             ConventionRegistry.Register(nameof(CamelCaseElementNameConvention), pack, x => true);
 
-
             _mongoClient = new MongoClient(connectionString);
 
             if (enableLogging)

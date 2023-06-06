@@ -5,10 +5,10 @@
   </PropertyGroup>
 
   <PropertyGroup>
-    <PackageId>Wemogy.Infrastructure.Database.InMemory</PackageId>
+    <PackageId>Wemogy.Infrastructure.Database.Mongo</PackageId>
     <Authors>wemogy GmbH</Authors>
     <Company>wemogy GmbH</Company>
-    <PackageDescription>In-Memory Database client</PackageDescription>
+    <PackageDescription>Mongo Database client</PackageDescription>
     <PackageTags>wemogy</PackageTags>
     <RepositoryUrl>https://github.com/wemogy/libs-infrastructure-database</RepositoryUrl>
   </PropertyGroup>

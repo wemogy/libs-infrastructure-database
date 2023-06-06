@@ -95,17 +95,27 @@ namespace Wemogy.Infrastructure.Database.InMemory.Client
             CancellationToken cancellationToken)
         {
             var compiledPredicate = predicate.CompileFast();
+            var skipped = 0;
+            var taken = 0;
+
             foreach (var entityPartition in EntityPartitions)
             {
                 var queryable = entityPartition.Value.Where(compiledPredicate);
-                if (paginationParameters != null)
-                {
-                    queryable = queryable.Skip(paginationParameters.Skip).Take(paginationParameters.Take);
-                }
 
-                foreach (var entity in queryable)
+                var entities = queryable.ToList();
+                foreach (var entity in entities)
                 {
+                    if (paginationParameters != null && paginationParameters.Skip > skipped++)
+                    {
+                        continue;
+                    }
+
                     await callback(entity.Clone());
+
+                    if (paginationParameters != null && paginationParameters.Take <= ++taken)
+                    {
+                        return;
+                    }
                 }
             }
         }

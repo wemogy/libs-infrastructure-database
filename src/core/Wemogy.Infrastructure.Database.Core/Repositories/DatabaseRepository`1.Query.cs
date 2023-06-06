@@ -30,6 +30,7 @@ public partial class DatabaseRepository<TEntity>
 
         await IterateAsync(
             predicate,
+            paginationParameters,
             entities.Add,
             cancellationToken);
 

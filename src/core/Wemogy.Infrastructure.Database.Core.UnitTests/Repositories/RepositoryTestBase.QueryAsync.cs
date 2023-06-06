@@ -63,4 +63,50 @@ public partial class RepositoryTestBase
         // Assert
         queriedUser.Should().HaveCount(queryParameters.Take.Value);
     }
+
+    [Fact]
+    public async Task QueryAsync_LambdaShouldRespectTakeCount()
+    {
+        // Arrange
+        var paginationParameters = new PaginationParameters(
+            0,
+            5);
+        await ResetAsync();
+        var users = User.Faker.Generate(10);
+        foreach (var user in users)
+        {
+            await MicrosoftUserRepository.CreateAsync(user);
+        }
+
+        // Act
+        var queriedUser = await MicrosoftUserRepository.QueryAsync(
+            x => true,
+            paginationParameters);
+
+        // Assert
+        queriedUser.Should().HaveCount(paginationParameters.Take);
+    }
+
+    [Fact]
+    public async Task QueryAsync_LambdaShouldRespectSkipCount()
+    {
+        // Arrange
+        var paginationParameters = new PaginationParameters(
+            2,
+            10);
+        await ResetAsync();
+        var users = User.Faker.Generate(10);
+        foreach (var user in users)
+        {
+            await MicrosoftUserRepository.CreateAsync(user);
+        }
+
+        // Act
+        var queriedUser = await MicrosoftUserRepository.QueryAsync(
+            x => true,
+            paginationParameters);
+
+        // Assert
+        queriedUser.Should().HaveCount(users.Count - paginationParameters.Skip);
+    }
 }

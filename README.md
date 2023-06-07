@@ -6,7 +6,7 @@ Currently Supported:
 
 - Local In Memory Database
 - Azure Cosmos DB
-- MongoDB (coming soon...)
+- MongoDB
 
 ## Getting started
 
@@ -35,7 +35,21 @@ dontet add package Wemogy.Infrastructure.Database.InMemory
 Initialize the Database Client Factory centrally.
 
 ```csharp
-var databaseClientFactory = new CosmosDatabaseClientFactory("<CONNECTION_STRING>", "bar");
+var databaseClientFactory = new CosmosDatabaseClientFactory("<CONNECTION_STRING>", "<DATABASE_NAME>");
+```
+
+### MongoDB
+
+Install the [NuGet package](https://www.nuget.org/packages/Wemogy.Infrastructure.Database.Mongo) into your project.
+
+```bash
+dontet add package Wemogy.Infrastructure.Database.Mongo
+```
+
+Initialize the Database Client Factory centrally.
+
+```csharp
+var databaseClientFactory = new MongoDatabaseClientFactory("<CONNECTION_STRING>", "<DATABASE_NAME>");
 ```
 
 ## Define and register Repositories

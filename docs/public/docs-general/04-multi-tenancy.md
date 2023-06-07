@@ -1,9 +1,15 @@
 # Multi-Tenancy
 
 ## Motivation
+
 For the use-case that you need to support the same primary key values on the same database (for example when different cloned environments are migrated on the same database), the concept of multi-tenancy is used.
 
 The idea is that the migration takes place by prefixing all partition keys by an environment/tenant-related value. The prefix is injected when querying/persisting and is filtered out of the results.
+
+Multi-Tenancy is currently supported for the following database clients:
+
+- Local In Memory Database
+- Azure Cosmos DB
 
 ### Advantages
 

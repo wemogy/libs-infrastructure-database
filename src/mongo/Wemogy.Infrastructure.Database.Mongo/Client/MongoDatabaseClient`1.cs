@@ -123,6 +123,13 @@ namespace Wemogy.Infrastructure.Database.Mongo.Client
             }
         }
 
+        public Task<long> CountAsync(Expression<Func<TEntity, bool>> predicate, CancellationToken cancellationToken)
+        {
+            return _collection.CountDocumentsAsync(
+                predicate,
+                cancellationToken: cancellationToken);
+        }
+
         public async Task<TEntity> CreateAsync(TEntity entity)
         {
             try

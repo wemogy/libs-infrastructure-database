@@ -120,6 +120,21 @@ namespace Wemogy.Infrastructure.Database.InMemory.Client
             }
         }
 
+        public Task<long> CountAsync(Expression<Func<TEntity, bool>> predicate, CancellationToken cancellationToken)
+        {
+            var totalCount = 0L;
+            var compiledPredicate = predicate.CompileFast();
+
+            foreach (var entityPartition in EntityPartitions)
+            {
+                var count = entityPartition.Value.Count(compiledPredicate);
+
+                totalCount += count;
+            }
+
+            return Task.FromResult(totalCount);
+        }
+
         public Task<TEntity> CreateAsync(TEntity entity)
         {
             var id = ResolveIdValue(entity);

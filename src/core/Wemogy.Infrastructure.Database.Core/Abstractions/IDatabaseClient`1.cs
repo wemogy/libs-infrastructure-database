@@ -27,6 +27,13 @@ public interface IDatabaseClient<TEntity> : IDatabaseClient
         CancellationToken cancellationToken);
 
     /// <summary>
+    ///     Counts all items which matches the predicate.
+    /// </summary>
+    Task<long> CountAsync(
+        Expression<Func<TEntity, bool>> predicate,
+        CancellationToken cancellationToken);
+
+    /// <summary>
     ///     Creates a new entity.
     /// </summary>
     Task<TEntity> CreateAsync(TEntity entity);

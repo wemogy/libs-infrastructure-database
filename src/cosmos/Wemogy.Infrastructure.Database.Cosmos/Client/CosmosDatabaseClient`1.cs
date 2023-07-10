@@ -93,6 +93,17 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Client
                 cancellationToken);
         }
 
+        public async Task<long> CountAsync(Expression<Func<TEntity, bool>> predicate, CancellationToken cancellationToken)
+        {
+            var queryable = _container.GetItemLinqQueryable<TEntity>()
+                .Where(predicate);
+
+            var response = await queryable
+                .CountAsync(cancellationToken);
+
+            return response.Resource;
+        }
+
         public async Task<TEntity> CreateAsync(TEntity entity)
         {
             var partitionKey = ResolvePartitionKey(entity);

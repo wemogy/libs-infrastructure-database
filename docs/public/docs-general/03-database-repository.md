@@ -17,6 +17,10 @@ The `QueryAsync` methods provide several ways to get multiple entities from the 
 
 The `QuerySingleAsync` method provides a way to get a single entity from the database. It throws a ```PreconditionFailedErrorException``` if more results are returned than the expected one. It also throws a ```NotFoundErrorException``` when no result is found.
 
+## CountAsync
+
+The `CountAsync` method provides a ways to count entities from the database, which match a given filter.
+
 ## ExistsAsync
 
 The `ExistsAsync` methods are used to check if entities exist in the database. They all return true when found or false otherwise.

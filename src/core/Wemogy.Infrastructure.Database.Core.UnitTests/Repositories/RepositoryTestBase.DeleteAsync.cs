@@ -33,6 +33,26 @@ public partial class RepositoryTestBase
     }
 
     [Fact]
+    public async Task DeleteAsyncWithIdOnlyShouldWork()
+    {
+        // Arrange
+        var user = User.Faker.Generate();
+        await MicrosoftUserRepository.CreateAsync(user);
+
+        // Act
+        var userExistsBeforeDeletion = await MicrosoftUserRepository.ExistsAsync(
+            user.Id);
+        await MicrosoftUserRepository.DeleteAsync(
+            user.Id);
+        var userExistsAfterDeletion = await MicrosoftUserRepository.ExistsAsync(
+            user.Id);
+
+        // Assert
+        userExistsBeforeDeletion.Should().BeTrue();
+        userExistsAfterDeletion.Should().BeFalse();
+    }
+
+    [Fact]
     public async Task DeleteAsyncShouldThrowForNonExistingEntities()
     {
         // Arrange

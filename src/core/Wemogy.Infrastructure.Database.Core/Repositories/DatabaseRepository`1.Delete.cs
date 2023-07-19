@@ -10,7 +10,7 @@ public partial class DatabaseRepository<TEntity>
 {
     public Task DeleteAsync(string id)
     {
-        return _database.DeleteAsync(x => id == x.Id.ToString());
+        return _database.DeleteAsync(x => id == x.Id);
     }
 
     public Task DeleteAsync(string id, string partitionKey)

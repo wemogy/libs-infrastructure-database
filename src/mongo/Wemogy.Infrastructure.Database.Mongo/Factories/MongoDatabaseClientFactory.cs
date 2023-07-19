@@ -1,6 +1,8 @@
 using Microsoft.Extensions.Logging;
+using MongoDB.Bson;
 using MongoDB.Bson.Serialization.Conventions;
 using MongoDB.Driver;
+using MongoDB.Driver.Core.Events;
 using Wemogy.Infrastructure.Database.Core.Abstractions;
 using Wemogy.Infrastructure.Database.Core.Models;
 using Wemogy.Infrastructure.Database.Mongo.Client;
@@ -24,7 +26,7 @@ namespace Wemogy.Infrastructure.Database.Mongo.Factories
             var pack = new ConventionPack { new CamelCaseElementNameConvention() };
             ConventionRegistry.Register(nameof(CamelCaseElementNameConvention), pack, x => true);
 
-            _mongoClient = new MongoClient(connectionString);
+            var settings = MongoClientSettings.FromConnectionString(connectionString);
 
             if (enableLogging)
             {
@@ -33,7 +35,20 @@ namespace Wemogy.Infrastructure.Database.Mongo.Factories
                     builder.AddConsole();
                 });
                 _logger = loggerFactory.CreateLogger(nameof(MongoDatabaseClientFactory));
+
+                settings.ClusterConfigurator = cb =>
+                {
+                    cb.Subscribe<CommandStartedEvent>(e =>
+                    {
+                        _logger.LogInformation(
+                            "{CommandName} - {Json}",
+                            e.CommandName,
+                            e.Command.ToJson());
+                    });
+                };
             }
+
+            _mongoClient = new MongoClient(settings);
         }
 
         public IDatabaseClient<TEntity> CreateClient<TEntity>(DatabaseRepositoryOptions databaseRepositoryOptions)

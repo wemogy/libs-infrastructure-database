@@ -52,7 +52,7 @@ public partial class DatabaseRepository<TEntity>
         try
         {
             return await GetAsync(
-                x => x.Id.ToString() == id,
+                x => x.Id == id,
                 cancellationToken);
         }
         catch (NotFoundErrorException)

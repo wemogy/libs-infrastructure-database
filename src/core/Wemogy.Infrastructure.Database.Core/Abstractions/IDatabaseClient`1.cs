@@ -22,6 +22,7 @@ public interface IDatabaseClient<TEntity> : IDatabaseClient
     /// </summary>
     Task IterateAsync(
         Expression<Func<TEntity, bool>> predicate,
+        SortingParameters<TEntity>? sortingParameters,
         PaginationParameters? paginationParameters,
         Func<TEntity, Task> callback,
         CancellationToken cancellationToken);

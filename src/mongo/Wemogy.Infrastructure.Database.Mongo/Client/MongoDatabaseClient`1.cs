@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Linq.Expressions;
 using System.Threading;
 using System.Threading.Tasks;
@@ -12,6 +13,7 @@ using Wemogy.Infrastructure.Database.Core.Attributes;
 using Wemogy.Infrastructure.Database.Core.Enums;
 using Wemogy.Infrastructure.Database.Core.Errors;
 using Wemogy.Infrastructure.Database.Core.ValueObjects;
+using SortDirection = Wemogy.Infrastructure.Database.Core.Enums.SortDirection;
 
 namespace Wemogy.Infrastructure.Database.Mongo.Client
 {
@@ -104,6 +106,7 @@ namespace Wemogy.Infrastructure.Database.Mongo.Client
 
         public async Task IterateAsync(
             Expression<Func<TEntity, bool>> predicate,
+            SortingParameters<TEntity>? sortingParameters,
             PaginationParameters? paginationParameters,
             Func<TEntity, Task> callback,
             CancellationToken cancellationToken)
@@ -113,6 +116,21 @@ namespace Wemogy.Infrastructure.Database.Mongo.Client
                 Limit = paginationParameters?.Take,
                 Skip = paginationParameters?.Skip
             };
+
+            if (sortingParameters != null && sortingParameters.Any())
+            {
+                BsonDocument sortDefinition = new BsonDocument();
+
+                foreach (var sortingParameter in sortingParameters)
+                {
+                    sortDefinition.Add(
+                        sortingParameter.CamelCaseProperty,
+                        sortingParameter.Direction == SortDirection.Ascending ? 1 : -1);
+                }
+
+                options.Sort = new BsonDocumentSortDefinition<TEntity>(sortDefinition);
+            }
+
             var entities = await _collection.FindAsync(predicate, options, cancellationToken);
             while (await entities.MoveNextAsync(cancellationToken))
             {

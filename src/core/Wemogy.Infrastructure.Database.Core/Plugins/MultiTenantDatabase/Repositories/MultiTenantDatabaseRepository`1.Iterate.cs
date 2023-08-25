@@ -17,12 +17,42 @@ public partial class MultiTenantDatabaseRepository<TEntity>
         return IterateAsync(
             predicate,
             null,
+            null,
             callback,
             cancellationToken);
     }
 
     public Task IterateAsync(
         Expression<Func<TEntity, bool>> predicate,
+        SortingParameters<TEntity> sortingParameters,
+        Func<TEntity, Task> callback,
+        CancellationToken cancellationToken = default)
+    {
+        return IterateAsync(
+            predicate,
+            sortingParameters,
+            null,
+            callback,
+            cancellationToken);
+    }
+
+    public Task IterateAsync(
+        Expression<Func<TEntity, bool>> predicate,
+        PaginationParameters paginationParameters,
+        Func<TEntity, Task> callback,
+        CancellationToken cancellationToken = default)
+    {
+        return IterateAsync(
+            predicate,
+            null,
+            paginationParameters,
+            callback,
+            cancellationToken);
+    }
+
+    public Task IterateAsync(
+        Expression<Func<TEntity, bool>> predicate,
+        SortingParameters<TEntity>? sortingParameters,
         PaginationParameters? paginationParameters,
         Func<TEntity, Task> callback,
         CancellationToken cancellationToken = default)
@@ -36,8 +66,26 @@ public partial class MultiTenantDatabaseRepository<TEntity>
         predicate = BuildComposedPartitionKeyPredicate(predicate);
         predicate = predicate.And(PartitionKeyPredicate);
 
-        if (paginationParameters == null)
+        if (paginationParameters == null || sortingParameters == null)
         {
+            if (sortingParameters != null)
+            {
+                return _databaseRepository.IterateAsync(
+                    predicate,
+                    sortingParameters,
+                    UpdatedCallback,
+                    cancellationToken);
+            }
+
+            if (paginationParameters != null)
+            {
+                return _databaseRepository.IterateAsync(
+                    predicate,
+                    paginationParameters,
+                    UpdatedCallback,
+                    cancellationToken);
+            }
+
             return _databaseRepository.IterateAsync(
                 predicate,
                 UpdatedCallback,
@@ -46,6 +94,7 @@ public partial class MultiTenantDatabaseRepository<TEntity>
 
         return _databaseRepository.IterateAsync(
             predicate,
+            sortingParameters,
             paginationParameters,
             UpdatedCallback,
             cancellationToken);
@@ -93,32 +142,48 @@ public partial class MultiTenantDatabaseRepository<TEntity>
 
     public Task IterateAsync(
         Expression<Func<TEntity, bool>> predicate,
+        PaginationParameters paginationParameters,
+        Action<TEntity> callback,
+        CancellationToken cancellationToken = default)
+    {
+        return IterateAsync(
+            predicate,
+            null,
+            paginationParameters,
+            callback,
+            cancellationToken);
+    }
+
+    public Task IterateAsync(
+        Expression<Func<TEntity, bool>> predicate,
+        SortingParameters<TEntity> sortingParameters,
+        Action<TEntity> callback,
+        CancellationToken cancellationToken = default)
+    {
+        return IterateAsync(
+            predicate,
+            sortingParameters,
+            null,
+            callback,
+            cancellationToken);
+    }
+
+    public Task IterateAsync(
+        Expression<Func<TEntity, bool>> predicate,
+        SortingParameters<TEntity>? sortingParameters,
         PaginationParameters? paginationParameters,
         Action<TEntity> callback,
         CancellationToken cancellationToken = default)
     {
-        Task UpdatedCallback(TEntity entity)
-        {
-            callback(entity);
-            RemovePartitionKeyPrefix(entity);
-            return Task.CompletedTask;
-        }
-
-        predicate = BuildComposedPartitionKeyPredicate(predicate);
-        predicate = predicate.And(PartitionKeyPredicate);
-
-        if (paginationParameters == null)
-        {
-            return _databaseRepository.IterateAsync(
-                predicate,
-                UpdatedCallback,
-                cancellationToken);
-        }
-
-        return _databaseRepository.IterateAsync(
+        return IterateAsync(
             predicate,
+            sortingParameters,
             paginationParameters,
-            UpdatedCallback,
+            entity =>
+            {
+                callback(entity);
+                return Task.CompletedTask;
+            },
             cancellationToken);
     }
 

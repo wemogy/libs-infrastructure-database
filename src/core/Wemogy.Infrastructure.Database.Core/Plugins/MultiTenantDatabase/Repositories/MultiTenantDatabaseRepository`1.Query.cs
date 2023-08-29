@@ -22,12 +22,12 @@ public partial class MultiTenantDatabaseRepository<TEntity>
 
     public Task<List<TEntity>> QueryAsync(
         Expression<Func<TEntity, bool>> predicate,
-        SortingParameters<TEntity> sortingParameters,
+        Sorting<TEntity> sorting,
         CancellationToken cancellationToken = default)
     {
         return QueryAsync(
             predicate,
-            sortingParameters,
+            sorting,
             null,
             cancellationToken);
     }
@@ -46,20 +46,20 @@ public partial class MultiTenantDatabaseRepository<TEntity>
 
     public async Task<List<TEntity>> QueryAsync(
         Expression<Func<TEntity, bool>> predicate,
-        SortingParameters<TEntity>? sortingParameters,
+        Sorting<TEntity>? sorting,
         PaginationParameters? paginationParameters,
         CancellationToken cancellationToken = default)
     {
         predicate = BuildComposedPartitionKeyPredicate(predicate);
 
         List<TEntity> entities;
-        if (paginationParameters == null || sortingParameters == null)
+        if (paginationParameters == null || sorting == null)
         {
-            if (sortingParameters != null)
+            if (sorting != null)
             {
                 entities = await _databaseRepository.QueryAsync(
                     predicate,
-                    sortingParameters,
+                    sorting,
                     cancellationToken);
             }
             else if (paginationParameters != null)
@@ -80,7 +80,7 @@ public partial class MultiTenantDatabaseRepository<TEntity>
         {
             entities = await _databaseRepository.QueryAsync(
                 predicate,
-                sortingParameters,
+                sorting,
                 paginationParameters,
                 cancellationToken);
         }

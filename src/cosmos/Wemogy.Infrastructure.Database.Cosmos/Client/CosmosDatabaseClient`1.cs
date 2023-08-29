@@ -72,7 +72,7 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Client
 
         public Task IterateAsync(
             Expression<Func<TEntity, bool>> predicate,
-            SortingParameters<TEntity>? sortingParameters,
+            Sorting<TEntity>? sorting,
             PaginationParameters? paginationParameters,
             Func<TEntity, Task> callback,
             CancellationToken cancellationToken = default)
@@ -87,9 +87,9 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Client
                     .Take(paginationParameters.Take);
             }
 
-            if (sortingParameters != null)
+            if (sorting != null)
             {
-                queryable = sortingParameters.ApplyTo(queryable);
+                queryable = sorting.ApplyTo(queryable);
             }
 
             var feedIterator = queryable.ToFeedIterator();

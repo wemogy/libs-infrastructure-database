@@ -127,8 +127,8 @@ public partial class RepositoryTestBase
             await MicrosoftUserRepository.CreateAsync(user);
         }
 
-        var sortingParameters = new SortingParameters<User>()
-            .AddOrderBy(x => x.Firstname, sortDirection);
+        var sortingParameters = new Sorting<User>()
+            .OrderBy(x => x.Firstname, sortDirection);
 
         // Act
         var queriedUser = await MicrosoftUserRepository.QueryAsync(

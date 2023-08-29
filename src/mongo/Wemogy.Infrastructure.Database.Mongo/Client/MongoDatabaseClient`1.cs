@@ -106,7 +106,7 @@ namespace Wemogy.Infrastructure.Database.Mongo.Client
 
         public async Task IterateAsync(
             Expression<Func<TEntity, bool>> predicate,
-            SortingParameters<TEntity>? sortingParameters,
+            Sorting<TEntity>? sorting,
             PaginationParameters? paginationParameters,
             Func<TEntity, Task> callback,
             CancellationToken cancellationToken)
@@ -117,11 +117,11 @@ namespace Wemogy.Infrastructure.Database.Mongo.Client
                 Skip = paginationParameters?.Skip
             };
 
-            if (sortingParameters != null && sortingParameters.Any())
+            if (sorting != null && sorting.Parameters.Any())
             {
                 BsonDocument sortDefinition = new BsonDocument();
 
-                foreach (var sortingParameter in sortingParameters)
+                foreach (var sortingParameter in sorting.Parameters)
                 {
                     sortDefinition.Add(
                         sortingParameter.CamelCaseProperty,

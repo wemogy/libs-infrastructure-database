@@ -25,7 +25,7 @@ public partial class DatabaseRepository<TEntity>
 
     public Task IterateAsync(
         Expression<Func<TEntity, bool>> predicate,
-        SortingParameters<TEntity> sortingParameters,
+        Sorting<TEntity> sortingParameters,
         Func<TEntity, Task> callback,
         CancellationToken cancellationToken = default)
     {
@@ -53,7 +53,7 @@ public partial class DatabaseRepository<TEntity>
 
     public async Task IterateAsync(
         Expression<Func<TEntity, bool>> predicate,
-        SortingParameters<TEntity>? sortingParameters,
+        Sorting<TEntity>? sortingParameters,
         PaginationParameters? paginationParameters,
         Func<TEntity, Task> callback,
         CancellationToken cancellationToken = default)
@@ -112,7 +112,7 @@ public partial class DatabaseRepository<TEntity>
 
     public Task IterateAsync(
         Expression<Func<TEntity, bool>> predicate,
-        SortingParameters<TEntity> sortingParameters,
+        Sorting<TEntity> sortingParameters,
         Action<TEntity> callback,
         CancellationToken cancellationToken = default)
     {
@@ -140,7 +140,7 @@ public partial class DatabaseRepository<TEntity>
 
     public Task IterateAsync(
         Expression<Func<TEntity, bool>> predicate,
-        SortingParameters<TEntity>? sortingParameters,
+        Sorting<TEntity>? sortingParameters,
         PaginationParameters? paginationParameters,
         Action<TEntity> callback,
         CancellationToken cancellationToken = default)

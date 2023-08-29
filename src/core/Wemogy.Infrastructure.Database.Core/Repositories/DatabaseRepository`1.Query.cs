@@ -24,12 +24,12 @@ public partial class DatabaseRepository<TEntity>
 
     public Task<List<TEntity>> QueryAsync(
         Expression<Func<TEntity, bool>> predicate,
-        SortingParameters<TEntity> sortingParameters,
+        Sorting<TEntity> sorting,
         CancellationToken cancellationToken = default)
     {
         return QueryAsync(
             predicate,
-            sortingParameters,
+            sorting,
             null,
             cancellationToken);
     }
@@ -48,7 +48,7 @@ public partial class DatabaseRepository<TEntity>
 
     public async Task<List<TEntity>> QueryAsync(
         Expression<Func<TEntity, bool>> predicate,
-        SortingParameters<TEntity>? sortingParameters,
+        Sorting<TEntity>? sorting,
         PaginationParameters? paginationParameters,
         CancellationToken cancellationToken = default)
     {
@@ -56,7 +56,7 @@ public partial class DatabaseRepository<TEntity>
 
         await IterateAsync(
             predicate,
-            sortingParameters,
+            sorting,
             paginationParameters,
             entities.Add,
             cancellationToken);

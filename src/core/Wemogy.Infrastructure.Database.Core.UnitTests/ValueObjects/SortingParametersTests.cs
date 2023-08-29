@@ -13,19 +13,19 @@ public class SortingParametersTests
     public void SortingParameters_OrderBy_HappyPath()
     {
         // Arrange
-        var sortingParameters = new SortingParameters<Animal>();
+        var sorting = new Sorting<Animal>();
 
         // Act
-        sortingParameters
-            .AddOrderBy(x => x.Firstname);
-        sortingParameters
-            .AddOrderBy(x => x.BestFriend!.Firstname);
+        sorting
+            .OrderBy(x => x.Firstname);
+        sorting
+            .OrderBy(x => x.BestFriend!.Firstname);
 
         // Assert
-        sortingParameters.First().Property.Should().Be("Firstname");
-        sortingParameters.First().Direction.Should().Be(SortDirection.Ascending);
-        sortingParameters[1].Property.Should().Be("BestFriend.Firstname");
-        sortingParameters[1].Direction.Should().Be(SortDirection.Ascending);
+        sorting.Parameters.First().Property.Should().Be("Firstname");
+        sorting.Parameters.First().Direction.Should().Be(SortDirection.Ascending);
+        sorting.Parameters[1].Property.Should().Be("BestFriend.Firstname");
+        sorting.Parameters[1].Direction.Should().Be(SortDirection.Ascending);
     }
 
     [Fact]
@@ -33,8 +33,8 @@ public class SortingParametersTests
     {
         // Arrange
         var animals = Animal.Faker.Generate(10);
-        var sortingParameters = new SortingParameters<Animal>()
-            .AddOrderBy(x => x.Firstname);
+        var sortingParameters = new Sorting<Animal>()
+            .OrderBy(x => x.Firstname);
 
         // Act
         var sortedAnimals = sortingParameters

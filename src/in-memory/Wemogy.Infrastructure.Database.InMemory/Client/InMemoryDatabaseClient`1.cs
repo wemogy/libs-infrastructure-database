@@ -91,7 +91,7 @@ namespace Wemogy.Infrastructure.Database.InMemory.Client
 
         public async Task IterateAsync(
             Expression<Func<TEntity, bool>> predicate,
-            SortingParameters<TEntity>? sortingParameters,
+            Sorting<TEntity>? sorting,
             PaginationParameters? paginationParameters,
             Func<TEntity, Task> callback,
             CancellationToken cancellationToken)
@@ -104,9 +104,9 @@ namespace Wemogy.Infrastructure.Database.InMemory.Client
             {
                 var queryable = entityPartition.Value.Where(compiledPredicate);
 
-                if (sortingParameters != null)
+                if (sorting != null)
                 {
-                    queryable = sortingParameters.ApplyTo(queryable);
+                    queryable = sorting.ApplyTo(queryable);
                 }
 
                 var entities = queryable.ToList();

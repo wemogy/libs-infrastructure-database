@@ -107,14 +107,14 @@ namespace Wemogy.Infrastructure.Database.Mongo.Client
         public async Task IterateAsync(
             Expression<Func<TEntity, bool>> predicate,
             Sorting<TEntity>? sorting,
-            PaginationParameters? paginationParameters,
+            Pagination? pagination,
             Func<TEntity, Task> callback,
             CancellationToken cancellationToken)
         {
             var options = new FindOptions<TEntity>()
             {
-                Limit = paginationParameters?.Take,
-                Skip = paginationParameters?.Skip
+                Limit = pagination?.Take,
+                Skip = pagination?.Skip
             };
 
             if (sorting != null && sorting.Parameters.Any())

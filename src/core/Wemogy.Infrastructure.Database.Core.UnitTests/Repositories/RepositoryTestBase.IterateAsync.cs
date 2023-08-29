@@ -90,7 +90,7 @@ public partial class RepositoryTestBase
         // Act
         await MicrosoftUserRepository.IterateAsync(
             x => x.TenantId == tenantId,
-            new PaginationParameters(0, take),
+            new Pagination(0, take),
             _ =>
         {
             firstDocumentsCount++;
@@ -98,7 +98,7 @@ public partial class RepositoryTestBase
 
         await MicrosoftUserRepository.IterateAsync(
             x => x.TenantId == tenantId,
-            new PaginationParameters(18, take),
+            new Pagination(18, take),
             _ =>
             {
                 lastDocumentsCount++;

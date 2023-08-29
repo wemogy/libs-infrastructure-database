@@ -73,18 +73,18 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Client
         public Task IterateAsync(
             Expression<Func<TEntity, bool>> predicate,
             Sorting<TEntity>? sorting,
-            PaginationParameters? paginationParameters,
+            Pagination? pagination,
             Func<TEntity, Task> callback,
             CancellationToken cancellationToken = default)
         {
             var queryable = _container.GetItemLinqQueryable<TEntity>()
                 .Where(predicate);
 
-            if (paginationParameters != null)
+            if (pagination != null)
             {
                 queryable = queryable
-                    .Skip(paginationParameters.Skip)
-                    .Take(paginationParameters.Take);
+                    .Skip(pagination.Skip)
+                    .Take(pagination.Take);
             }
 
             if (sorting != null)

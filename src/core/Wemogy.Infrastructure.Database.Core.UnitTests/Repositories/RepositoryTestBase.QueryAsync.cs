@@ -70,7 +70,7 @@ public partial class RepositoryTestBase
     public async Task QueryAsync_LambdaShouldRespectTakeCount()
     {
         // Arrange
-        var paginationParameters = new PaginationParameters(
+        var pagination = new Pagination(
             0,
             5);
         await ResetAsync();
@@ -83,17 +83,17 @@ public partial class RepositoryTestBase
         // Act
         var queriedUser = await MicrosoftUserRepository.QueryAsync(
             x => true,
-            paginationParameters);
+            pagination);
 
         // Assert
-        queriedUser.Should().HaveCount(paginationParameters.Take);
+        queriedUser.Should().HaveCount(pagination.Take);
     }
 
     [Fact]
     public async Task QueryAsync_LambdaShouldRespectSkipCount()
     {
         // Arrange
-        var paginationParameters = new PaginationParameters(
+        var pagination = new Pagination(
             2,
             10);
         await ResetAsync();
@@ -106,10 +106,10 @@ public partial class RepositoryTestBase
         // Act
         var queriedUser = await MicrosoftUserRepository.QueryAsync(
             x => true,
-            paginationParameters);
+            pagination);
 
         // Assert
-        queriedUser.Should().HaveCount(users.Count - paginationParameters.Skip);
+        queriedUser.Should().HaveCount(users.Count - pagination.Skip);
     }
 
     [Theory]

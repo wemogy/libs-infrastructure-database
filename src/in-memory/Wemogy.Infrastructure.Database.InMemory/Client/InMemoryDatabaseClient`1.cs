@@ -92,7 +92,7 @@ namespace Wemogy.Infrastructure.Database.InMemory.Client
         public async Task IterateAsync(
             Expression<Func<TEntity, bool>> predicate,
             Sorting<TEntity>? sorting,
-            PaginationParameters? paginationParameters,
+            Pagination? pagination,
             Func<TEntity, Task> callback,
             CancellationToken cancellationToken)
         {
@@ -112,14 +112,14 @@ namespace Wemogy.Infrastructure.Database.InMemory.Client
                 var entities = queryable.ToList();
                 foreach (var entity in entities)
                 {
-                    if (paginationParameters != null && paginationParameters.Skip > skipped++)
+                    if (pagination != null && pagination.Skip > skipped++)
                     {
                         continue;
                     }
 
                     await callback(entity.Clone());
 
-                    if (paginationParameters != null && paginationParameters.Take <= ++taken)
+                    if (pagination != null && pagination.Take <= ++taken)
                     {
                         return;
                     }

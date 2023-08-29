@@ -38,14 +38,14 @@ public partial class MultiTenantDatabaseRepository<TEntity>
 
     public Task IterateAsync(
         Expression<Func<TEntity, bool>> predicate,
-        PaginationParameters paginationParameters,
+        Pagination pagination,
         Func<TEntity, Task> callback,
         CancellationToken cancellationToken = default)
     {
         return IterateAsync(
             predicate,
             null,
-            paginationParameters,
+            pagination,
             callback,
             cancellationToken);
     }
@@ -53,7 +53,7 @@ public partial class MultiTenantDatabaseRepository<TEntity>
     public Task IterateAsync(
         Expression<Func<TEntity, bool>> predicate,
         Sorting<TEntity>? sorting,
-        PaginationParameters? paginationParameters,
+        Pagination? pagination,
         Func<TEntity, Task> callback,
         CancellationToken cancellationToken = default)
     {
@@ -66,7 +66,7 @@ public partial class MultiTenantDatabaseRepository<TEntity>
         predicate = BuildComposedPartitionKeyPredicate(predicate);
         predicate = predicate.And(PartitionKeyPredicate);
 
-        if (paginationParameters == null || sorting == null)
+        if (pagination == null || sorting == null)
         {
             if (sorting != null)
             {
@@ -77,11 +77,11 @@ public partial class MultiTenantDatabaseRepository<TEntity>
                     cancellationToken);
             }
 
-            if (paginationParameters != null)
+            if (pagination != null)
             {
                 return _databaseRepository.IterateAsync(
                     predicate,
-                    paginationParameters,
+                    pagination,
                     UpdatedCallback,
                     cancellationToken);
             }
@@ -95,7 +95,7 @@ public partial class MultiTenantDatabaseRepository<TEntity>
         return _databaseRepository.IterateAsync(
             predicate,
             sorting,
-            paginationParameters,
+            pagination,
             UpdatedCallback,
             cancellationToken);
     }
@@ -142,14 +142,14 @@ public partial class MultiTenantDatabaseRepository<TEntity>
 
     public Task IterateAsync(
         Expression<Func<TEntity, bool>> predicate,
-        PaginationParameters paginationParameters,
+        Pagination pagination,
         Action<TEntity> callback,
         CancellationToken cancellationToken = default)
     {
         return IterateAsync(
             predicate,
             null,
-            paginationParameters,
+            pagination,
             callback,
             cancellationToken);
     }
@@ -171,14 +171,14 @@ public partial class MultiTenantDatabaseRepository<TEntity>
     public Task IterateAsync(
         Expression<Func<TEntity, bool>> predicate,
         Sorting<TEntity>? sorting,
-        PaginationParameters? paginationParameters,
+        Pagination? pagination,
         Action<TEntity> callback,
         CancellationToken cancellationToken = default)
     {
         return IterateAsync(
             predicate,
             sorting,
-            paginationParameters,
+            pagination,
             entity =>
             {
                 callback(entity);

@@ -1,12 +1,12 @@
 namespace Wemogy.Infrastructure.Database.Core.ValueObjects;
 
-public class PaginationParameters
+public class Pagination
 {
     public int Skip { get; set; }
 
     public int Take { get; set; }
 
-    public PaginationParameters(int skip, int take)
+    public Pagination(int skip, int take)
     {
         Skip = skip;
         Take = take;

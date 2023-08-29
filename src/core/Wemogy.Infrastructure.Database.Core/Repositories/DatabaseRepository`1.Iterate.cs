@@ -18,13 +18,43 @@ public partial class DatabaseRepository<TEntity>
         return IterateAsync(
             predicate,
             null,
+            null,
+            callback,
+            cancellationToken);
+    }
+
+    public Task IterateAsync(
+        Expression<Func<TEntity, bool>> predicate,
+        Sorting<TEntity> sortingParameters,
+        Func<TEntity, Task> callback,
+        CancellationToken cancellationToken = default)
+    {
+        return IterateAsync(
+            predicate,
+            sortingParameters,
+            null,
+            callback,
+            cancellationToken);
+    }
+
+    public Task IterateAsync(
+        Expression<Func<TEntity, bool>> predicate,
+        Pagination pagination,
+        Func<TEntity, Task> callback,
+        CancellationToken cancellationToken = default)
+    {
+        return IterateAsync(
+            predicate,
+            null,
+            pagination,
             callback,
             cancellationToken);
     }
 
     public async Task IterateAsync(
         Expression<Func<TEntity, bool>> predicate,
-        PaginationParameters? paginationParameters,
+        Sorting<TEntity>? sortingParameters,
+        Pagination? pagination,
         Func<TEntity, Task> callback,
         CancellationToken cancellationToken = default)
     {
@@ -40,7 +70,8 @@ public partial class DatabaseRepository<TEntity>
 
         await _database.IterateAsync(
             predicate,
-            paginationParameters,
+            sortingParameters,
+            pagination,
             callback,
             cancellationToken);
     }
@@ -74,19 +105,50 @@ public partial class DatabaseRepository<TEntity>
         return IterateAsync(
             predicate,
             null,
+            null,
             callback,
             cancellationToken);
     }
 
     public Task IterateAsync(
         Expression<Func<TEntity, bool>> predicate,
-        PaginationParameters? paginationParameters,
+        Sorting<TEntity> sortingParameters,
         Action<TEntity> callback,
         CancellationToken cancellationToken = default)
     {
         return IterateAsync(
             predicate,
-            paginationParameters,
+            sortingParameters,
+            null,
+            callback,
+            cancellationToken);
+    }
+
+    public Task IterateAsync(
+        Expression<Func<TEntity, bool>> predicate,
+        Pagination pagination,
+        Action<TEntity> callback,
+        CancellationToken cancellationToken = default)
+    {
+        return IterateAsync(
+            predicate,
+            null,
+            pagination,
+            callback,
+            cancellationToken);
+    }
+
+    public Task IterateAsync(
+        Expression<Func<TEntity, bool>> predicate,
+        Sorting<TEntity>? sortingParameters,
+        Pagination? pagination,
+        Action<TEntity> callback,
+        CancellationToken cancellationToken = default)
+    {
+        return IterateAsync(
+            predicate,
+            sortingParameters,
+            pagination,
             entity =>
             {
                 callback(entity);

@@ -23,12 +23,40 @@ public partial interface IDatabaseRepository<TEntity>
     ///     Iterate through the repository by filtering via a predicate and applying a callback on the retrieved results.
     /// </summary>
     /// <param name="predicate">The predicate to filter the repository for</param>
-    /// <param name="paginationParameters">Parameters for pagination</param>
+    /// <param name="pagination">Parameters for pagination</param>
     /// <param name="callback">The async callback function to apply to each retrieved entity</param>
     /// <param name="cancellationToken">The cancellation token to use for the operation</param>
     Task IterateAsync(
         Expression<Func<TEntity, bool>> predicate,
-        PaginationParameters paginationParameters,
+        Pagination pagination,
+        Func<TEntity, Task> callback,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    ///     Iterate through the repository by filtering via a predicate and applying a callback on the retrieved results.
+    /// </summary>
+    /// <param name="predicate">The predicate to filter the repository for</param>
+    /// <param name="sorting">Parameters for sorting</param>
+    /// <param name="callback">The async callback function to apply to each retrieved entity</param>
+    /// <param name="cancellationToken">The cancellation token to use for the operation</param>
+    Task IterateAsync(
+        Expression<Func<TEntity, bool>> predicate,
+        Sorting<TEntity> sorting,
+        Func<TEntity, Task> callback,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    ///     Iterate through the repository by filtering via a predicate and applying a callback on the retrieved results.
+    /// </summary>
+    /// <param name="predicate">The predicate to filter the repository for</param>
+    /// <param name="sorting">Parameters for sorting</param>
+    /// <param name="pagination">Parameters for pagination</param>
+    /// <param name="callback">The async callback function to apply to each retrieved entity</param>
+    /// <param name="cancellationToken">The cancellation token to use for the operation</param>
+    Task IterateAsync(
+        Expression<Func<TEntity, bool>> predicate,
+        Sorting<TEntity> sorting,
+        Pagination pagination,
         Func<TEntity, Task> callback,
         CancellationToken cancellationToken = default);
 
@@ -59,12 +87,40 @@ public partial interface IDatabaseRepository<TEntity>
     ///     Iterate through the repository by filtering via a predicate and applying a callback on the retrieved results.
     /// </summary>
     /// <param name="predicate">The predicate to filter the repository for</param>
-    /// <param name="paginationParameters">Parameters for pagination</param>
+    /// <param name="pagination">Parameters for pagination</param>
     /// <param name="callback">The callback action to apply to each retrieved entity</param>
     /// <param name="cancellationToken">The cancellation token to use for the operation</param>
     Task IterateAsync(
         Expression<Func<TEntity, bool>> predicate,
-        PaginationParameters paginationParameters,
+        Pagination pagination,
+        Action<TEntity> callback,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    ///     Iterate through the repository by filtering via a predicate and applying a callback on the retrieved results.
+    /// </summary>
+    /// <param name="predicate">The predicate to filter the repository for</param>
+    /// <param name="sorting">Parameters for sorting</param>
+    /// <param name="callback">The callback action to apply to each retrieved entity</param>
+    /// <param name="cancellationToken">The cancellation token to use for the operation</param>
+    Task IterateAsync(
+        Expression<Func<TEntity, bool>> predicate,
+        Sorting<TEntity> sorting,
+        Action<TEntity> callback,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    ///     Iterate through the repository by filtering via a predicate and applying a callback on the retrieved results.
+    /// </summary>
+    /// <param name="predicate">The predicate to filter the repository for</param>
+    /// <param name="sorting">Parameters for sorting</param>
+    /// <param name="pagination">Parameters for pagination</param>
+    /// <param name="callback">The callback action to apply to each retrieved entity</param>
+    /// <param name="cancellationToken">The cancellation token to use for the operation</param>
+    Task IterateAsync(
+        Expression<Func<TEntity, bool>> predicate,
+        Sorting<TEntity> sorting,
+        Pagination pagination,
         Action<TEntity> callback,
         CancellationToken cancellationToken = default);
 

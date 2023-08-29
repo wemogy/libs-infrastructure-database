@@ -17,6 +17,8 @@ public class Animal : EntityBase
 
     public string PrivateNote { get; set; }
 
+    public Animal? BestFriend { get; set; }
+
     public Animal()
         : base(Guid.NewGuid().ToString())
     {

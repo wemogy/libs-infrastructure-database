@@ -1,5 +1,7 @@
+using System;
 using System.Threading.Tasks;
 using FluentAssertions;
+using Wemogy.Infrastructure.Database.Core.Enums;
 using Wemogy.Infrastructure.Database.Core.UnitTests.Fakes.Entities;
 using Wemogy.Infrastructure.Database.Core.ValueObjects;
 using Xunit;
@@ -68,7 +70,7 @@ public partial class RepositoryTestBase
     public async Task QueryAsync_LambdaShouldRespectTakeCount()
     {
         // Arrange
-        var paginationParameters = new PaginationParameters(
+        var pagination = new Pagination(
             0,
             5);
         await ResetAsync();
@@ -81,17 +83,17 @@ public partial class RepositoryTestBase
         // Act
         var queriedUser = await MicrosoftUserRepository.QueryAsync(
             x => true,
-            paginationParameters);
+            pagination);
 
         // Assert
-        queriedUser.Should().HaveCount(paginationParameters.Take);
+        queriedUser.Should().HaveCount(pagination.Take);
     }
 
     [Fact]
     public async Task QueryAsync_LambdaShouldRespectSkipCount()
     {
         // Arrange
-        var paginationParameters = new PaginationParameters(
+        var pagination = new Pagination(
             2,
             10);
         await ResetAsync();
@@ -104,9 +106,52 @@ public partial class RepositoryTestBase
         // Act
         var queriedUser = await MicrosoftUserRepository.QueryAsync(
             x => true,
-            paginationParameters);
+            pagination);
 
         // Assert
-        queriedUser.Should().HaveCount(users.Count - paginationParameters.Skip);
+        queriedUser.Should().HaveCount(users.Count - pagination.Skip);
+    }
+
+    [Theory]
+    [InlineData(SortDirection.Ascending)]
+    [InlineData(SortDirection.Descending)]
+    public async Task QueryAsync_LambdaShouldRespectSorting(SortDirection sortDirection)
+    {
+        // Arrange
+        var tenantId = Guid.NewGuid().ToString();
+        await ResetAsync();
+        for (int i = 0; i < 20; i++)
+        {
+            var user = User.Faker.Generate();
+            user.TenantId = tenantId;
+            await MicrosoftUserRepository.CreateAsync(user);
+        }
+
+        var sortingParameters = new Sorting<User>()
+            .OrderBy(x => x.Firstname, sortDirection);
+
+        // Act
+        var queriedUser = await MicrosoftUserRepository.QueryAsync(
+            x => true,
+            sortingParameters);
+
+        // Assert that queriedUser are sorted by Firstname
+        for (int i = 0; i < queriedUser.Count - 1; i++)
+        {
+            var current = queriedUser[i];
+            var next = queriedUser[i + 1];
+            var sortOrder = string.Compare(
+                current.Firstname,
+                next.Firstname,
+                StringComparison.Ordinal);
+            if (sortDirection == SortDirection.Ascending)
+            {
+                sortOrder.Should().BeLessOrEqualTo(0);
+            }
+            else
+            {
+                sortOrder.Should().BeGreaterOrEqualTo(0);
+            }
+        }
     }
 }

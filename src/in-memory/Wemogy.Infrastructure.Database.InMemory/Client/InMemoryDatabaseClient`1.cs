@@ -76,6 +76,7 @@ namespace Wemogy.Infrastructure.Database.InMemory.Client
             return IterateAsync(
                 x => predicate(x),
                 null,
+                null,
                 entity =>
                 {
                     if (queryParameters.Take.HasValue && count++ < queryParameters.Take)
@@ -90,7 +91,8 @@ namespace Wemogy.Infrastructure.Database.InMemory.Client
 
         public async Task IterateAsync(
             Expression<Func<TEntity, bool>> predicate,
-            PaginationParameters? paginationParameters,
+            Sorting<TEntity>? sorting,
+            Pagination? pagination,
             Func<TEntity, Task> callback,
             CancellationToken cancellationToken)
         {
@@ -102,17 +104,22 @@ namespace Wemogy.Infrastructure.Database.InMemory.Client
             {
                 var queryable = entityPartition.Value.Where(compiledPredicate);
 
+                if (sorting != null)
+                {
+                    queryable = sorting.ApplyTo(queryable);
+                }
+
                 var entities = queryable.ToList();
                 foreach (var entity in entities)
                 {
-                    if (paginationParameters != null && paginationParameters.Skip > skipped++)
+                    if (pagination != null && pagination.Skip > skipped++)
                     {
                         continue;
                     }
 
                     await callback(entity.Clone());
 
-                    if (paginationParameters != null && paginationParameters.Take <= ++taken)
+                    if (pagination != null && pagination.Take <= ++taken)
                     {
                         return;
                     }

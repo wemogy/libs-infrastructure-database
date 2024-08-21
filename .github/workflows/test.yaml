@@ -10,11 +10,14 @@ jobs:
   tests:
     name: Tests
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
     steps:
       - uses: actions/checkout@v2
 
       - name: Start containers
-        run: docker-compose -f env/mongo/docker-compose.yaml up -d
+        run: docker compose -f env/mongo/docker-compose.yaml up -d
 
       # .NET Tests
       - name: Build .NET
@@ -34,7 +37,7 @@ jobs:
         # the containers should be stopped regardless of
         # the test result
         if: always()
-        run: docker-compose -f env/mongo/docker-compose.yaml down
+        run: docker compose -f env/mongo/docker-compose.yaml down
 
       - name: Code Coverage Summary Report
         uses: irongut/CodeCoverageSummary@v1.0.2

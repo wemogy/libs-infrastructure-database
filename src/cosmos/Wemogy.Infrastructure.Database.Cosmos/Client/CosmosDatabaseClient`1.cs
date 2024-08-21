@@ -80,16 +80,16 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Client
             var queryable = _container.GetItemLinqQueryable<TEntity>()
                 .Where(predicate);
 
+            if (sorting != null)
+            {
+                queryable = sorting.ApplyTo(queryable);
+            }
+
             if (pagination != null)
             {
                 queryable = queryable
                     .Skip(pagination.Skip)
                     .Take(pagination.Take);
-            }
-
-            if (sorting != null)
-            {
-                queryable = sorting.ApplyTo(queryable);
             }
 
             var feedIterator = queryable.ToFeedIterator();

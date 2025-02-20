@@ -16,6 +16,9 @@ jobs:
   release:
     name: Release
     runs-on: ubuntu-latest
+    permissions:
+      contents: "write"
+      packages: "write"
     steps:
       - name: Get version for next release
         if: ${{ github.event.inputs.version == '' }}

@@ -21,14 +21,23 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Factories
             bool insecureDevelopmentMode = false,
             bool enableLogging = false,
             List<string>? containerNames = null)
+            : this(
+                AzureCosmosClientFactory.FromConnectionString(
+            connectionString,
+            insecureDevelopmentMode,
+            containerNames?.Select(c => (databaseName, c)).ToList(),
+            databaseName),
+                databaseName,
+                enableLogging)
         {
-            var containers = containerNames?.Select(c => (databaseName, c))?.ToList();
+        }
 
-            _cosmosClient = AzureCosmosClientFactory.FromConnectionString(
-                connectionString,
-                insecureDevelopmentMode,
-                containers,
-                databaseName);
+        public CosmosDatabaseClientFactory(
+            CosmosClient cosmosClient,
+            string databaseName,
+            bool enableLogging = false)
+        {
+            _cosmosClient = cosmosClient;
             _databaseName = databaseName;
 
             if (enableLogging)

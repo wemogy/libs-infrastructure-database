@@ -48,7 +48,8 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Client
                 {
                     throw DatabaseError.EntityNotFound(
                         id,
-                        partitionKey);
+                        partitionKey,
+                        innerException: e);
                 }
 
                 throw;
@@ -131,7 +132,8 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Client
                 {
                     throw Error.Conflict(
                         "AlreadyExists",
-                        $"Entity with id {ResolveIdValue(entity)} already exists");
+                        $"Entity with id {ResolveIdValue(entity)} already exists",
+                        cosmosException);
                 }
 
                 throw;
@@ -157,7 +159,8 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Client
                 {
                     throw DatabaseError.EntityNotFound(
                         ResolveIdValue(entity),
-                        ResolvePartitionKeyValue(entity));
+                        ResolvePartitionKeyValue(entity),
+                        innerException: cosmosException);
                 }
 
                 throw;
@@ -202,7 +205,8 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Client
                     case HttpStatusCode.NotFound:
                         throw DatabaseError.EntityNotFound(
                             id,
-                            partitionKey.ToString());
+                            partitionKey.ToString(),
+                            innerException: e);
                     default:
                         throw;
                 }

@@ -1,3 +1,4 @@
+using System;
 using Wemogy.Core.Errors;
 using Wemogy.Core.Errors.Exceptions;
 
@@ -19,7 +20,7 @@ public static class DatabaseError
             $"Entity with id {id} not found");
     }
 
-    public static NotFoundErrorException EntityNotFound(string id, string partitionKey, string hint = "")
+    public static NotFoundErrorException EntityNotFound(string id, string partitionKey, string hint = "", Exception? innerException = null)
     {
         if (hint != string.Empty)
         {
@@ -28,6 +29,7 @@ public static class DatabaseError
 
         return Error.NotFound(
             "EntityNotFound",
-            $"Entity with id {id} was not found in partition {partitionKey}{hint}");
+            $"Entity with id {id} was not found in partition {partitionKey}{hint}",
+            innerException);
     }
 }

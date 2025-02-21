@@ -22,5 +22,8 @@ public class PartitionKeyDefaultsTests
         Assert.Equal("custom", PartitionKeyDefaults.GlobalPartition);
         Assert.Equal("global", tenantA.PartitionKey);
         Assert.Equal("custom", tenantB.PartitionKey);
+
+        // Clean up
+        PartitionKeyDefaults.CustomizeGlobalPartition("global");
     }
 }

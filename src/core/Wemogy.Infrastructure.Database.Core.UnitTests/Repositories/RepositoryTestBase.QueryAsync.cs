@@ -146,11 +146,11 @@ public partial class RepositoryTestBase
                 StringComparison.Ordinal);
             if (sortDirection == SortDirection.Ascending)
             {
-                sortOrder.Should().BeLessOrEqualTo(0);
+                sortOrder.Should().BeLessThanOrEqualTo(0);
             }
             else
             {
-                sortOrder.Should().BeGreaterOrEqualTo(0);
+                sortOrder.Should().BeGreaterThanOrEqualTo(0);
             }
         }
     }
@@ -193,11 +193,11 @@ public partial class RepositoryTestBase
                 StringComparison.Ordinal);
             if (sortDirection == SortDirection.Ascending)
             {
-                sortOrder.Should().BeLessOrEqualTo(0);
+                sortOrder.Should().BeLessThanOrEqualTo(0);
             }
             else
             {
-                sortOrder.Should().BeGreaterOrEqualTo(0);
+                sortOrder.Should().BeGreaterThanOrEqualTo(0);
             }
         }
 

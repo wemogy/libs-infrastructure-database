@@ -9,7 +9,7 @@ public static class TestingConstants
         get
         {
             var configuration = ConfigurationFactory.BuildConfiguration();
-            return configuration["COSMOS_CONNECTION_STRING"];
+            return configuration["COSMOS_CONNECTION_STRING"]!;
         }
     }
 
@@ -18,7 +18,7 @@ public static class TestingConstants
         get
         {
             var configuration = ConfigurationFactory.BuildConfiguration();
-            return configuration["COSMOS_DATABASE_NAME"];
+            return configuration["COSMOS_DATABASE_NAME"]!;
         }
     }
 }

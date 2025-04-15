@@ -6,6 +6,7 @@
 
   <PropertyGroup>
     <PackageId>Wemogy.Infrastructure.Database.InMemory</PackageId>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <Authors>wemogy GmbH</Authors>
     <Company>wemogy GmbH</Company>
     <PackageDescription>In-Memory Database client</PackageDescription>

@@ -6,6 +6,7 @@
   </PropertyGroup>
   <PropertyGroup>
     <PackageId>Wemogy.Infrastructure.Database.Core</PackageId>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <Authors>wemogy GmbH</Authors>
     <Company>wemogy GmbH</Company>
     <PackageDescription>Unified infrastructure database layer</PackageDescription>

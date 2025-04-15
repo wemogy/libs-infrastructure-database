@@ -6,6 +6,7 @@
 
   <PropertyGroup>
     <PackageId>Wemogy.Infrastructure.Database.Mongo</PackageId>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <Authors>wemogy GmbH</Authors>
     <Company>wemogy GmbH</Company>
     <PackageDescription>Mongo Database client</PackageDescription>

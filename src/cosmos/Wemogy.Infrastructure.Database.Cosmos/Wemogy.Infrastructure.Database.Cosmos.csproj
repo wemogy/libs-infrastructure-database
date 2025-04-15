@@ -7,6 +7,7 @@
 
   <PropertyGroup>
     <PackageId>Wemogy.Infrastructure.Database.Cosmos</PackageId>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <Authors>wemogy GmbH</Authors>
     <Company>wemogy GmbH</Company>
     <PackageDescription>Implementation for Azure Cosmos DB</PackageDescription>

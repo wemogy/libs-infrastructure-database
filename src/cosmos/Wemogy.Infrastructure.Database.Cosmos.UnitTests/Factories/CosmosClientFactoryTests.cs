@@ -16,7 +16,8 @@ public class CosmosClientFactoryTests : CosmosUnitTestBase
         // Act
         var cosmosClient = AzureCosmosClientFactory.FromConnectionString(
             ConnectionString,
-            true);
+            true,
+            applicationName: "test-app-name");
 
         // Assert
         Assert.NotNull(cosmosClient);

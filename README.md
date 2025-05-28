@@ -15,7 +15,7 @@ Currently Supported:
 Install the [NuGet package](https://www.nuget.org/packages/Wemogy.Infrastructure.Database.InMemory) into your project.
 
 ```bash
-dontet add package Wemogy.Infrastructure.Database.InMemory
+dotnet add package Wemogy.Infrastructure.Database.InMemory
 ```
 
 Initialize the Database Client Factory centrally.
@@ -29,7 +29,7 @@ var databaseClientFactory = new InMemoryDatabaseClientFactory();
 Install the [NuGet package](https://www.nuget.org/packages/Wemogy.Infrastructure.Database.Cosmos) into your project.
 
 ```bash
-dontet add package Wemogy.Infrastructure.Database.Cosmos
+dotnet add package Wemogy.Infrastructure.Database.Cosmos
 ```
 
 Initialize the Database Client Factory centrally.
@@ -43,7 +43,7 @@ var databaseClientFactory = new CosmosDatabaseClientFactory("<CONNECTION_STRING>
 Install the [NuGet package](https://www.nuget.org/packages/Wemogy.Infrastructure.Database.Mongo) into your project.
 
 ```bash
-dontet add package Wemogy.Infrastructure.Database.Mongo
+dotnet add package Wemogy.Infrastructure.Database.Mongo
 ```
 
 Initialize the Database Client Factory centrally.
@@ -57,7 +57,7 @@ var databaseClientFactory = new MongoDatabaseClientFactory("<CONNECTION_STRING>"
 If your Models are stored in a differen class library, install the Core [NuGet package](https://www.nuget.org/packages/Wemogy.Infrastructure.Database.Core) into your project.
 
 ```bash
-dontet add package Wemogy.Infrastructure.Database.Core
+dotnet add package Wemogy.Infrastructure.Database.Core
 ```
 
 Define a class that you want to store in a database vie the Repository, and let it inherit from `EntityBase`.

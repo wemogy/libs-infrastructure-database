@@ -15,7 +15,7 @@ Currently Supported:
 Install the [NuGet package](https://www.nuget.org/packages/Wemogy.Infrastructure.Database.InMemory) into your project.
 
 ```bash
-dontet add package Wemogy.Infrastructure.Database.Cosmos
+dontet add package Wemogy.Infrastructure.Database.InMemory
 ```
 
 Initialize the Database Client Factory centrally.
@@ -29,7 +29,7 @@ var databaseClientFactory = new InMemoryDatabaseClientFactory();
 Install the [NuGet package](https://www.nuget.org/packages/Wemogy.Infrastructure.Database.Cosmos) into your project.
 
 ```bash
-dontet add package Wemogy.Infrastructure.Database.InMemory
+dontet add package Wemogy.Infrastructure.Database.Cosmos
 ```
 
 Initialize the Database Client Factory centrally.

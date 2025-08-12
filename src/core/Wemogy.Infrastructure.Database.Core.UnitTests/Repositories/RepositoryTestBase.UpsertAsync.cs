@@ -38,6 +38,7 @@ public partial class RepositoryTestBase
         }
 
         exception.Should().BeNull();
+        updatedUser.Should().NotBeNull();
         updatedUser.Id.Should().Be(user.Id);
         updatedUser.TenantId.Should().Be(user.TenantId);
     }
@@ -74,6 +75,7 @@ public partial class RepositoryTestBase
         }
 
         exception.Should().BeNull();
+        updatedUser.Should().NotBeNull();
         updatedUser.Firstname.Should().Be("Updated");
         updatedUser.Id.Should().Be(user.Id);
         updatedUser.TenantId.Should().Be(user.TenantId);
@@ -141,6 +143,8 @@ public partial class RepositoryTestBase
             return;
         }
 
+        exception.Should().BeNull();
+        updatedUser.Should().NotBeNull();
         updatedUser.Firstname.Should().Be("Updated");
         updatedUser.Id.Should().Be(user.Id);
         updatedUser.TenantId.Should().Be(user.TenantId);

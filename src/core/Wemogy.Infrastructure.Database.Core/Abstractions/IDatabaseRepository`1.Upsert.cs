@@ -1,4 +1,3 @@
-using System;
 using System.Threading.Tasks;
 
 namespace Wemogy.Infrastructure.Database.Core.Abstractions;
@@ -6,7 +5,6 @@ namespace Wemogy.Infrastructure.Database.Core.Abstractions;
 /// <summary>
 /// Defines methods for upserting entities in a database repository.
 /// </summary>
-/// <typeparam name="TEntity">The type of the entity managed by the repository.</typeparam>
 public partial interface IDatabaseRepository<TEntity>
 {
     /// <summary>

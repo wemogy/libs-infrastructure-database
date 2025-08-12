@@ -47,4 +47,8 @@ public interface IDatabaseClient<TEntity> : IDatabaseClient
     Task DeleteAsync(string id, string partitionKey);
 
     Task DeleteAsync(Expression<Func<TEntity, bool>> predicate);
+
+    Task<TEntity> UpsertAsync(TEntity entity);
+
+    Task<TEntity> UpsertAsync(TEntity entity, string partitionKey);
 }

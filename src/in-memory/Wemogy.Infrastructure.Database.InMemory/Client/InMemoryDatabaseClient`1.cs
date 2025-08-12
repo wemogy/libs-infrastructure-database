@@ -197,6 +197,56 @@ namespace Wemogy.Infrastructure.Database.InMemory.Client
             return Task.FromResult(entity.Clone());
         }
 
+        public Task<TEntity> UpsertAsync(TEntity entity)
+        {
+            var id = ResolveIdValue(entity);
+            var partitionKeyValue = ResolvePartitionKeyValue(entity);
+
+            if (!EntityPartitions.TryGetValue(
+                    partitionKeyValue,
+                    out var entities))
+            {
+                entities = new List<TEntity>();
+                EntityPartitions.Add(
+                    partitionKeyValue,
+                    entities);
+            }
+
+            var existingEntity = entities.AsQueryable().FirstOrDefault("e => e.Id.Equals(@0)", id);
+
+            if (existingEntity != null)
+            {
+                entities.Remove(existingEntity);
+            }
+
+            entities.Add(entity.Clone());
+            return Task.FromResult(entity.Clone());
+        }
+
+        public Task<TEntity> UpsertAsync(TEntity entity, string partitionKey)
+        {
+            if (!EntityPartitions.TryGetValue(
+                    partitionKey,
+                    out var entities))
+            {
+                entities = new List<TEntity>();
+                EntityPartitions.Add(
+                    partitionKey,
+                    entities);
+            }
+
+            var id = ResolveIdValue(entity);
+            var existingEntity = entities.AsQueryable().FirstOrDefault("e => e.Id.Equals(@0)", id);
+
+            if (existingEntity != null)
+            {
+                entities.Remove(existingEntity);
+            }
+
+            entities.Add(entity.Clone());
+            return Task.FromResult(entity.Clone());
+        }
+
         public Task DeleteAsync(string id, string partitionKey)
         {
             if (!EntityPartitions.TryGetValue(

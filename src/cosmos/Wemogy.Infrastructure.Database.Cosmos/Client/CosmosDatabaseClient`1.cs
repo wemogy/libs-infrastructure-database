@@ -167,6 +167,33 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Client
             }
         }
 
+        public async Task<TEntity> UpsertAsync(TEntity entity)
+        {
+            var partitionKey = ResolvePartitionKey(entity);
+            var upsertResponse = await _container.UpsertItemAsync(
+                entity,
+                partitionKey.CosmosPartitionKey,
+                new ItemRequestOptions
+                {
+                    EnableContentResponseOnWrite = true
+                });
+
+            return upsertResponse.Resource;
+        }
+
+        public async Task<TEntity> UpsertAsync(TEntity entity, string partitionKey)
+        {
+            var upsertResponse = await _container.UpsertItemAsync(
+                entity,
+                new PartitionKey<string>(partitionKey).CosmosPartitionKey,
+                new ItemRequestOptions
+                {
+                    EnableContentResponseOnWrite = true
+                });
+
+            return upsertResponse.Resource;
+        }
+
         public Task DeleteAsync(string id, string partitionKey)
         {
             return DeleteAsync(

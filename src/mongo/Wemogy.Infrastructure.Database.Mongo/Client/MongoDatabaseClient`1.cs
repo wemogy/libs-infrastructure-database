@@ -185,6 +185,16 @@ namespace Wemogy.Infrastructure.Database.Mongo.Client
             return entity;
         }
 
+        public Task<TEntity> UpsertAsync(TEntity entity)
+        {
+            throw new NotSupportedException();
+        }
+
+        public Task<TEntity> UpsertAsync(TEntity entity, string partitionKey)
+        {
+            throw new NotSupportedException();
+        }
+
         public async Task DeleteAsync(string id, string partitionKey)
         {
             var filter = GetEntityFilterDefinition(

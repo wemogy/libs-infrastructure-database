@@ -1,5 +1,5 @@
 using System.Threading.Tasks;
-using FluentAssertions;
+using Shouldly;
 using Wemogy.Core.Errors.Exceptions;
 using Wemogy.Infrastructure.Database.Core.UnitTests.Fakes.Entities;
 using Xunit;
@@ -17,7 +17,7 @@ public partial class RepositoryTestBase
         await MicrosoftUserRepository.CreateAsync(user);
 
         // Act & Assert
-        await Assert.ThrowsAsync<ConflictErrorException>(() => MicrosoftUserRepository.CreateAsync(user));
+        await Should.ThrowAsync<ConflictErrorException>(() => MicrosoftUserRepository.CreateAsync(user));
     }
 
     [Fact]
@@ -31,6 +31,6 @@ public partial class RepositoryTestBase
         var entity = await MicrosoftUserRepository.CreateAsync(user);
 
         // Act & Assert
-        entity.Should().BeEquivalentTo(user);
+        entity.ShouldBeEquivalentTo(user);
     }
 }

@@ -1,7 +1,7 @@
 using System;
 using System.Linq.Expressions;
 using System.Threading.Tasks;
-using FluentAssertions;
+using Shouldly;
 using Wemogy.Core.Extensions;
 using Wemogy.Infrastructure.Database.Core.Enums;
 using Wemogy.Infrastructure.Database.Core.UnitTests.Fakes.Entities;
@@ -28,13 +28,13 @@ public partial class MultiTenantDatabaseRepositoryTestsBase
         var msQueriedUsers = await MicrosoftUserRepository.QueryAsync(queryParameters);
         var appleQueriedUsers = await AppleUserRepository.QueryAsync(queryParameters);
 
-        msQueriedUsers.Should().HaveCount(2);
-        msQueriedUsers.Should().ContainSingle(u => u.TenantId == user1.TenantId);
-        msQueriedUsers.Should().ContainSingle(u => u.TenantId == user2.TenantId);
+        msQueriedUsers.Count.ShouldBe(2);
+        msQueriedUsers.ShouldContain(u => u.TenantId == user1.TenantId, 1);
+        msQueriedUsers.ShouldContain(u => u.TenantId == user2.TenantId, 1);
         AssertPartitionKeyPrefixIsRemoved(msQueriedUsers);
 
-        appleQueriedUsers.Should().HaveCount(1);
-        appleQueriedUsers.Should().ContainSingle(u => u.TenantId == user1.TenantId);
+        appleQueriedUsers.ShouldHaveSingleItem();
+        appleQueriedUsers.ShouldContain(u => u.TenantId == user1.TenantId, 1);
         AssertPartitionKeyPrefixIsRemoved(appleQueriedUsers);
     }
 
@@ -63,12 +63,12 @@ public partial class MultiTenantDatabaseRepositoryTestsBase
         var appleQueriedUsers = await AppleUserRepository.QueryAsync(queryParameters);
 
         // Assert
-        msQueriedUsers.Should().HaveCount(1);
-        msQueriedUsers.Should().ContainSingle(u => u.Firstname == user1.Firstname);
+        msQueriedUsers.ShouldHaveSingleItem();
+        msQueriedUsers.ShouldContain(u => u.Firstname == user1.Firstname, 1);
         AssertPartitionKeyPrefixIsRemoved(msQueriedUsers);
 
-        appleQueriedUsers.Should().HaveCount(1);
-        appleQueriedUsers.Should().ContainSingle(u => u.Firstname == user1.Firstname);
+        appleQueriedUsers.ShouldHaveSingleItem();
+        appleQueriedUsers.ShouldContain(u => u.Firstname == user1.Firstname, 1);
         AssertPartitionKeyPrefixIsRemoved(appleQueriedUsers);
     }
 
@@ -105,12 +105,12 @@ public partial class MultiTenantDatabaseRepositoryTestsBase
         var appleQueriedUsers = await AppleUserRepository.QueryAsync(queryParameters);
 
         // Assert
-        msQueriedUsers.Should().HaveCount(1);
-        msQueriedUsers.Should().ContainSingle(u => u.Firstname == user1.Firstname);
+        msQueriedUsers.ShouldHaveSingleItem();
+        msQueriedUsers.ShouldContain(u => u.Firstname == user1.Firstname, 1);
         AssertPartitionKeyPrefixIsRemoved(msQueriedUsers);
 
-        appleQueriedUsers.Should().HaveCount(1);
-        appleQueriedUsers.Should().ContainSingle(u => u.Firstname == user1.Firstname);
+        appleQueriedUsers.ShouldHaveSingleItem();
+        appleQueriedUsers.ShouldContain(u => u.Firstname == user1.Firstname, 1);
         AssertPartitionKeyPrefixIsRemoved(appleQueriedUsers);
     }
 
@@ -131,13 +131,13 @@ public partial class MultiTenantDatabaseRepositoryTestsBase
         var appleQueriedUsers = await AppleUserRepository.QueryAsync(predicate);
 
         // Assert
-        msQueriedUsers.Should().HaveCount(2);
-        msQueriedUsers.Should().ContainSingle(u => u.TenantId == user1.TenantId);
-        msQueriedUsers.Should().ContainSingle(u => u.TenantId == user2.TenantId);
+        msQueriedUsers.Count.ShouldBe(2);
+        msQueriedUsers.ShouldContain(u => u.TenantId == user1.TenantId, 1);
+        msQueriedUsers.ShouldContain(u => u.TenantId == user2.TenantId, 1);
         AssertPartitionKeyPrefixIsRemoved(msQueriedUsers);
 
-        appleQueriedUsers.Should().HaveCount(1);
-        appleQueriedUsers.Should().ContainSingle(u => u.TenantId == user1.TenantId);
+        appleQueriedUsers.ShouldHaveSingleItem();
+        appleQueriedUsers.ShouldContain(u => u.TenantId == user1.TenantId, 1);
         AssertPartitionKeyPrefixIsRemoved(appleQueriedUsers);
     }
 
@@ -157,13 +157,13 @@ public partial class MultiTenantDatabaseRepositoryTestsBase
         var appleQueriedUsers = await AppleUserRepository.QueryAsync(x => !x.IsDeleted);
 
         // Assert
-        msQueriedUsers.Should().HaveCount(2);
-        msQueriedUsers.Should().ContainSingle(u => u.TenantId == user1.TenantId);
-        msQueriedUsers.Should().ContainSingle(u => u.TenantId == user2.TenantId);
+        msQueriedUsers.Count.ShouldBe(2);
+        msQueriedUsers.ShouldContain(u => u.TenantId == user1.TenantId, 1);
+        msQueriedUsers.ShouldContain(u => u.TenantId == user2.TenantId, 1);
         AssertPartitionKeyPrefixIsRemoved(msQueriedUsers);
 
-        appleQueriedUsers.Should().HaveCount(1);
-        appleQueriedUsers.Should().ContainSingle(u => u.TenantId == user1.TenantId);
+        appleQueriedUsers.ShouldHaveSingleItem();
+        appleQueriedUsers.ShouldContain(u => u.TenantId == user1.TenantId, 1);
         AssertPartitionKeyPrefixIsRemoved(appleQueriedUsers);
     }
 
@@ -183,13 +183,13 @@ public partial class MultiTenantDatabaseRepositoryTestsBase
         var appleQueriedUsers = await AppleUserRepository.QueryAsync(x => x.TenantId == user1.TenantId);
 
         // Assert
-        msQueriedUsers.Should().HaveCount(2);
-        msQueriedUsers.Should().ContainSingle(u => u.TenantId == user1.TenantId);
-        msQueriedUsers.Should().ContainSingle(u => u.TenantId == user2.TenantId);
+        msQueriedUsers.Count.ShouldBe(2);
+        msQueriedUsers.ShouldContain(u => u.TenantId == user1.TenantId, 1);
+        msQueriedUsers.ShouldContain(u => u.TenantId == user2.TenantId, 1);
         AssertPartitionKeyPrefixIsRemoved(msQueriedUsers);
 
-        appleQueriedUsers.Should().HaveCount(1);
-        appleQueriedUsers.Should().ContainSingle(u => u.TenantId == user1.TenantId);
+        appleQueriedUsers.ShouldHaveSingleItem();
+        appleQueriedUsers.ShouldContain(u => u.TenantId == user1.TenantId, 1);
         AssertPartitionKeyPrefixIsRemoved(appleQueriedUsers);
     }
 }

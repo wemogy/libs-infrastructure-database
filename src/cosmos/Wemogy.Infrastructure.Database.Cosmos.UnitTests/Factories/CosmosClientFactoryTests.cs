@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using Shouldly;
 using Wemogy.Infrastructure.Database.Cosmos.Factories;
 using Wemogy.Infrastructure.Database.Cosmos.UnitTests.Abstractions;
 using Wemogy.Infrastructure.Database.Cosmos.UnitTests.Constants;
@@ -20,7 +21,7 @@ public class CosmosClientFactoryTests : CosmosUnitTestBase
             applicationName: "test-app-name");
 
         // Assert
-        Assert.NotNull(cosmosClient);
+        cosmosClient.ShouldNotBeNull();
     }
 
     [Fact]
@@ -36,6 +37,6 @@ public class CosmosClientFactoryTests : CosmosUnitTestBase
             "test-app-name");
 
         // Assert
-        Assert.NotNull(cosmosClient);
+        cosmosClient.ShouldNotBeNull();
     }
 }

@@ -1,6 +1,6 @@
 using System;
 using System.Threading.Tasks;
-using FluentAssertions;
+using Shouldly;
 using Wemogy.Core.Errors.Exceptions;
 using Wemogy.Infrastructure.Database.Core.UnitTests.Fakes.Entities;
 using Xunit;
@@ -29,8 +29,8 @@ public partial class RepositoryTestBase
             UpdateAction);
 
         // Assert
-        updatedUser.Firstname.Should().Be("Updated");
-        updatedUser.TenantId.Should().Be(user.TenantId);
+        updatedUser.Firstname.ShouldBe("Updated");
+        updatedUser.TenantId.ShouldBe(user.TenantId);
     }
 
     [Fact]
@@ -52,8 +52,8 @@ public partial class RepositoryTestBase
             UpdateAction);
 
         // Assert
-        updatedUser.Firstname.Should().Be("Updated");
-        updatedUser.TenantId.Should().Be(user.TenantId);
+        updatedUser.Firstname.ShouldBe("Updated");
+        updatedUser.TenantId.ShouldBe(user.TenantId);
     }
 
     [Fact]
@@ -68,7 +68,7 @@ public partial class RepositoryTestBase
         }
 
         // Act & Assert
-        await Assert.ThrowsAsync<NotFoundErrorException>(
+        await Should.ThrowAsync<NotFoundErrorException>(
             () => MicrosoftUserRepository.UpdateAsync(
                 Guid.NewGuid().ToString(),
                 Guid.NewGuid().ToString(),

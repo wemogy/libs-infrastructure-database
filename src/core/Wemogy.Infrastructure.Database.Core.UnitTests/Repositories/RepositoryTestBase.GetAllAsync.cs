@@ -1,5 +1,5 @@
 using System.Threading.Tasks;
-using FluentAssertions;
+using Shouldly;
 using Wemogy.Infrastructure.Database.Core.UnitTests.Fakes.Entities;
 using Xunit;
 
@@ -22,7 +22,7 @@ public partial class RepositoryTestBase
         var usersFromDb = await MicrosoftUserRepository.GetAllAsync();
 
         // Assert
-        usersFromDb.Should().HaveCount(20);
+        usersFromDb.Count.ShouldBe(20);
     }
 
     [Fact]
@@ -45,7 +45,7 @@ public partial class RepositoryTestBase
         var usersFromDb = await MicrosoftUserRepository.GetAllAsync();
 
         // Assert
-        usersFromDb.Should().HaveCount(10);
+        usersFromDb.Count.ShouldBe(10);
     }
 
     [Fact]
@@ -68,6 +68,6 @@ public partial class RepositoryTestBase
         var result = await DataCenterRepository.GetAllAsync();
 
         // Assert
-        result.Should().HaveCount(20);
+        result.Count.ShouldBe(20);
     }
 }

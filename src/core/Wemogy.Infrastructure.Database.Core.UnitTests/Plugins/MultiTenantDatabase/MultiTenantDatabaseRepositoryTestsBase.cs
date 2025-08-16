@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using FluentAssertions;
+using Shouldly;
 using Wemogy.Infrastructure.Database.Core.Abstractions;
 using Wemogy.Infrastructure.Database.Core.UnitTests.Fakes.Entities;
 using Wemogy.Infrastructure.Database.Core.UnitTests.Providers;
@@ -31,22 +31,20 @@ public abstract partial class MultiTenantDatabaseRepositoryTestsBase : Repositor
 
     private void AssertPartitionKeyPrefixIsRemoved(User user)
     {
-        user.TenantId.Should().NotStartWith(new MicrosoftTenantProvider().GetTenantId());
-        user.TenantId.Should().NotStartWith(new AppleTenantProvider().GetTenantId());
+        user.TenantId.ShouldNotStartWith(new MicrosoftTenantProvider().GetTenantId());
+        user.TenantId.ShouldNotStartWith(new AppleTenantProvider().GetTenantId());
     }
 
     private void AssertExceptionMessageDoesNotContainPrefix(Exception? exception)
     {
-        exception?.Message.Should().NotContain(new MicrosoftTenantProvider().GetTenantId());
-        exception?.Message.Should().NotContain(new AppleTenantProvider().GetTenantId());
+        exception?.Message.ShouldNotContain(new MicrosoftTenantProvider().GetTenantId());
+        exception?.Message.ShouldNotContain(new AppleTenantProvider().GetTenantId());
     }
 
     private void AssertPartitionKeyPrefixIsRemoved(IEnumerable<User> actualUsers)
     {
         var users = actualUsers.ToList();
-        users.Should()
-            .AllSatisfy(u => u.TenantId.Should().NotStartWith(new MicrosoftTenantProvider().GetTenantId()));
-        users.Should()
-            .AllSatisfy(u => u.TenantId.Should().NotStartWith(new AppleTenantProvider().GetTenantId()));
+        users.ShouldAllBe(u => !u.TenantId.StartsWith(new MicrosoftTenantProvider().GetTenantId()));
+        users.ShouldAllBe(u => !u.TenantId.StartsWith(new AppleTenantProvider().GetTenantId()));
     }
 }

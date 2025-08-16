@@ -1,6 +1,6 @@
 using System;
 using System.Threading.Tasks;
-using FluentAssertions;
+using Shouldly;
 using Wemogy.Core.Errors.Exceptions;
 using Wemogy.Infrastructure.Database.Core.UnitTests.Fakes.Entities;
 using Xunit;
@@ -17,11 +17,8 @@ public partial class RepositoryTestBase
         var user = User.Faker.Generate();
         await MicrosoftUserRepository.CreateAsync(user);
 
-        // Act
-        var exception = await Record.ExceptionAsync(() => MicrosoftUserRepository.EnsureExistsAsync(user.Id));
-
-        // Assert
-        exception.Should().BeNull();
+        // Act & Assert
+        await Should.NotThrowAsync(() => MicrosoftUserRepository.EnsureExistsAsync(user.Id));
     }
 
     [Fact]
@@ -30,11 +27,9 @@ public partial class RepositoryTestBase
         // Arrange
         await ResetAsync();
 
-        // Act
-        var exception = await Record.ExceptionAsync(() => MicrosoftUserRepository.EnsureExistsAsync(Guid.NewGuid().ToString()));
-
-        // Assert
-        exception.Should().BeOfType<NotFoundErrorException>();
+        // Act & Assert
+        await Should.ThrowAsync<NotFoundErrorException>(() =>
+            MicrosoftUserRepository.EnsureExistsAsync(Guid.NewGuid().ToString()));
     }
 
     [Fact]
@@ -45,14 +40,11 @@ public partial class RepositoryTestBase
         var user = User.Faker.Generate();
         await MicrosoftUserRepository.CreateAsync(user);
 
-        // Act
-        var exception = await Record.ExceptionAsync(
+        // Act & Assert
+        await Should.NotThrowAsync(
             () => MicrosoftUserRepository.EnsureExistsAsync(
                 user.Id,
                 user.TenantId));
-
-        // Assert
-        exception.Should().BeNull();
     }
 
     [Fact]
@@ -61,14 +53,11 @@ public partial class RepositoryTestBase
         // Arrange
         await ResetAsync();
 
-        // Act
-        var exception = await Record.ExceptionAsync(
+        // Act & Assert
+        await Should.ThrowAsync<NotFoundErrorException>(
             () => MicrosoftUserRepository.EnsureExistsAsync(
                 Guid.NewGuid().ToString(),
                 Guid.NewGuid().ToString()));
-
-        // Assert
-        exception.Should().BeOfType<NotFoundErrorException>();
     }
 
     [Fact]
@@ -79,13 +68,10 @@ public partial class RepositoryTestBase
         var user = User.Faker.Generate();
         await MicrosoftUserRepository.CreateAsync(user);
 
-        // Act
-        var exception = await Record.ExceptionAsync(
+        // Act & Assert
+        await Should.ThrowAsync<NotFoundErrorException>(
             () => MicrosoftUserRepository.EnsureExistsAsync(
                 user.Id,
                 Guid.NewGuid().ToString()));
-
-        // Assert
-        exception.Should().BeOfType<NotFoundErrorException>();
     }
 }

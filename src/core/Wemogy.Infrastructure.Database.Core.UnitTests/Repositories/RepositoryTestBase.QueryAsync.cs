@@ -1,10 +1,10 @@
 using System;
 using System.Threading.Tasks;
-using FluentAssertions;
-using Wemogy.Infrastructure.Database.Core.Enums;
+using Shouldly;
 using Wemogy.Infrastructure.Database.Core.UnitTests.Fakes.Entities;
 using Wemogy.Infrastructure.Database.Core.ValueObjects;
 using Xunit;
+using SortDirection = Wemogy.Infrastructure.Database.Core.Enums.SortDirection;
 
 namespace Wemogy.Infrastructure.Database.Core.UnitTests.Repositories;
 
@@ -23,8 +23,8 @@ public partial class RepositoryTestBase
         var queriedUser = await MicrosoftUserRepository.QueryAsync(queryParameters);
 
         // Assert
-        queriedUser.Should().HaveCount(1);
-        queriedUser[0].TenantId.Should().Be(user.TenantId);
+        queriedUser.ShouldHaveSingleItem();
+        queriedUser[0].TenantId.ShouldBe(user.TenantId);
     }
 
     [Fact]
@@ -41,7 +41,7 @@ public partial class RepositoryTestBase
         var queriedUser = await MicrosoftUserRepository.QueryAsync(queryParameters);
 
         // Assert
-        queriedUser.Should().HaveCount(0);
+        queriedUser.Count.ShouldBe(0);
     }
 
     [Fact]
@@ -63,7 +63,7 @@ public partial class RepositoryTestBase
         var queriedUser = await MicrosoftUserRepository.QueryAsync(queryParameters);
 
         // Assert
-        queriedUser.Should().HaveCount(queryParameters.Take.Value);
+        queriedUser.Count.ShouldBe(queryParameters.Take.Value);
     }
 
     [Fact]
@@ -86,7 +86,7 @@ public partial class RepositoryTestBase
             pagination);
 
         // Assert
-        queriedUser.Should().HaveCount(pagination.Take);
+        queriedUser.Count.ShouldBe(pagination.Take);
     }
 
     [Fact]
@@ -109,7 +109,7 @@ public partial class RepositoryTestBase
             pagination);
 
         // Assert
-        queriedUser.Should().HaveCount(users.Count - pagination.Skip);
+        queriedUser.Count.ShouldBe(users.Count - pagination.Skip);
     }
 
     [Theory]
@@ -146,11 +146,11 @@ public partial class RepositoryTestBase
                 StringComparison.Ordinal);
             if (sortDirection == SortDirection.Ascending)
             {
-                sortOrder.Should().BeLessThanOrEqualTo(0);
+                sortOrder.ShouldBeLessThanOrEqualTo(0);
             }
             else
             {
-                sortOrder.Should().BeGreaterThanOrEqualTo(0);
+                sortOrder.ShouldBeGreaterThanOrEqualTo(0);
             }
         }
     }
@@ -193,15 +193,15 @@ public partial class RepositoryTestBase
                 StringComparison.Ordinal);
             if (sortDirection == SortDirection.Ascending)
             {
-                sortOrder.Should().BeLessThanOrEqualTo(0);
+                sortOrder.ShouldBeLessThanOrEqualTo(0);
             }
             else
             {
-                sortOrder.Should().BeGreaterThanOrEqualTo(0);
+                sortOrder.ShouldBeGreaterThanOrEqualTo(0);
             }
         }
 
         // Assert that queriedUser are paginated
-        queriedUser.Should().HaveCount(pagination.Take);
+        queriedUser.Count.ShouldBe(pagination.Take);
     }
 }

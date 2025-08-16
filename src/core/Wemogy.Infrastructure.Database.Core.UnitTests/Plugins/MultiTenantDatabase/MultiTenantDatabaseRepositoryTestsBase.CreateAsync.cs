@@ -1,5 +1,5 @@
 using System.Threading.Tasks;
-using FluentAssertions;
+using Shouldly;
 using Wemogy.Infrastructure.Database.Core.UnitTests.Fakes.Entities;
 using Xunit;
 
@@ -20,8 +20,8 @@ public abstract partial class MultiTenantDatabaseRepositoryTestsBase
         var appleEntity = await AppleUserRepository.CreateAsync(appleUser);
 
         // Act & Assert
-        msEntity.Should().BeEquivalentTo(msUser);
-        appleEntity.Should().BeEquivalentTo(appleUser);
+        msEntity.ShouldBeEquivalentTo(msUser);
+        appleEntity.ShouldBeEquivalentTo(appleUser);
         AssertPartitionKeyPrefixIsRemoved(msEntity);
         AssertPartitionKeyPrefixIsRemoved(appleEntity);
     }

@@ -1,9 +1,9 @@
 using System.Linq;
-using FluentAssertions;
-using Wemogy.Infrastructure.Database.Core.Enums;
+using Shouldly;
 using Wemogy.Infrastructure.Database.Core.UnitTests.Fakes.Entities;
 using Wemogy.Infrastructure.Database.Core.ValueObjects;
 using Xunit;
+using SortDirection = Wemogy.Infrastructure.Database.Core.Enums.SortDirection;
 
 namespace Wemogy.Infrastructure.Database.Core.UnitTests.ValueObjects;
 
@@ -22,10 +22,10 @@ public class SortingParametersTests
             .OrderBy(x => x.BestFriend!.Firstname);
 
         // Assert
-        sorting.Parameters.First().Property.Should().Be("Firstname");
-        sorting.Parameters.First().Direction.Should().Be(SortDirection.Ascending);
-        sorting.Parameters[1].Property.Should().Be("BestFriend.Firstname");
-        sorting.Parameters[1].Direction.Should().Be(SortDirection.Ascending);
+        sorting.Parameters.First().Property.ShouldBe("Firstname");
+        sorting.Parameters.First().Direction.ShouldBe(SortDirection.Ascending);
+        sorting.Parameters[1].Property.ShouldBe("BestFriend.Firstname");
+        sorting.Parameters[1].Direction.ShouldBe(SortDirection.Ascending);
     }
 
     [Fact]
@@ -42,7 +42,7 @@ public class SortingParametersTests
             .ToList();
 
         // Assert
-        sortedAnimals.Should().NotBeNull();
-        sortedAnimals.Should().HaveCount(10);
+        sortedAnimals.ShouldNotBeNull();
+        sortedAnimals.Count.ShouldBe(10);
     }
 }

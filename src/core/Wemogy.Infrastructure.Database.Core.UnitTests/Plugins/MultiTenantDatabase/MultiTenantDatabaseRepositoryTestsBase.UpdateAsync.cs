@@ -1,6 +1,6 @@
 using System.Linq;
 using System.Threading.Tasks;
-using FluentAssertions;
+using Shouldly;
 using Wemogy.Infrastructure.Database.Core.UnitTests.Fakes.Entities;
 using Xunit;
 
@@ -25,12 +25,12 @@ public abstract partial class MultiTenantDatabaseRepositoryTestsBase
             UpdateAction);
 
         // Assert
-        updatedMsUser.Firstname.Should().Be("Updated");
-        updatedMsUser.TenantId.Should().Be(user.TenantId);
+        updatedMsUser.Firstname.ShouldBe("Updated");
+        updatedMsUser.TenantId.ShouldBe(user.TenantId);
 
         // apple user should remain intact!
         var appleUser = await AppleUserRepository.GetAllAsync();
-        appleUser.First().Should().BeEquivalentTo(user);
+        appleUser.First().ShouldBeEquivalentTo(user);
     }
 
     [Fact]
@@ -48,12 +48,12 @@ public abstract partial class MultiTenantDatabaseRepositoryTestsBase
             UpdateAction);
 
         // Assert
-        updatedUser.Firstname.Should().Be("Updated");
-        updatedUser.TenantId.Should().Be(user.TenantId);
+        updatedUser.Firstname.ShouldBe("Updated");
+        updatedUser.TenantId.ShouldBe(user.TenantId);
 
         // apple user should remain intact!
         var appleUser = await AppleUserRepository.GetAllAsync();
-        appleUser.First().Should().BeEquivalentTo(user);
+        appleUser.First().ShouldBeEquivalentTo(user);
     }
 
     private void UpdateAction(User u)

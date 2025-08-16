@@ -1,6 +1,6 @@
 using System;
 using System.Threading.Tasks;
-using FluentAssertions;
+using Shouldly;
 using Wemogy.Infrastructure.Database.Core.UnitTests.Fakes.Entities;
 using Xunit;
 
@@ -37,10 +37,10 @@ public partial class RepositoryTestBase
             return;
         }
 
-        exception.Should().BeNull();
-        updatedUser.Should().NotBeNull();
-        updatedUser.Id.Should().Be(user.Id);
-        updatedUser.TenantId.Should().Be(user.TenantId);
+        exception.ShouldBeNull();
+        updatedUser.ShouldNotBeNull();
+        updatedUser.Id.ShouldBe(user.Id);
+        updatedUser.TenantId.ShouldBe(user.TenantId);
     }
 
     [Fact]
@@ -74,11 +74,11 @@ public partial class RepositoryTestBase
             return;
         }
 
-        exception.Should().BeNull();
-        updatedUser.Should().NotBeNull();
-        updatedUser.Firstname.Should().Be("Updated");
-        updatedUser.Id.Should().Be(user.Id);
-        updatedUser.TenantId.Should().Be(user.TenantId);
+        exception.ShouldBeNull();
+        updatedUser.ShouldNotBeNull();
+        updatedUser.Firstname.ShouldBe("Updated");
+        updatedUser.Id.ShouldBe(user.Id);
+        updatedUser.TenantId.ShouldBe(user.TenantId);
     }
 
     [Fact]
@@ -108,10 +108,10 @@ public partial class RepositoryTestBase
             return;
         }
 
-        exception.Should().BeNull();
-        updatedUser.Should().NotBeNull();
-        updatedUser.Id.Should().Be(user.Id);
-        updatedUser.TenantId.Should().Be(user.TenantId);
+        exception.ShouldBeNull();
+        updatedUser.ShouldNotBeNull();
+        updatedUser.Id.ShouldBe(user.Id);
+        updatedUser.TenantId.ShouldBe(user.TenantId);
     }
 
     [Fact]
@@ -143,10 +143,10 @@ public partial class RepositoryTestBase
             return;
         }
 
-        exception.Should().BeNull();
-        updatedUser.Should().NotBeNull();
-        updatedUser.Firstname.Should().Be("Updated");
-        updatedUser.Id.Should().Be(user.Id);
-        updatedUser.TenantId.Should().Be(user.TenantId);
+        exception.ShouldBeNull();
+        updatedUser.ShouldNotBeNull();
+        updatedUser.Firstname.ShouldBe("Updated");
+        updatedUser.Id.ShouldBe(user.Id);
+        updatedUser.TenantId.ShouldBe(user.TenantId);
     }
 }

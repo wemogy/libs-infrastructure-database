@@ -1,6 +1,6 @@
 using System.Linq;
 using System.Threading.Tasks;
-using FluentAssertions;
+using Shouldly;
 using Wemogy.Infrastructure.Database.Core.UnitTests.Fakes.Entities;
 using Xunit;
 
@@ -25,6 +25,6 @@ public partial class RepositoryTestBase
         var usersFromDb = await MicrosoftUserRepository.GetByIdsAsync(ids);
 
         // Assert
-        usersFromDb.Should().HaveCount(5);
+        usersFromDb.Count.ShouldBe(5);
     }
 }

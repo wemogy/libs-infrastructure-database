@@ -1,5 +1,5 @@
 using System;
-using FluentAssertions;
+using Shouldly;
 using Wemogy.Core.Errors.Exceptions;
 using Wemogy.Infrastructure.Database.Core.Attributes;
 using Wemogy.Infrastructure.Database.Core.Extensions;
@@ -27,12 +27,12 @@ public class TypeExtensionsTests
         // Assert
         if (expectedToBeSoftDeletable)
         {
-            exception.Should().BeNull();
+            exception.ShouldBeNull();
         }
         else
         {
-            exception.Should().NotBeNull();
-            exception.Should().BeOfType<UnexpectedErrorException>();
+            exception.ShouldNotBeNull();
+            exception.ShouldBeOfType<UnexpectedErrorException>();
         }
     }
 

@@ -1,5 +1,5 @@
 using System.Threading.Tasks;
-using FluentAssertions;
+using Shouldly;
 using Wemogy.Infrastructure.Database.Core.UnitTests.Fakes.Entities;
 using Xunit;
 
@@ -20,7 +20,7 @@ public abstract partial class MultiTenantDatabaseRepositoryTestsBase
         AssertExceptionMessageDoesNotContainPrefix(exception);
 
         // Assert
-        exception.Should().BeNull();
+        exception.ShouldBeNull();
     }
 
     [Fact]
@@ -38,7 +38,7 @@ public abstract partial class MultiTenantDatabaseRepositoryTestsBase
         AssertExceptionMessageDoesNotContainPrefix(exception);
 
         // Assert
-        exception.Should().BeNull();
+        exception.ShouldBeNull();
     }
 
     [Fact]
@@ -58,7 +58,7 @@ public abstract partial class MultiTenantDatabaseRepositoryTestsBase
         AssertExceptionMessageDoesNotContainPrefix(exception);
 
         // Assert
-        exception.Should().BeNull();
+        exception.ShouldBeNull();
     }
 
     [Fact]
@@ -76,6 +76,6 @@ public abstract partial class MultiTenantDatabaseRepositoryTestsBase
         AssertExceptionMessageDoesNotContainPrefix(exception);
 
         // Assert
-        exception.Should().BeNull();
+        exception.ShouldBeNull();
     }
 }

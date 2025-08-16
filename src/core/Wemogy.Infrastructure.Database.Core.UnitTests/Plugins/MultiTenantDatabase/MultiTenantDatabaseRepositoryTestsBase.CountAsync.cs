@@ -1,5 +1,5 @@
 using System.Threading.Tasks;
-using FluentAssertions;
+using Shouldly;
 using Wemogy.Infrastructure.Database.Core.UnitTests.Fakes.Entities;
 using Xunit;
 
@@ -22,8 +22,8 @@ public partial class MultiTenantDatabaseRepositoryTestsBase
         var msUsersCount = await MicrosoftUserRepository.CountAsync(x => true);
         var appleUsersCount = await AppleUserRepository.CountAsync(x => true);
 
-        msUsersCount.Should().Be(2);
-        appleUsersCount.Should().Be(1);
+        msUsersCount.ShouldBe(2);
+        appleUsersCount.ShouldBe(1);
     }
 
     [Fact]
@@ -41,8 +41,8 @@ public partial class MultiTenantDatabaseRepositoryTestsBase
         var msUsersCount = await MicrosoftUserRepository.CountAsync(x => x.Id == user1.Id);
         var appleUsersCount = await AppleUserRepository.CountAsync(x => x.Id == user1.Id);
 
-        msUsersCount.Should().Be(1);
-        appleUsersCount.Should().Be(1);
+        msUsersCount.ShouldBe(1);
+        appleUsersCount.ShouldBe(1);
     }
 
     [Fact]
@@ -60,7 +60,7 @@ public partial class MultiTenantDatabaseRepositoryTestsBase
         var msUsersCount = await MicrosoftUserRepository.CountAsync(x => false);
         var appleUsersCount = await AppleUserRepository.CountAsync(x => false);
 
-        msUsersCount.Should().Be(0);
-        appleUsersCount.Should().Be(0);
+        msUsersCount.ShouldBe(0);
+        appleUsersCount.ShouldBe(0);
     }
 }

@@ -1,5 +1,5 @@
 using System.Threading.Tasks;
-using FluentAssertions;
+using Shouldly;
 using Wemogy.Core.Errors.Exceptions;
 using Wemogy.Infrastructure.Database.Core.UnitTests.Fakes.Entities;
 using Xunit;
@@ -17,7 +17,7 @@ public partial class RepositoryTestBase
         await MicrosoftUserRepository.CreateAsync(user);
 
         // Act & Assert
-        await Assert.ThrowsAsync<NotFoundErrorException>(
+        await Should.ThrowAsync<NotFoundErrorException>(
             () => MicrosoftUserRepository.GetAsync(
                 user.Id,
                 user.TenantId));
@@ -38,7 +38,7 @@ public partial class RepositoryTestBase
             user.TenantId);
 
         // Assert
-        Assert.True(userFromDb.IsDeleted);
-        userFromDb.Should().BeEquivalentTo(user);
+        userFromDb.IsDeleted.ShouldBeTrue();
+        userFromDb.ShouldBeEquivalentTo(user);
     }
 }

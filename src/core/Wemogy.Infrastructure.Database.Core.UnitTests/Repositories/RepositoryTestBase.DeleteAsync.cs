@@ -1,6 +1,6 @@
 using System;
 using System.Threading.Tasks;
-using FluentAssertions;
+using Shouldly;
 using Wemogy.Core.Errors.Exceptions;
 using Wemogy.Infrastructure.Database.Core.UnitTests.Fakes.Entities;
 using Xunit;
@@ -28,8 +28,8 @@ public partial class RepositoryTestBase
             user.TenantId);
 
         // Assert
-        userExistsBeforeDeletion.Should().BeTrue();
-        userExistsAfterDeletion.Should().BeFalse();
+        userExistsBeforeDeletion.ShouldBeTrue();
+        userExistsAfterDeletion.ShouldBeFalse();
     }
 
     [Fact]
@@ -48,8 +48,8 @@ public partial class RepositoryTestBase
             user.Id);
 
         // Assert
-        userExistsBeforeDeletion.Should().BeTrue();
-        userExistsAfterDeletion.Should().BeFalse();
+        userExistsBeforeDeletion.ShouldBeTrue();
+        userExistsAfterDeletion.ShouldBeFalse();
     }
 
     [Fact]
@@ -59,14 +59,10 @@ public partial class RepositoryTestBase
         var notExistingUserId = Guid.NewGuid().ToString();
         var notExistingTenantId = Guid.NewGuid().ToString();
 
-        // Act
-        var exception = await Record.ExceptionAsync(
-            () => MicrosoftUserRepository.DeleteAsync(
-                notExistingUserId,
-                notExistingTenantId));
-
-        // Assert
-        exception.Should().BeOfType<NotFoundErrorException>();
+        // Act & Assert
+        await Should.ThrowAsync<NotFoundErrorException>(() => MicrosoftUserRepository.DeleteAsync(
+            notExistingUserId,
+            notExistingTenantId));
     }
 
     [Fact]
@@ -81,6 +77,6 @@ public partial class RepositoryTestBase
 
         // Assert
         var entities = await MicrosoftUserRepository.QueryAsync(x => true);
-        entities.Should().BeEmpty();
+        entities.ShouldBeEmpty();
     }
 }

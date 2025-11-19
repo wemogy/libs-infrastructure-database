@@ -1,5 +1,5 @@
-using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
+using Shouldly;
 using Wemogy.Core.Errors.Exceptions;
 using Wemogy.Infrastructure.Database.Core.Constants;
 using Wemogy.Infrastructure.Database.Core.Setup;
@@ -28,7 +28,7 @@ public class DependencyInjectionTests : MongoUnitTestBase
         var userRepository = ServiceCollection.BuildServiceProvider().GetRequiredService<IUserRepository>();
 
         // Assert
-        Assert.NotNull(userRepository);
+        userRepository.ShouldNotBeNull();
     }
 
     [Fact]
@@ -48,8 +48,8 @@ public class DependencyInjectionTests : MongoUnitTestBase
 
         // Assert
         exception
-            .Should().BeOfType<UnexpectedErrorException>()
-            .Which.Code.Should().Be(ErrorCodes.MultiTenantDatabaseNotSupported);
+            .ShouldBeOfType<UnexpectedErrorException>()
+            .Code.ShouldBe(ErrorCodes.MultiTenantDatabaseNotSupported);
     }
 
     [Fact]
@@ -67,6 +67,6 @@ public class DependencyInjectionTests : MongoUnitTestBase
         var userRepository = ServiceCollection.BuildServiceProvider().GetRequiredService<IUserRepository>();
 
         // Assert
-        Assert.NotNull(userRepository);
+        userRepository.ShouldNotBeNull();
     }
 }

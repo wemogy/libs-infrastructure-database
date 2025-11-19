@@ -1,5 +1,5 @@
 using System.Threading.Tasks;
-using FluentAssertions;
+using Shouldly;
 using Wemogy.Infrastructure.Database.Core.UnitTests.Fakes.Entities;
 using Xunit;
 
@@ -20,7 +20,7 @@ public partial class RepositoryTestBase
         var result = await MicrosoftUserRepository.GetAsync(user.Id);
 
         // Assert
-        result.PrivateNote.Should().BeEmpty();
+        result.PrivateNote.ShouldBeEmpty();
     }
 
     [Fact]
@@ -36,7 +36,7 @@ public partial class RepositoryTestBase
         var result = await MicrosoftUserRepository.QueryAsync(x => x.Id == user.Id);
 
         // Assert
-        result.Should().AllSatisfy(x => x.PrivateNote.Should().BeEmpty());
+        result.ShouldAllBe(x => x.PrivateNote == string.Empty);
     }
 
     [Fact]
@@ -52,7 +52,7 @@ public partial class RepositoryTestBase
         var result = await MicrosoftUserRepository.GetAllAsync();
 
         // Assert
-        result.Should().AllSatisfy(x => x.PrivateNote.Should().BeEmpty());
+        result.ShouldAllBe(x => x.PrivateNote == string.Empty);
     }
 
     [Fact]
@@ -69,10 +69,10 @@ public partial class RepositoryTestBase
         await MicrosoftUserRepository.IterateAsync(x => x.Id == user.Id, x =>
         {
             count++;
-            x.PrivateNote.Should().BeEmpty();
+            x.PrivateNote.ShouldBeEmpty();
         });
 
         // Assert
-        count.Should().Be(1);
+        count.ShouldBe(1);
     }
 }

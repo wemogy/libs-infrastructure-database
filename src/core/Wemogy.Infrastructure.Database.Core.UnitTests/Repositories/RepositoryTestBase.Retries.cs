@@ -1,5 +1,5 @@
 using System.Threading.Tasks;
-using FluentAssertions;
+using Shouldly;
 using Wemogy.Core.DynamicProxies;
 using Wemogy.Core.DynamicProxies.Enums;
 using Wemogy.Core.Errors;
@@ -43,8 +43,8 @@ public partial class RepositoryTestBase
             UpdateAction);
 
         // Assert
-        updatedUser.Firstname.Should().Be("Updated");
-        flakyProxy.FailAttempts.Should().Be(2);
+        updatedUser.Firstname.ShouldBe("Updated");
+        flakyProxy.FailAttempts.ShouldBe(2);
     }
 
     [Fact]
@@ -76,8 +76,8 @@ public partial class RepositoryTestBase
             UpdateAction);
 
         // Assert
-        updatedUser.Firstname.Should().Be("Updated");
-        flakyProxy.FailAttempts.Should().Be(2);
+        updatedUser.Firstname.ShouldBe("Updated");
+        flakyProxy.FailAttempts.ShouldBe(2);
     }
 
     [Fact]
@@ -104,14 +104,13 @@ public partial class RepositoryTestBase
         }
 
         // Act
-        var updatedUserException = await Record.ExceptionAsync(
+        await Should.ThrowAsync<PreconditionFailedErrorException>(
             () => flakyUserRepository.UpdateAsync(
                 user.Id,
                 user.TenantId,
                 UpdateAction));
 
         // Assert
-        updatedUserException.Should().BeOfType<PreconditionFailedErrorException>();
-        flakyProxy.FailAttempts.Should().Be(4);
+        flakyProxy.FailAttempts.ShouldBe(4);
     }
 }

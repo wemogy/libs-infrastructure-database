@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using Microsoft.Extensions.DependencyInjection;
+using Shouldly;
 using Wemogy.Infrastructure.Database.Core.Setup;
 using Wemogy.Infrastructure.Database.Core.UnitTests.DatabaseRepositories;
 using Wemogy.Infrastructure.Database.Cosmos.Factories;
@@ -25,7 +26,7 @@ public class DependencyInjectionTests : CosmosUnitTestBase
         var userRepository = ServiceCollection.BuildServiceProvider().GetRequiredService<IUserRepository>();
 
         // Assert
-        Assert.NotNull(userRepository);
+        userRepository.ShouldNotBeNull();
     }
 
     [Fact]
@@ -46,6 +47,6 @@ public class DependencyInjectionTests : CosmosUnitTestBase
         var userRepository = ServiceCollection.BuildServiceProvider().GetRequiredService<IUserRepository>();
 
         // Assert
-        Assert.NotNull(userRepository);
+        userRepository.ShouldNotBeNull();
     }
 }

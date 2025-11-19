@@ -1,5 +1,5 @@
 using System.Threading.Tasks;
-using FluentAssertions;
+using Shouldly;
 using Wemogy.Core.Errors.Exceptions;
 using Wemogy.Infrastructure.Database.Core.UnitTests.Fakes.Entities;
 using Xunit;
@@ -24,8 +24,8 @@ public abstract partial class MultiTenantDatabaseRepositoryTestsBase
         var msEntities = await MicrosoftUserRepository.GetAllAsync();
         var appleEntities = await AppleUserRepository.GetAllAsync();
 
-        msEntities.Count.Should().Be(2);
-        appleEntities.Count.Should().Be(2);
+        msEntities.Count.ShouldBe(2);
+        appleEntities.Count.ShouldBe(2);
 
         // Act
         await MicrosoftUserRepository.DeleteAsync(user1.Id);
@@ -35,10 +35,10 @@ public abstract partial class MultiTenantDatabaseRepositoryTestsBase
         msEntities = await MicrosoftUserRepository.GetAllAsync();
         appleEntities = await AppleUserRepository.GetAllAsync();
 
-        msEntities.Count.Should().Be(1);
-        msEntities.Should().ContainSingle(u => u.Id == user2.Id);
-        appleEntities.Count.Should().Be(1);
-        appleEntities.Should().ContainSingle(u => u.Id == user1.Id);
+        msEntities.Count.ShouldBe(1);
+        msEntities.ShouldContain(u => u.Id == user2.Id, 1);
+        appleEntities.Count.ShouldBe(1);
+        appleEntities.ShouldContain(u => u.Id == user1.Id, 1);
     }
 
     [Fact]
@@ -57,8 +57,8 @@ public abstract partial class MultiTenantDatabaseRepositoryTestsBase
         var msEntities = await MicrosoftUserRepository.GetAllAsync();
         var appleEntities = await AppleUserRepository.GetAllAsync();
 
-        msEntities.Count.Should().Be(2);
-        appleEntities.Count.Should().Be(2);
+        msEntities.Count.ShouldBe(2);
+        appleEntities.Count.ShouldBe(2);
 
         // Act
         await MicrosoftUserRepository.DeleteAsync(
@@ -72,10 +72,10 @@ public abstract partial class MultiTenantDatabaseRepositoryTestsBase
         msEntities = await MicrosoftUserRepository.GetAllAsync();
         appleEntities = await AppleUserRepository.GetAllAsync();
 
-        msEntities.Count.Should().Be(1);
-        msEntities.Should().ContainSingle(u => u.Id == user2.Id);
-        appleEntities.Count.Should().Be(1);
-        appleEntities.Should().ContainSingle(u => u.Id == user1.Id);
+        msEntities.Count.ShouldBe(1);
+        msEntities.ShouldContain(u => u.Id == user2.Id, 1);
+        appleEntities.Count.ShouldBe(1);
+        appleEntities.ShouldContain(u => u.Id == user1.Id, 1);
     }
 
     [Fact]
@@ -94,8 +94,8 @@ public abstract partial class MultiTenantDatabaseRepositoryTestsBase
         var msEntities = await MicrosoftUserRepository.GetAllAsync();
         var appleEntities = await AppleUserRepository.GetAllAsync();
 
-        msEntities.Count.Should().Be(2);
-        appleEntities.Count.Should().Be(2);
+        msEntities.Count.ShouldBe(2);
+        appleEntities.Count.ShouldBe(2);
 
         // Act
         await MicrosoftUserRepository.DeleteAsync(u => u.Firstname == user1.Firstname);
@@ -105,10 +105,10 @@ public abstract partial class MultiTenantDatabaseRepositoryTestsBase
         msEntities = await MicrosoftUserRepository.GetAllAsync();
         appleEntities = await AppleUserRepository.GetAllAsync();
 
-        msEntities.Count.Should().Be(1);
-        msEntities.Should().ContainSingle(u => u.Id == user2.Id);
-        appleEntities.Count.Should().Be(1);
-        appleEntities.Should().ContainSingle(u => u.Id == user1.Id);
+        msEntities.Count.ShouldBe(1);
+        msEntities.ShouldContain(u => u.Id == user2.Id, 1);
+        appleEntities.Count.ShouldBe(1);
+        appleEntities.ShouldContain(u => u.Id == user1.Id, 1);
     }
 
     [Fact]
@@ -127,8 +127,8 @@ public abstract partial class MultiTenantDatabaseRepositoryTestsBase
         // Assert
         var msEntities = await MicrosoftUserRepository.GetAllAsync();
 
-        msEntities.Should().HaveCount(1);
-        msEntities.Should().ContainSingle(u => u.Id == user1.Id);
+        msEntities.ShouldHaveSingleItem();
+        msEntities.ShouldContain(u => u.Id == user1.Id, 1);
     }
 
     [Fact]
@@ -146,7 +146,7 @@ public abstract partial class MultiTenantDatabaseRepositoryTestsBase
                 "tenantId"));
 
         // Assert
-        exception1.Should().BeOfType<NotFoundErrorException>();
+        exception1.ShouldBeOfType<NotFoundErrorException>();
         AssertExceptionMessageDoesNotContainPrefix(exception1);
     }
 }

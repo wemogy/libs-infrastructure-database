@@ -1,6 +1,6 @@
 using System;
 using System.Threading.Tasks;
-using FluentAssertions;
+using Shouldly;
 using Wemogy.Infrastructure.Database.Core.UnitTests.Fakes.Entities;
 using Xunit;
 
@@ -20,7 +20,7 @@ public partial class RepositoryTestBase
         var result = await MicrosoftUserRepository.ExistsAsync(user.Id);
 
         // Assert
-        result.Should().BeTrue();
+        result.ShouldBeTrue();
     }
 
     [Fact]
@@ -33,7 +33,7 @@ public partial class RepositoryTestBase
         var result = await MicrosoftUserRepository.ExistsAsync(Guid.NewGuid().ToString());
 
         // Assert
-        result.Should().BeFalse();
+        result.ShouldBeFalse();
     }
 
     [Fact]
@@ -50,7 +50,7 @@ public partial class RepositoryTestBase
             user.TenantId);
 
         // Assert
-        result.Should().BeTrue();
+        result.ShouldBeTrue();
     }
 
     [Fact]
@@ -65,7 +65,7 @@ public partial class RepositoryTestBase
             Guid.NewGuid().ToString());
 
         // Assert
-        result.Should().BeFalse();
+        result.ShouldBeFalse();
     }
 
     [Fact]
@@ -82,6 +82,6 @@ public partial class RepositoryTestBase
             Guid.NewGuid().ToString());
 
         // Assert
-        result.Should().BeFalse();
+        result.ShouldBeFalse();
     }
 }

@@ -1,5 +1,5 @@
 using System.Threading.Tasks;
-using FluentAssertions;
+using Shouldly;
 using Wemogy.Infrastructure.Database.Core.UnitTests.Fakes.Entities;
 using Xunit;
 
@@ -20,8 +20,8 @@ public abstract partial class MultiTenantDatabaseRepositoryTestsBase
         var appleExists = await AppleUserRepository.ExistsAsync(user.Id);
 
         // Assert
-        msExists.Should().BeTrue();
-        appleExists.Should().BeFalse();
+        msExists.ShouldBeTrue();
+        appleExists.ShouldBeFalse();
     }
 
     [Fact]
@@ -37,7 +37,7 @@ public abstract partial class MultiTenantDatabaseRepositoryTestsBase
         var appleExists = await AppleUserRepository.ExistsAsync(x => x.Id == user.Id && x.TenantId == user.TenantId);
 
         // Assert
-        msExists.Should().BeTrue();
-        appleExists.Should().BeFalse();
+        msExists.ShouldBeTrue();
+        appleExists.ShouldBeFalse();
     }
 }

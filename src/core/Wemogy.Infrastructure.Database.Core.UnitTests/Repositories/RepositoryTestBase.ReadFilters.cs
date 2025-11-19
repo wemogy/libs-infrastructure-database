@@ -1,6 +1,6 @@
 using System.Linq;
 using System.Threading.Tasks;
-using FluentAssertions;
+using Shouldly;
 using Wemogy.Core.Errors.Exceptions;
 using Wemogy.Infrastructure.Database.Core.UnitTests.Fakes.Entities;
 using Xunit;
@@ -22,8 +22,8 @@ public partial class RepositoryTestBase
         var exception = await Record.ExceptionAsync(() => MicrosoftUserRepository.GetAsync(user.Id));
 
         // Assert
-        exception.Should().NotBeNull();
-        exception.Should().BeOfType<NotFoundErrorException>();
+        exception.ShouldNotBeNull();
+        exception.ShouldBeOfType<NotFoundErrorException>();
     }
 
     [Fact]
@@ -42,8 +42,8 @@ public partial class RepositoryTestBase
         var result = await MicrosoftUserRepository.QueryAsync(x => true);
 
         // Assert
-        result.Should().HaveCount(1);
-        result.First().Firstname.Should().Be(user2.Firstname);
+        result.ShouldHaveSingleItem();
+        result.First().Firstname.ShouldBe(user2.Firstname);
     }
 
     [Fact]
@@ -62,8 +62,8 @@ public partial class RepositoryTestBase
         var result = await MicrosoftUserRepository.GetAllAsync();
 
         // Assert
-        result.Should().HaveCount(1);
-        result.First().Firstname.Should().Be(user2.Firstname);
+        result.ShouldHaveSingleItem();
+        result.First().Firstname.ShouldBe(user2.Firstname);
     }
 
     [Fact]
@@ -83,10 +83,10 @@ public partial class RepositoryTestBase
         await MicrosoftUserRepository.IterateAsync(x => true, x =>
         {
             count++;
-            x.Firstname.Should().NotBe(user1.Firstname);
+            x.Firstname.ShouldNotBe(user1.Firstname);
         });
 
         // Assert
-        count.Should().Be(1);
+        count.ShouldBe(1);
     }
 }

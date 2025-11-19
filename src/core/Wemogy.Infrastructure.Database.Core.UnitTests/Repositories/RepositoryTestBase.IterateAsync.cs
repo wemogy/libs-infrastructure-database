@@ -1,11 +1,11 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using FluentAssertions;
-using Wemogy.Infrastructure.Database.Core.Enums;
+using Shouldly;
 using Wemogy.Infrastructure.Database.Core.UnitTests.Fakes.Entities;
 using Wemogy.Infrastructure.Database.Core.ValueObjects;
 using Xunit;
+using SortDirection = Wemogy.Infrastructure.Database.Core.Enums.SortDirection;
 
 namespace Wemogy.Infrastructure.Database.Core.UnitTests.Repositories;
 
@@ -27,7 +27,7 @@ public partial class RepositoryTestBase
         });
 
         // Assert
-        count.Should().Be(1);
+        count.ShouldBe(1);
     }
 
     [Fact]
@@ -46,7 +46,7 @@ public partial class RepositoryTestBase
         });
 
         // Assert
-        count.Should().Be(1);
+        count.ShouldBe(1);
     }
 
     [Fact]
@@ -67,7 +67,7 @@ public partial class RepositoryTestBase
         });
 
         // Assert
-        count.Should().Be(1);
+        count.ShouldBe(1);
     }
 
     [Fact]
@@ -105,8 +105,8 @@ public partial class RepositoryTestBase
             });
 
         // Assert
-        firstDocumentsCount.Should().Be(take);
-        lastDocumentsCount.Should().Be(2);
+        firstDocumentsCount.ShouldBe(take);
+        lastDocumentsCount.ShouldBe(2);
     }
 
     [Theory]
@@ -145,11 +145,11 @@ public partial class RepositoryTestBase
                 StringComparison.Ordinal);
             if (sortDirection == SortDirection.Ascending)
             {
-                sortOrder.Should().BeLessThanOrEqualTo(0);
+                sortOrder.ShouldBeLessThanOrEqualTo(0);
             }
             else
             {
-                sortOrder.Should().BeGreaterThanOrEqualTo(0);
+                sortOrder.ShouldBeGreaterThanOrEqualTo(0);
             }
         }
     }

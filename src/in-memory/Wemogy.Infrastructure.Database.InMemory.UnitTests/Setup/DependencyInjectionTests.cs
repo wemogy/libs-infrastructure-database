@@ -1,4 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
+using Shouldly;
 using Wemogy.Infrastructure.Database.Core.UnitTests.DatabaseRepositories;
 using Wemogy.Infrastructure.Database.InMemory.Setup;
 using Xunit;
@@ -21,6 +22,6 @@ public class DependencyInjectionTests
         var userRepository = serviceCollection.BuildServiceProvider().GetRequiredService<IUserRepository>();
 
         // Assert
-        Assert.NotNull(userRepository);
+        userRepository.ShouldNotBeNull();
     }
 }

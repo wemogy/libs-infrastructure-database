@@ -57,6 +57,45 @@ public partial class RepositoryTestBase
     }
 
     [Fact]
+    public async Task UpdateAsync_ShouldRefreshTheUpdatedAtTimestamp()
+    {
+        // Arrange
+        await ResetAsync();
+        var user = User.Faker.Generate();
+        var originalUpdatedAt = user.UpdatedAt;
+        await MicrosoftUserRepository.CreateAsync(user);
+
+        // Act
+        var updatedUser = await MicrosoftUserRepository.UpdateAsync(
+            user.Id,
+            user.TenantId,
+            u => u.Firstname = "Updated");
+
+        // Assert
+        updatedUser.UpdatedAt.Should().NotBe(originalUpdatedAt);
+        updatedUser.UpdatedAt.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromMinutes(1));
+    }
+
+    [Fact]
+    public async Task UpdateAsyncWithoutPartitionKey_ShouldRefreshTheUpdatedAtTimestamp()
+    {
+        // Arrange
+        await ResetAsync();
+        var user = User.Faker.Generate();
+        var originalUpdatedAt = user.UpdatedAt;
+        await MicrosoftUserRepository.CreateAsync(user);
+
+        // Act
+        var updatedUser = await MicrosoftUserRepository.UpdateAsync(
+            user.Id,
+            u => u.Firstname = "Updated");
+
+        // Assert
+        updatedUser.UpdatedAt.Should().NotBe(originalUpdatedAt);
+        updatedUser.UpdatedAt.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromMinutes(1));
+    }
+
+    [Fact]
     public async Task UpdateAsync_ShouldThrowIfTheItemNotExists()
     {
         // Arrange

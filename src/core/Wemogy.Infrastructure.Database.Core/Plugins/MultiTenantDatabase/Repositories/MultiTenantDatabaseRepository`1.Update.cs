@@ -50,6 +50,7 @@ public partial class MultiTenantDatabaseRepository<TEntity>
     {
         var entity = await GetAsync(id);
         await updateAction(entity);
+        entity.UpdatedAt = DateTime.UtcNow;
         var updatedEntity = await ReplaceAsync(entity);
         return updatedEntity;
     }

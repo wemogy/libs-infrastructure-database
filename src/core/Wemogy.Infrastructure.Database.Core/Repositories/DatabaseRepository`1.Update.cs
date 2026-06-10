@@ -36,6 +36,7 @@ public partial class DatabaseRepository<TEntity>
             id,
             partitionKey);
         await updateAction(entity);
+        entity.UpdatedAt = DateTime.UtcNow;
         var updatedEntity = await _database.ReplaceAsync(entity);
         return updatedEntity;
     }
@@ -44,6 +45,7 @@ public partial class DatabaseRepository<TEntity>
     {
         var entity = await GetAsync(id);
         await updateAction(entity);
+        entity.UpdatedAt = DateTime.UtcNow;
         var updatedEntity = await _database.ReplaceAsync(entity);
         return updatedEntity;
     }

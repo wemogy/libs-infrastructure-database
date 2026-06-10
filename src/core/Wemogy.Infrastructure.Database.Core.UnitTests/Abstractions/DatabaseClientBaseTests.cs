@@ -1,4 +1,4 @@
-using FluentAssertions;
+using Shouldly;
 using Wemogy.Infrastructure.Database.Core.Abstractions;
 using Wemogy.Infrastructure.Database.Core.Attributes;
 using Xunit;
@@ -21,7 +21,7 @@ public class DatabaseClientBaseTests
         var eTag = client.ResolveETag(entity);
 
         // Assert
-        eTag.Should().Be("etag-123");
+        eTag.ShouldBe("etag-123");
     }
 
     [Fact]
@@ -35,7 +35,7 @@ public class DatabaseClientBaseTests
         client.SetETag(entity, "etag-456");
 
         // Assert
-        entity.ETag.Should().Be("etag-456");
+        entity.ETag.ShouldBe("etag-456");
     }
 
     [Fact]
@@ -52,7 +52,7 @@ public class DatabaseClientBaseTests
         client.SetETag(entity, null);
 
         // Assert
-        entity.ETag.Should().BeNull();
+        entity.ETag.ShouldBeNull();
     }
 
     [Fact]
@@ -66,7 +66,7 @@ public class DatabaseClientBaseTests
         var eTag = client.ResolveETag(entity);
 
         // Assert
-        eTag.Should().BeNull();
+        eTag.ShouldBeNull();
     }
 
     [Fact]
@@ -80,7 +80,7 @@ public class DatabaseClientBaseTests
         var exception = Record.Exception(() => client.SetETag(entity, "etag-123"));
 
         // Assert
-        exception.Should().BeNull();
+        exception.ShouldBeNull();
     }
 
     private class EntityWithETag

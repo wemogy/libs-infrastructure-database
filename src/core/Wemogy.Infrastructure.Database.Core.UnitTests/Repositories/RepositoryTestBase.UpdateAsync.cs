@@ -72,8 +72,8 @@ public partial class RepositoryTestBase
             u => u.Firstname = "Updated");
 
         // Assert
-        updatedUser.UpdatedAt.Should().NotBe(originalUpdatedAt);
-        updatedUser.UpdatedAt.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromMinutes(1));
+        updatedUser.UpdatedAt.ShouldNotBe(originalUpdatedAt);
+        updatedUser.UpdatedAt.ShouldBe(DateTime.UtcNow, TimeSpan.FromMinutes(1));
     }
 
     [Fact]
@@ -91,8 +91,8 @@ public partial class RepositoryTestBase
             u => u.Firstname = "Updated");
 
         // Assert
-        updatedUser.UpdatedAt.Should().NotBe(originalUpdatedAt);
-        updatedUser.UpdatedAt.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromMinutes(1));
+        updatedUser.UpdatedAt.ShouldNotBe(originalUpdatedAt);
+        updatedUser.UpdatedAt.ShouldBe(DateTime.UtcNow, TimeSpan.FromMinutes(1));
     }
 
     [Fact]

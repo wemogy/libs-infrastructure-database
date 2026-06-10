@@ -1,6 +1,6 @@
 using System;
 using System.Threading.Tasks;
-using FluentAssertions;
+using Shouldly;
 using Wemogy.Core.Errors.Exceptions;
 using Wemogy.Infrastructure.Database.Core.Abstractions;
 using Wemogy.Infrastructure.Database.Core.UnitTests.DatabaseRepositories;
@@ -69,8 +69,8 @@ public class CosmosDatabaseRepositoryTests : RepositoryTestBase
 
         // Assert: both writes survived — proves the 412 fired and the retry re-read.
         // Without the eTag guard the outer replace would overwrite Lastname.
-        updatedUser.Firstname.Should().Be("Updated");
-        updatedUser.Lastname.Should().Be("Concurrent");
+        updatedUser.Firstname.ShouldBe("Updated");
+        updatedUser.Lastname.ShouldBe("Concurrent");
     }
 
     [Fact]
@@ -95,13 +95,13 @@ public class CosmosDatabaseRepositoryTests : RepositoryTestBase
             () => _userWithETagRepository.ReplaceAsync(staleUser));
 
         // Assert
-        exception.Should().BeOfType<PreconditionFailedErrorException>();
+        exception.ShouldBeOfType<PreconditionFailedErrorException>();
 
         // last write must NOT have won
         var persistedUser = await _userWithETagRepository.GetAsync(
             user.Id,
             user.TenantId);
-        persistedUser.Firstname.Should().Be("Fresh");
+        persistedUser.Firstname.ShouldBe("Fresh");
     }
 
     [Fact]
@@ -119,7 +119,7 @@ public class CosmosDatabaseRepositoryTests : RepositoryTestBase
             d => d.Location = "Updated");
 
         // Assert
-        updatedDataCenter.Location.Should().Be("Updated");
+        updatedDataCenter.Location.ShouldBe("Updated");
     }
 
     private static UserWithETag NewUserWithETag()

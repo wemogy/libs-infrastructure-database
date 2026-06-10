@@ -43,7 +43,13 @@ public class User : EntityBase
                     f => f.Random.Guid().ToString())
                 .RuleFor(
                     x => x.Firstname,
-                    f => f.Name.FirstName())
+                    f =>
+                    {
+                        // "John" is silently excluded by GeneralUserReadFilter,
+                        // which makes count/getAll tests flaky
+                        var firstname = f.Name.FirstName();
+                        return firstname == "John" ? "Jane" : firstname;
+                    })
                 .RuleFor(
                     x => x.Lastname,
                     f => f.Name.LastName())

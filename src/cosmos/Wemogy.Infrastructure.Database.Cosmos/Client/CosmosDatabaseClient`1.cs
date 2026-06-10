@@ -40,7 +40,9 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Client
                     new PartitionKey<string>(partitionKey).CosmosPartitionKey,
                     cancellationToken: cancellationToken);
 
-                return itemResponse;
+                var entity = itemResponse.Resource;
+                SetETagValue(entity, itemResponse.ETag);
+                return entity;
             }
             catch (CosmosException e)
             {
@@ -114,6 +116,12 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Client
         public async Task<TEntity> CreateAsync(TEntity entity)
         {
             var partitionKey = ResolvePartitionKey(entity);
+
+            // never persist an eTag into the document body — queries would
+            // deserialize a stale value and cause false 412s on later replaces
+            var eTag = ResolveETagValue(entity);
+            SetETagValue(entity, null);
+
             try
             {
                 var createResponse = await _container.CreateItemAsync(
@@ -124,10 +132,15 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Client
                         EnableContentResponseOnWrite = true
                     });
 
-                return createResponse.Resource;
+                var createdEntity = createResponse.Resource;
+                SetETagValue(createdEntity, createResponse.ETag);
+                SetETagValue(entity, createResponse.ETag);
+                return createdEntity;
             }
             catch (CosmosException cosmosException)
             {
+                SetETagValue(entity, eTag);
+
                 if (cosmosException.StatusCode == HttpStatusCode.Conflict)
                 {
                     throw Error.Conflict(
@@ -142,23 +155,48 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Client
 
         public async Task<TEntity> ReplaceAsync(TEntity entity)
         {
+            var id = ResolveIdValue(entity);
+            var partitionKey = ResolvePartitionKey(entity);
+
+            // never persist an eTag into the document body — queries would
+            // deserialize a stale value and cause false 412s on later replaces
+            var eTag = ResolveETagValue(entity);
+            SetETagValue(entity, null);
+
             try
             {
-                var id = ResolveIdValue(entity);
-                var partitionKey = ResolvePartitionKey(entity);
                 var replaceResponse = await _container.ReplaceItemAsync(
                     entity,
                     id,
-                    partitionKey.CosmosPartitionKey);
+                    partitionKey.CosmosPartitionKey,
+                    new ItemRequestOptions
+                    {
+                        IfMatchEtag = eTag
+                    });
 
-                return replaceResponse.Resource;
+                var replacedEntity = replaceResponse.Resource;
+                SetETagValue(replacedEntity, replaceResponse.ETag);
+                SetETagValue(entity, replaceResponse.ETag);
+                return replacedEntity;
             }
             catch (CosmosException cosmosException)
             {
+                // restore the guard, otherwise a caller-level retry with this
+                // instance would silently fall back to an unconditional replace
+                SetETagValue(entity, eTag);
+
+                if (cosmosException.StatusCode == HttpStatusCode.PreconditionFailed)
+                {
+                    throw Error.PreconditionFailed(
+                        "EtagMismatch",
+                        $"The eTag of the entity with id {id} does not match the version in the database",
+                        cosmosException);
+                }
+
                 if (cosmosException.StatusCode == HttpStatusCode.NotFound)
                 {
                     throw DatabaseError.EntityNotFound(
-                        ResolveIdValue(entity),
+                        id,
                         ResolvePartitionKeyValue(entity),
                         innerException: cosmosException);
                 }
@@ -170,28 +208,61 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Client
         public async Task<TEntity> UpsertAsync(TEntity entity)
         {
             var partitionKey = ResolvePartitionKey(entity);
-            var upsertResponse = await _container.UpsertItemAsync(
-                entity,
-                partitionKey.CosmosPartitionKey,
-                new ItemRequestOptions
-                {
-                    EnableContentResponseOnWrite = true
-                });
 
-            return upsertResponse.Resource;
+            // upserts stay unconditional by design, but the eTag must still
+            // not be persisted into the document body
+            var eTag = ResolveETagValue(entity);
+            SetETagValue(entity, null);
+
+            try
+            {
+                var upsertResponse = await _container.UpsertItemAsync(
+                    entity,
+                    partitionKey.CosmosPartitionKey,
+                    new ItemRequestOptions
+                    {
+                        EnableContentResponseOnWrite = true
+                    });
+
+                var upsertedEntity = upsertResponse.Resource;
+                SetETagValue(upsertedEntity, upsertResponse.ETag);
+                SetETagValue(entity, upsertResponse.ETag);
+                return upsertedEntity;
+            }
+            catch
+            {
+                SetETagValue(entity, eTag);
+                throw;
+            }
         }
 
         public async Task<TEntity> UpsertAsync(TEntity entity, string partitionKey)
         {
-            var upsertResponse = await _container.UpsertItemAsync(
-                entity,
-                new PartitionKey<string>(partitionKey).CosmosPartitionKey,
-                new ItemRequestOptions
-                {
-                    EnableContentResponseOnWrite = true
-                });
+            // upserts stay unconditional by design, but the eTag must still
+            // not be persisted into the document body
+            var eTag = ResolveETagValue(entity);
+            SetETagValue(entity, null);
 
-            return upsertResponse.Resource;
+            try
+            {
+                var upsertResponse = await _container.UpsertItemAsync(
+                    entity,
+                    new PartitionKey<string>(partitionKey).CosmosPartitionKey,
+                    new ItemRequestOptions
+                    {
+                        EnableContentResponseOnWrite = true
+                    });
+
+                var upsertedEntity = upsertResponse.Resource;
+                SetETagValue(upsertedEntity, upsertResponse.ETag);
+                SetETagValue(entity, upsertResponse.ETag);
+                return upsertedEntity;
+            }
+            catch
+            {
+                SetETagValue(entity, eTag);
+                throw;
+            }
         }
 
         public Task DeleteAsync(string id, string partitionKey)

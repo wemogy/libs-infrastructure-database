@@ -1,7 +1,14 @@
+using System;
+using System.Threading.Tasks;
+using FluentAssertions;
+using Wemogy.Core.Errors.Exceptions;
+using Wemogy.Infrastructure.Database.Core.Abstractions;
 using Wemogy.Infrastructure.Database.Core.UnitTests.DatabaseRepositories;
+using Wemogy.Infrastructure.Database.Core.UnitTests.Fakes.Entities;
 using Wemogy.Infrastructure.Database.Core.UnitTests.Repositories;
 using Wemogy.Infrastructure.Database.Cosmos.Factories;
 using Wemogy.Infrastructure.Database.Cosmos.UnitTests.Constants;
+using Wemogy.Infrastructure.Database.Cosmos.UnitTests.Fakes;
 using Xunit;
 
 namespace Wemogy.Infrastructure.Database.Cosmos.UnitTests.Repositories;
@@ -9,6 +16,8 @@ namespace Wemogy.Infrastructure.Database.Cosmos.UnitTests.Repositories;
 [Collection("Sequential")]
 public class CosmosDatabaseRepositoryTests : RepositoryTestBase
 {
+    private readonly IDatabaseRepository<UserWithETag> _userWithETagRepository;
+
     public CosmosDatabaseRepositoryTests()
         : base(
             () => CosmosDatabaseRepositoryFactory.CreateInstance<IUserRepository>(
@@ -22,5 +31,104 @@ public class CosmosDatabaseRepositoryTests : RepositoryTestBase
             true,
             true))
     {
+        _userWithETagRepository = CosmosDatabaseRepositoryFactory.CreateInstance<IUserWithETagRepository>(
+            TestingConstants.ConnectionString,
+            TestingConstants.DatabaseName,
+            true,
+            true);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_ShouldRecoverFromRealETagConflict()
+    {
+        // Arrange
+        var user = NewUserWithETag();
+        await _userWithETagRepository.CreateAsync(user);
+        var concurrentWriteDone = false;
+
+        // Act: a concurrent writer bumps the eTag between this update's Get and Replace.
+        // 1st attempt: Get (eTag A) -> concurrent update writes (eTag becomes B)
+        //              -> Replace with IfMatch A -> real 412 -> PreconditionFailedErrorException
+        // RetryProxy re-runs UpdateAsync: Get (eTag B) -> Replace with IfMatch B -> success
+        var updatedUser = await _userWithETagRepository.UpdateAsync(
+            user.Id,
+            user.TenantId,
+            async u =>
+            {
+                if (!concurrentWriteDone)
+                {
+                    concurrentWriteDone = true;
+                    await _userWithETagRepository.UpdateAsync(
+                        user.Id,
+                        user.TenantId,
+                        concurrentUser => concurrentUser.Lastname = "Concurrent");
+                }
+
+                u.Firstname = "Updated";
+            });
+
+        // Assert: both writes survived — proves the 412 fired and the retry re-read.
+        // Without the eTag guard the outer replace would overwrite Lastname.
+        updatedUser.Firstname.Should().Be("Updated");
+        updatedUser.Lastname.Should().Be("Concurrent");
+    }
+
+    [Fact]
+    public async Task ReplaceAsync_ShouldThrowPreconditionFailedForStaleETag()
+    {
+        // Arrange
+        var user = NewUserWithETag();
+        await _userWithETagRepository.CreateAsync(user);
+        var staleUser = await _userWithETagRepository.GetAsync(
+            user.Id,
+            user.TenantId);
+        var freshUser = await _userWithETagRepository.GetAsync(
+            user.Id,
+            user.TenantId);
+        freshUser.Firstname = "Fresh";
+        await _userWithETagRepository.ReplaceAsync(freshUser);
+
+        // Act: replace with the instance that still carries the old eTag.
+        // A direct ReplaceAsync has no re-read, so all RetryProxy attempts hit 412.
+        staleUser.Firstname = "Stale";
+        var exception = await Record.ExceptionAsync(
+            () => _userWithETagRepository.ReplaceAsync(staleUser));
+
+        // Assert
+        exception.Should().BeOfType<PreconditionFailedErrorException>();
+
+        // last write must NOT have won
+        var persistedUser = await _userWithETagRepository.GetAsync(
+            user.Id,
+            user.TenantId);
+        persistedUser.Firstname.Should().Be("Fresh");
+    }
+
+    [Fact]
+    public async Task UpdateAsync_OnEntityWithoutETagProperty_ShouldStillWork()
+    {
+        // Arrange: DataCenter has no [ETag] property -> unconditional replace path
+        await ResetAsync();
+        var dataCenter = DataCenter.Faker.Generate();
+        await DataCenterRepository.CreateAsync(dataCenter);
+
+        // Act
+        var updatedDataCenter = await DataCenterRepository.UpdateAsync(
+            dataCenter.Id,
+            dataCenter.PartitionKey,
+            d => d.Location = "Updated");
+
+        // Assert
+        updatedDataCenter.Location.Should().Be("Updated");
+    }
+
+    private static UserWithETag NewUserWithETag()
+    {
+        return new UserWithETag
+        {
+            TenantId = Guid.NewGuid().ToString(),
+            Firstname = "Initial",
+            Lastname = "Initial"
+        };
     }
 }

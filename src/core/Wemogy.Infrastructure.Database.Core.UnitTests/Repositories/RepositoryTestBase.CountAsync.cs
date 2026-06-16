@@ -36,12 +36,14 @@ public partial class RepositoryTestBase
         await ResetAsync();
         for (int i = 0; i < totalUserCount; i++)
         {
-            var user = User.Faker.Generate();
+            var faker = User.Faker;
 
             if (i == 0)
             {
-                user.Id = firstUserId;
+                faker.RuleFor(x => x.Id, firstUserId);
             }
+
+            var user = faker.Generate();
 
             await MicrosoftUserRepository.CreateAsync(user);
         }

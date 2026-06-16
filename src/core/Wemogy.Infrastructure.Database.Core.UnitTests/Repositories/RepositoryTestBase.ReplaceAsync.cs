@@ -30,8 +30,9 @@ public partial class RepositoryTestBase
         var created = await MicrosoftUserRepository.CreateAsync(user);
         created.TenantId.ShouldBe(user.TenantId);
 
-        var updatedUser = User.Faker.Generate();
-        updatedUser.Id = id;
+        var updatedUser = User.Faker
+            .RuleFor(x => x.Id, id)
+            .Generate();
         updatedUser.TenantId = tenantId;
 
         // Act

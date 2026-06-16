@@ -15,7 +15,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Wemogy.StyleCop" Version="0.2.2">
+    <PackageReference Include="Wemogy.StyleCop">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
     </PackageReference>
@@ -23,6 +23,8 @@
 
   <PropertyGroup>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
-    <NoWarn>$(NoWarn);1591</NoWarn>
+    <!-- xUnit1051: suggests TestContext.Current.CancellationToken on token-accepting calls (xunit v3). Opt-out repo-wide.
+         NU1507: central package management with multiple package sources (sources are configured per-environment). -->
+    <NoWarn>$(NoWarn);1591;xUnit1051;NU1507</NoWarn>
   </PropertyGroup>
 </Project>

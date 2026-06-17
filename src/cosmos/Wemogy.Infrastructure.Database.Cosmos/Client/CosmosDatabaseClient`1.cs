@@ -168,7 +168,7 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Client
                 {
                     throw Error.PreconditionFailed(
                         "EtagMismatch",
-                        $"The eTag of the entity with id {id} does not match the version in the database",
+                        $"The eTag of the entity with id {id} and partition key {ResolvePartitionKeyValue(entity)} does not match the version in the database",
                         cosmosException);
                 }
 

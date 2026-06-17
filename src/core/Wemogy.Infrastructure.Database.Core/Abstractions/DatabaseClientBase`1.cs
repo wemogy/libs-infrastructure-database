@@ -40,13 +40,13 @@ public abstract class DatabaseClientBase<TEntity>
 
     protected string ResolveIdValue(TEntity entity)
     {
-        var idValue = (string)_idPropertyInfo.GetValue(entity);
+        var idValue = (string)_idPropertyInfo.GetValue(entity)!;
         return idValue;
     }
 
     protected string ResolvePartitionKeyValue(TEntity entity)
     {
-        var partitionKeyValue = (string)_partitionKeyPropertyInfo.GetValue(entity);
+        var partitionKeyValue = (string)_partitionKeyPropertyInfo.GetValue(entity)!;
         return partitionKeyValue;
     }
 

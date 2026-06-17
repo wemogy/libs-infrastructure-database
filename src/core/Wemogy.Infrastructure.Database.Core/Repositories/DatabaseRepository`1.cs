@@ -97,7 +97,7 @@ public partial class DatabaseRepository<TEntity> : IDatabaseRepository<TEntity>
             return false;
         }
 
-        return (bool)_softDeleteFlagProperty.GetValue(entity);
+        return (bool)_softDeleteFlagProperty.GetValue(entity)!;
     }
 
     private async Task<Expression<Func<TEntity, bool>>> GetReadFilter()

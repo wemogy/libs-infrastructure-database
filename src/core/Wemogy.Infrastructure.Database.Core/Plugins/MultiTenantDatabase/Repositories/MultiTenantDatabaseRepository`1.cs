@@ -72,7 +72,7 @@ public partial class MultiTenantDatabaseRepository<TEntity> : IDatabaseRepositor
 
     private Action AddPartitionKeyPrefix(TEntity entity)
     {
-        var partitionKeyValue = (string)_partitionKeyProperty.GetValue(entity);
+        var partitionKeyValue = (string)_partitionKeyProperty.GetValue(entity)!;
 
         _partitionKeyProperty.SetValue(
             entity,
@@ -88,7 +88,7 @@ public partial class MultiTenantDatabaseRepository<TEntity> : IDatabaseRepositor
 
     private void RemovePartitionKeyPrefix(TEntity entity)
     {
-        var prefixedPartitionKeyValue = (string)_partitionKeyProperty.GetValue(entity);
+        var prefixedPartitionKeyValue = (string)_partitionKeyProperty.GetValue(entity)!;
         var valueToTrimOut = BuildComposedPartitionKey(null);
 
         var partitionKeyValue = prefixedPartitionKeyValue.Replace(

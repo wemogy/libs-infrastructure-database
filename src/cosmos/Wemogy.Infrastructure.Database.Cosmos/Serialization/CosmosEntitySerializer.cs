@@ -34,13 +34,14 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Serialization
 
         public override T FromStream<T>(Stream stream)
         {
+            // when the caller materializes the raw stream, hand it back undisposed
+            if (typeof(Stream).IsAssignableFrom(typeof(T)))
+            {
+                return (T)(object)stream;
+            }
+
             using (stream)
             {
-                if (typeof(Stream).IsAssignableFrom(typeof(T)))
-                {
-                    return (T)(object)stream;
-                }
-
                 using var streamReader = new StreamReader(stream);
                 using var jsonTextReader = new JsonTextReader(streamReader);
                 return _serializer.Deserialize<T>(jsonTextReader)!;

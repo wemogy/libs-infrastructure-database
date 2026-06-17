@@ -4,8 +4,7 @@ using Wemogy.Infrastructure.Database.Core.Attributes;
 namespace Wemogy.Infrastructure.Database.Cosmos.UnitTests.Fakes;
 
 /// <summary>
-///     Cosmos fake that relies on the <see cref="ETagAttribute"/> carried by
-///     <see cref="EntityBase.ETag"/> to opt into optimistic concurrency.
+///     Cosmos fake that opts into optimistic concurrency via the <see cref="ETagAttribute"/>.
 /// </summary>
 public class UserWithETag : EntityBase
 {
@@ -15,4 +14,7 @@ public class UserWithETag : EntityBase
     public string Firstname { get; set; } = string.Empty;
 
     public string Lastname { get; set; } = string.Empty;
+
+    [ETag]
+    public string? ETag { get; init; }
 }

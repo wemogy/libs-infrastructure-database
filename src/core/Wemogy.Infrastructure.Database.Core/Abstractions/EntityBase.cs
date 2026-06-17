@@ -26,7 +26,4 @@ public abstract class EntityBase : IEntityBase
     public DateTime CreatedAt { get; set; }
 
     public DateTime UpdatedAt { get; set; }
-
-    [ETag]
-    public string? ETag { get; init; }
 }

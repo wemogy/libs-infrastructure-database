@@ -12,10 +12,4 @@ public interface IEntityBase
     public DateTime CreatedAt { get; set; }
 
     public DateTime UpdatedAt { get; set; }
-
-    /// <summary>
-    ///     The entity's eTag used for optimistic concurrency.
-    ///     Populated from the store on read; never persisted into the document body.
-    /// </summary>
-    public string? ETag { get; }
 }

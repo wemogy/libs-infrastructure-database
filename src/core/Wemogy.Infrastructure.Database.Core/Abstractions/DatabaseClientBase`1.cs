@@ -10,6 +10,7 @@ public abstract class DatabaseClientBase<TEntity>
 {
     private readonly PropertyInfo _partitionKeyPropertyInfo;
     private readonly PropertyInfo _idPropertyInfo;
+    private readonly PropertyInfo? _eTagPropertyInfo;
 
     protected DatabaseClientBase()
     {
@@ -32,6 +33,9 @@ public abstract class DatabaseClientBase<TEntity>
         }
 
         _partitionKeyPropertyInfo = partitionKeyPropertyInfo;
+
+        // optional: entities opt into optimistic concurrency via the [ETag] attribute
+        _eTagPropertyInfo = typeof(TEntity).GetPropertyByCustomAttribute<ETagAttribute>();
     }
 
     protected string ResolveIdValue(TEntity entity)
@@ -44,5 +48,14 @@ public abstract class DatabaseClientBase<TEntity>
     {
         var partitionKeyValue = (string)_partitionKeyPropertyInfo.GetValue(entity);
         return partitionKeyValue;
+    }
+
+    /// <summary>
+    ///     Returns the eTag value of the entity, or null if the entity does not opt into
+    ///     optimistic concurrency via the <see cref="ETagAttribute"/>.
+    /// </summary>
+    protected string? ResolveETagValue(TEntity entity)
+    {
+        return (string?)_eTagPropertyInfo?.GetValue(entity);
     }
 }

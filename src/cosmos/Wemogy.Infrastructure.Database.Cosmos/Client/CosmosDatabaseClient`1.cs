@@ -142,23 +142,40 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Client
 
         public async Task<TEntity> ReplaceAsync(TEntity entity)
         {
+            var id = ResolveIdValue(entity);
+            var partitionKey = ResolvePartitionKey(entity);
+
+            // entities that opt into optimistic concurrency via [ETag] carry the eTag they
+            // were read with; passing it as IfMatch makes Cosmos reject stale writes with a 412
+            var eTag = ResolveETagValue(entity);
+
             try
             {
-                var id = ResolveIdValue(entity);
-                var partitionKey = ResolvePartitionKey(entity);
                 var replaceResponse = await _container.ReplaceItemAsync(
                     entity,
                     id,
-                    partitionKey.CosmosPartitionKey);
+                    partitionKey.CosmosPartitionKey,
+                    new ItemRequestOptions
+                    {
+                        IfMatchEtag = eTag
+                    });
 
                 return replaceResponse.Resource;
             }
             catch (CosmosException cosmosException)
             {
+                if (cosmosException.StatusCode == HttpStatusCode.PreconditionFailed)
+                {
+                    throw Error.PreconditionFailed(
+                        "EtagMismatch",
+                        $"The eTag of the entity with id {id} does not match the version in the database",
+                        cosmosException);
+                }
+
                 if (cosmosException.StatusCode == HttpStatusCode.NotFound)
                 {
                     throw DatabaseError.EntityNotFound(
-                        ResolveIdValue(entity),
+                        id,
                         ResolvePartitionKeyValue(entity),
                         innerException: cosmosException);
                 }

@@ -49,6 +49,7 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Client
                     throw DatabaseError.EntityNotFound(
                         id,
                         partitionKey,
+                        hint: typeof(TEntity).Name,
                         innerException: e);
                 }
 
@@ -143,7 +144,8 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Client
         public async Task<TEntity> ReplaceAsync(TEntity entity)
         {
             var id = ResolveIdValue(entity);
-            var partitionKey = ResolvePartitionKey(entity);
+            var partitionKeyValue = ResolvePartitionKeyValue(entity);
+            var partitionKey = new PartitionKey<string>(partitionKeyValue);
 
             // entities that opt into optimistic concurrency via [ETag] carry the eTag they
             // were read with; passing it as IfMatch makes Cosmos reject stale writes with a 412
@@ -168,7 +170,7 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Client
                 {
                     throw Error.PreconditionFailed(
                         "EtagMismatch",
-                        $"The eTag of the entity with id {id} and partition key {ResolvePartitionKeyValue(entity)} does not match the version in the database",
+                        $"The eTag of the entity with id {id} and partition key {partitionKeyValue} does not match the version in the database",
                         cosmosException);
                 }
 
@@ -176,7 +178,8 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Client
                 {
                     throw DatabaseError.EntityNotFound(
                         id,
-                        ResolvePartitionKeyValue(entity),
+                        partitionKeyValue,
+                        hint: typeof(TEntity).Name,
                         innerException: cosmosException);
                 }
 
@@ -250,6 +253,7 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Client
                         throw DatabaseError.EntityNotFound(
                             id,
                             partitionKey.ToString(),
+                            hint: typeof(TEntity).Name,
                             innerException: e);
                     default:
                         throw;

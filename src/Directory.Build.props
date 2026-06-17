@@ -24,7 +24,7 @@
   <PropertyGroup>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <!-- xUnit1051: suggests TestContext.Current.CancellationToken on token-accepting calls (xunit v3). Opt-out repo-wide.
-         NU1507: central package management with multiple package sources (sources are configured per-environment). -->
+        NU1507: central package management with multiple package sources (sources are configured per-environment). -->
     <NoWarn>$(NoWarn);1591;xUnit1051;NU1507</NoWarn>
   </PropertyGroup>
 </Project>

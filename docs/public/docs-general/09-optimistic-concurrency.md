@@ -37,8 +37,7 @@ The `[ETag]` property is bound to Cosmos' system `_etag` field through two
 serialization rules that are applied automatically:
 
 1. **Read:** the property is populated from the store's `_etag` on every read.
-2. **Write:** the property is never serialized into the document body, so a stale
-   value can never be persisted.
+2. **Write:** the property is never serialized into the document body, so a stale value can never be persisted.
 
 On `ReplaceAsync`, the eTag that the entity was read with is sent as an `If-Match`
 condition. If the document changed in the meantime, Cosmos rejects the write with

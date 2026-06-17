@@ -49,7 +49,6 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Client
                     throw DatabaseError.EntityNotFound(
                         id,
                         partitionKey,
-                        hint: typeof(TEntity).Name,
                         innerException: e);
                 }
 
@@ -253,7 +252,6 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Client
                         throw DatabaseError.EntityNotFound(
                             id,
                             partitionKey.ToString(),
-                            hint: typeof(TEntity).Name,
                             innerException: e);
                     default:
                         throw;

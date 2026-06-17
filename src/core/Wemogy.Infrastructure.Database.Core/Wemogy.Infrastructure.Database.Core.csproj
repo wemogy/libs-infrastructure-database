@@ -15,7 +15,6 @@
   <ItemGroup>
     <PackageReference Include="FastExpressionCompiler" />
     <PackageReference Include="ImpromptuInterface" />
-    <PackageReference Include="Microsoft.CSharp" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
     <PackageReference Include="NuGetizer">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>

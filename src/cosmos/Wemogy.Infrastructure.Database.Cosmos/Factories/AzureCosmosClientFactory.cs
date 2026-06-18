@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Net.Http;
 using System.Threading.Tasks;
 using Microsoft.Azure.Cosmos;
+using Wemogy.Infrastructure.Database.Cosmos.Serialization;
 
 namespace Wemogy.Infrastructure.Database.Cosmos.Factories
 {
@@ -29,11 +30,11 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Factories
             var options = new CosmosClientOptions
             {
                 ApplicationName = applicationName,
-                SerializerOptions = new CosmosSerializationOptions
-                {
-                    IgnoreNullValues = true,
-                    PropertyNamingPolicy = CosmosPropertyNamingPolicy.CamelCase
-                },
+
+                // custom serializer keeps the previous camelCase + ignore-null behavior and
+                // additionally applies the [ETag] serialization rules. SerializerOptions and
+                // Serializer are mutually exclusive, so the naming policy moves into the serializer.
+                Serializer = new CosmosEntitySerializer(),
             };
 
             if (insecureDevelopmentMode)

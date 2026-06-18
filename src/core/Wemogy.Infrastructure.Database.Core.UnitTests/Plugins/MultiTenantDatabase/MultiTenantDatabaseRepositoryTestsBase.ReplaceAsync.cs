@@ -25,8 +25,9 @@ public partial class MultiTenantDatabaseRepositoryTestsBase
         var appleUser = await AppleUserRepository.GetAllAsync();
         appleUser.First().ShouldBeEquivalentTo(user2);
 
-        var updatedUser = User.Faker.Generate();
-        updatedUser.Id = user1Id;
+        var updatedUser = User.Faker
+            .RuleFor(x => x.Id, user1Id)
+            .Generate();
         updatedUser.TenantId = user1TenantId;
 
         // Act

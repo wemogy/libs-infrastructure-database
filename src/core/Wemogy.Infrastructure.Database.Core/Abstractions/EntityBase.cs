@@ -21,7 +21,7 @@ public abstract class EntityBase : IEntityBase
     public bool IsDeleted { get; set; }
 
     [Id]
-    public string Id { get; set; }
+    public string Id { get; init; }
 
     public DateTime CreatedAt { get; set; }
 

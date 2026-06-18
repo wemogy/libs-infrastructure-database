@@ -7,7 +7,7 @@ namespace Wemogy.Infrastructure.Database.Core.Abstractions;
 /// </summary>
 public interface IEntityBase
 {
-    public string Id { get; set; }
+    public string Id { get; }
 
     public DateTime CreatedAt { get; set; }
 

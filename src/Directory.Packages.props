@@ -1,0 +1,26 @@
+<Project>
+  <PropertyGroup>
+    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageVersion Include="Bogus" Version="35.6.5" />
+    <PackageVersion Include="coverlet.collector" Version="6.0.4" />
+    <PackageVersion Include="coverlet.msbuild" Version="6.0.4" />
+    <PackageVersion Include="FastExpressionCompiler" Version="5.3.0" />
+    <PackageVersion Include="ImpromptuInterface" Version="8.0.6" />
+    <PackageVersion Include="Microsoft.Azure.Cosmos" Version="3.61.0" />
+    <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="9.0.11" />
+    <PackageVersion Include="Microsoft.Extensions.Logging.Console" Version="9.0.11" />
+    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
+    <PackageVersion Include="MongoDB.Driver" Version="3.9.0" />
+    <PackageVersion Include="NuGetizer" Version="1.4.7" />
+    <PackageVersion Include="Shouldly" Version="4.3.0" />
+    <PackageVersion Include="System.Linq.Dynamic.Core" Version="1.7.0" />
+    <PackageVersion Include="Wemogy.Configuration" Version="2.0.0" />
+    <PackageVersion Include="Wemogy.Core" Version="5.0.1" />
+    <PackageVersion Include="Wemogy.StyleCop" Version="0.2.2" />
+    <PackageVersion Include="xunit.v3" Version="3.2.2" />
+    <PackageVersion Include="xunit.runner.visualstudio" Version="3.1.5" />
+  </ItemGroup>
+</Project>

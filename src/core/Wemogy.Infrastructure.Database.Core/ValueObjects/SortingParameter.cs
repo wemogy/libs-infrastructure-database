@@ -106,7 +106,7 @@ public class SortingParameter
     {
         if (expression is MemberExpression memberExpression)
         {
-            var parentPath = GetPropertyPath(memberExpression.Expression);
+            var parentPath = GetPropertyPath(memberExpression.Expression!);
             if (!string.IsNullOrEmpty(parentPath))
             {
                 return $"{parentPath}.{memberExpression.Member.Name}";
@@ -129,7 +129,7 @@ public class SortingParameter
     {
         if (expression is MemberExpression memberExpression)
         {
-            var parentPath = GetCamelCasePropertyPath(memberExpression.Expression);
+            var parentPath = GetCamelCasePropertyPath(memberExpression.Expression!);
             if (!string.IsNullOrEmpty(parentPath))
             {
                 return $"{parentPath}.{memberExpression.Member.Name.ToCamelCase()}";

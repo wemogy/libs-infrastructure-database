@@ -66,7 +66,8 @@ namespace Wemogy.Infrastructure.Database.Mongo.Client
             {
                 throw DatabaseError.EntityNotFound(
                     id,
-                    partitionKey);
+                    partitionKey,
+                    hint: typeof(TEntity).Name);
             }
 
             return entity;
@@ -179,7 +180,8 @@ namespace Wemogy.Infrastructure.Database.Mongo.Client
             {
                 throw DatabaseError.EntityNotFound(
                     ResolveIdValue(entity),
-                    ResolvePartitionKeyValue(entity));
+                    ResolvePartitionKeyValue(entity),
+                    hint: typeof(TEntity).Name);
             }
 
             return entity;
@@ -206,7 +208,8 @@ namespace Wemogy.Infrastructure.Database.Mongo.Client
             {
                 throw DatabaseError.EntityNotFound(
                     id,
-                    partitionKey);
+                    partitionKey,
+                    hint: typeof(TEntity).Name);
             }
         }
 

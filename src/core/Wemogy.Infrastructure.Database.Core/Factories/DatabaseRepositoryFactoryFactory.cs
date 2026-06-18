@@ -71,10 +71,10 @@ public class DatabaseRepositoryFactoryFactory
         {
             var readFilters = getReadFiltersGenericMethod.Invoke(
                 this,
-                new object[] { serviceProvider, repositoryReadFilterAttribute });
+                new object?[] { serviceProvider, repositoryReadFilterAttribute });
             var propertyFilters = getPropertyFiltersGenericMethod.Invoke(
                 this,
-                new object[] { serviceProvider, repositoryPropertyFilterAttribute });
+                new object?[] { serviceProvider, repositoryPropertyFilterAttribute });
             var databaseRepository = createDatabaseRepositoryGenericMethod.Invoke(
                 this,
                 new[] { databaseClientInstance, databaseRepositoryOptions, readFilters, propertyFilters });

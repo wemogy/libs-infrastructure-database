@@ -44,7 +44,8 @@ namespace Wemogy.Infrastructure.Database.InMemory.Client
             {
                 throw DatabaseError.EntityNotFound(
                     id,
-                    partitionKey);
+                    partitionKey,
+                    hint: typeof(TEntity).Name);
             }
 
             TEntity entity = entities.AsQueryable().FirstOrDefault("e => e.Id.Equals(@0)", id);
@@ -53,7 +54,8 @@ namespace Wemogy.Infrastructure.Database.InMemory.Client
             {
                 throw DatabaseError.EntityNotFound(
                     id,
-                    partitionKey);
+                    partitionKey,
+                    hint: typeof(TEntity).Name);
             }
 
             return Task.FromResult(entity.Clone());
@@ -179,7 +181,8 @@ namespace Wemogy.Infrastructure.Database.InMemory.Client
             {
                 throw DatabaseError.EntityNotFound(
                     id,
-                    partitionKeyValue);
+                    partitionKeyValue,
+                    hint: typeof(TEntity).Name);
             }
 
             var existingEntity = entities.AsQueryable().FirstOrDefault("e => e.Id.Equals(@0)", id);
@@ -188,7 +191,8 @@ namespace Wemogy.Infrastructure.Database.InMemory.Client
             {
                 throw DatabaseError.EntityNotFound(
                     id,
-                    partitionKeyValue);
+                    partitionKeyValue,
+                    hint: typeof(TEntity).Name);
             }
 
             entities.Remove(existingEntity);
@@ -255,7 +259,8 @@ namespace Wemogy.Infrastructure.Database.InMemory.Client
             {
                 throw DatabaseError.EntityNotFound(
                     id,
-                    partitionKey);
+                    partitionKey,
+                    hint: typeof(TEntity).Name);
             }
 
             var entity = entities.AsQueryable().FirstOrDefault("e => e.Id.Equals(@0)", id);
@@ -264,7 +269,8 @@ namespace Wemogy.Infrastructure.Database.InMemory.Client
             {
                 throw DatabaseError.EntityNotFound(
                     id,
-                    partitionKey);
+                    partitionKey,
+                    hint: typeof(TEntity).Name);
             }
 
             entities.Remove(entity);

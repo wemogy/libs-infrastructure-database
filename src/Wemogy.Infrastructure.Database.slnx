@@ -1,0 +1,23 @@
+<Solution>
+  <Configurations>
+    <Platform Name="Any CPU" />
+    <Platform Name="x64" />
+    <Platform Name="x86" />
+  </Configurations>
+  <Folder Name="/core/">
+    <Project Path="core/Wemogy.Infrastructure.Database.Core.UnitTests/Wemogy.Infrastructure.Database.Core.UnitTests.csproj" />
+    <Project Path="core/Wemogy.Infrastructure.Database.Core/Wemogy.Infrastructure.Database.Core.csproj" />
+  </Folder>
+  <Folder Name="/cosmos/">
+    <Project Path="cosmos/Wemogy.Infrastructure.Database.Cosmos.UnitTests/Wemogy.Infrastructure.Database.Cosmos.UnitTests.csproj" />
+    <Project Path="cosmos/Wemogy.Infrastructure.Database.Cosmos/Wemogy.Infrastructure.Database.Cosmos.csproj" />
+  </Folder>
+  <Folder Name="/in-memory/">
+    <Project Path="in-memory/Wemogy.Infrastructure.Database.InMemory.UnitTests/Wemogy.Infrastructure.Database.InMemory.UnitTests.csproj" />
+    <Project Path="in-memory/Wemogy.Infrastructure.Database.InMemory/Wemogy.Infrastructure.Database.InMemory.csproj" />
+  </Folder>
+  <Folder Name="/mongo/">
+    <Project Path="mongo/Wemogy.Infrastructure.Database.Mongo.UnitTests/Wemogy.Infrastructure.Database.Mongo.UnitTests.csproj" />
+    <Project Path="mongo/Wemogy.Infrastructure.Database.Mongo/Wemogy.Infrastructure.Database.Mongo.csproj" />
+  </Folder>
+</Solution>

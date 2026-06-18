@@ -92,7 +92,8 @@ public partial class RepositoryTestBase
         var partitionKey = Guid.NewGuid().ToString();
         var notFoundException = DatabaseError.EntityNotFound(
             id,
-            partitionKey);
+            partitionKey,
+            hint: nameof(User));
 
         // Act
         var exception = await Record.ExceptionAsync(

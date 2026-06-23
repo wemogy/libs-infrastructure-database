@@ -28,7 +28,15 @@ jobs:
       - name: Test .NET Solution
         working-directory: src
         shell: bash
-        run: dotnet test -c Release /p:CollectCoverage=true -m:1
+        run: |
+          filter_args=()
+
+          if [ -z "${COSMOS_CONNECTION_STRING}" ]; then
+            echo "COSMOS_CONNECTION_STRING is not configured; skipping Cosmos integration tests."
+            filter_args+=(--filter "FullyQualifiedName!~Wemogy.Infrastructure.Database.Cosmos.UnitTests")
+          fi
+
+          dotnet test -c Release /p:CollectCoverage=true -m:1 "${filter_args[@]}"
         env:
           COSMOS_CONNECTION_STRING: ${{ secrets.COSMOS_CONNECTION_STRING }}
           COSMOS_DATABASE_NAME: infrastructuredbtests

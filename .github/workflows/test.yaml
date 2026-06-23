@@ -33,7 +33,7 @@ jobs:
 
           if [ -z "${COSMOS_CONNECTION_STRING}" ]; then
             echo "COSMOS_CONNECTION_STRING is not configured; skipping Cosmos integration tests."
-            # The Cosmos test assembly exercises a live Cosmos DB connection.
+            # The Cosmos.UnitTests assembly includes tests that exercise a live Cosmos DB connection.
             filter_args+=(--filter "FullyQualifiedName!~Wemogy.Infrastructure.Database.Cosmos.UnitTests")
           fi
 

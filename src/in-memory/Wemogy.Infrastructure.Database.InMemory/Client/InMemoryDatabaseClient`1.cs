@@ -11,6 +11,7 @@ using Wemogy.Core.Extensions;
 using Wemogy.Infrastructure.Database.Core.Abstractions;
 using Wemogy.Infrastructure.Database.Core.Errors;
 using Wemogy.Infrastructure.Database.Core.ValueObjects;
+using Wemogy.Infrastructure.Database.InMemory.Batch;
 using Wemogy.Infrastructure.Database.InMemory.Extensions;
 
 namespace Wemogy.Infrastructure.Database.InMemory.Client
@@ -291,6 +292,26 @@ namespace Wemogy.Infrastructure.Database.InMemory.Client
             }
 
             return Task.CompletedTask;
+        }
+
+        public IBatchContext CreateBatch(string partitionKey)
+        {
+            return new InMemoryBatchContext();
+        }
+
+        public IBatchOperation CreateBatchOperationForCreate(TEntity entity)
+        {
+            return new InMemoryFuncBatchOperation(async () => { await CreateAsync(entity); });
+        }
+
+        public IBatchOperation CreateBatchOperationForReplace(TEntity entity)
+        {
+            return new InMemoryFuncBatchOperation(async () => { await ReplaceAsync(entity); });
+        }
+
+        public IBatchOperation CreateBatchOperationForDelete(string id, string partitionKey)
+        {
+            return new InMemoryFuncBatchOperation(() => DeleteAsync(id, partitionKey));
         }
     }
 }

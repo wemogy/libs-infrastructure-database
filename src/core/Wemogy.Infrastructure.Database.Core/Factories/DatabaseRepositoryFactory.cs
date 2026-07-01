@@ -1,3 +1,4 @@
+using System;
 using System.Reflection;
 using Microsoft.Extensions.DependencyInjection;
 using Wemogy.Core.Extensions;
@@ -51,10 +52,28 @@ public partial class DatabaseRepositoryFactory
         return repositoryFactory;
     }
 
+    internal Func<IServiceProvider, IDatabaseRepository<TEntity>> CreateDelegateWithOptions<TEntity>(
+        DatabaseRepositoryOptions options)
+        where TEntity : class, IEntityBase
+    {
+        var typeMetadata = new DatabaseRepositoryTypeMetadata(typeof(IDatabaseRepository<TEntity>));
+        var databaseClient = _databaseClientFactory.InvokeGenericMethod<IDatabaseClient>(
+            nameof(IDatabaseClientFactory.CreateClient),
+            new[] { typeMetadata.EntityType },
+            options);
+        var repositoryFactory = _repositoryFactoryFactory.GetRepositoryFactory<IDatabaseRepository<TEntity>>(
+            typeMetadata,
+            options,
+            databaseClient);
+
+        return serviceProvider => repositoryFactory(serviceProvider);
+    }
+
     private DatabaseRepositoryOptions ResolveDatabaseRepositoryOptions(DatabaseRepositoryTypeMetadata typeMetadata)
     {
         var repositoryOptionsAttribute =
-            typeMetadata.DatabaseRepositoryType.GetCustomAttribute<RepositoryOptionsAttribute>();
+            typeMetadata.DatabaseRepositoryType.GetCustomAttribute<RepositoryOptionsAttribute>()
+            ?? typeMetadata.EntityType.GetCustomAttribute<RepositoryOptionsAttribute>();
         var databaseRepositoryOptions = new DatabaseRepositoryOptions(
             repositoryOptionsAttribute?.CollectionName ?? $"{typeMetadata.EntityType.Name.ToLower()}s",
             repositoryOptionsAttribute?.EnableSoftDelete ?? false);

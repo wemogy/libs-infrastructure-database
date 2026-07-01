@@ -1,8 +1,10 @@
+using System;
 using Microsoft.Extensions.DependencyInjection;
 using Wemogy.Core.Errors;
 using Wemogy.Infrastructure.Database.Core.Abstractions;
 using Wemogy.Infrastructure.Database.Core.Constants;
 using Wemogy.Infrastructure.Database.Core.Factories;
+using Wemogy.Infrastructure.Database.Core.Models;
 using Wemogy.Infrastructure.Database.Core.Plugins.MultiTenantDatabase.Abstractions;
 using Wemogy.Infrastructure.Database.Core.Plugins.MultiTenantDatabase.Factories;
 
@@ -17,6 +19,16 @@ public class DatabaseSetupEnvironment
     {
         _serviceCollection = serviceCollection;
         _databaseRepositoryFactory = new DatabaseRepositoryFactory(databaseClientFactory);
+    }
+
+    public IServiceCollection Services => _serviceCollection;
+
+    internal Func<IServiceProvider, IDatabaseRepository<TEntity>> CreateOutboxRepositoryDelegate<TEntity>(
+        string containerName)
+        where TEntity : class, IEntityBase
+    {
+        var options = new DatabaseRepositoryOptions(containerName, enableSoftDelete: false);
+        return _databaseRepositoryFactory.CreateDelegateWithOptions<TEntity>(options);
     }
 
     public DatabaseSetupEnvironment AddRepository<TDatabaseRepository>()

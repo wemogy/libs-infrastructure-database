@@ -1,5 +1,6 @@
 using System;
 using System.Linq;
+using Wemogy.Infrastructure.Database.Core.Abstractions;
 
 namespace Wemogy.Infrastructure.Database.Core.Models;
 
@@ -16,6 +17,13 @@ public class DatabaseRepositoryTypeMetadata
 
     private static Type GetGenericDatabaseRepositoryType(Type databaseRepositoryType)
     {
+        // Handle the case where the type itself is IDatabaseRepository<T>
+        if (databaseRepositoryType.IsGenericType &&
+            databaseRepositoryType.GetGenericTypeDefinition() == typeof(IDatabaseRepository<>))
+        {
+            return databaseRepositoryType;
+        }
+
         return databaseRepositoryType.GetInterfaces().First(x => x.GenericTypeArguments.Length == 1);
     }
 

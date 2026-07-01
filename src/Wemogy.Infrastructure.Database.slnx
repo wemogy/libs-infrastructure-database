@@ -20,4 +20,7 @@
     <Project Path="mongo/Wemogy.Infrastructure.Database.Mongo.UnitTests/Wemogy.Infrastructure.Database.Mongo.UnitTests.csproj" />
     <Project Path="mongo/Wemogy.Infrastructure.Database.Mongo/Wemogy.Infrastructure.Database.Mongo.csproj" />
   </Folder>
+  <Folder Name="/outbox/">
+    <Project Path="outbox/Wemogy.Infrastructure.Database.Outbox/Wemogy.Infrastructure.Database.Outbox.csproj" />
+  </Folder>
 </Solution>

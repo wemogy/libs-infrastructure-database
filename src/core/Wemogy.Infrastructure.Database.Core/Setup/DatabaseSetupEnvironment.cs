@@ -23,7 +23,7 @@ public class DatabaseSetupEnvironment
 
     public IServiceCollection Services => _serviceCollection;
 
-    internal Func<IServiceProvider, IDatabaseRepository<TEntity>> CreateOutboxRepositoryDelegate<TEntity>(
+    public Func<IServiceProvider, IDatabaseRepository<TEntity>> CreateOutboxRepositoryDelegate<TEntity>(
         string containerName)
         where TEntity : class, IEntityBase
     {

@@ -22,5 +22,6 @@
   </Folder>
   <Folder Name="/outbox/">
     <Project Path="outbox/Wemogy.Infrastructure.Database.Outbox/Wemogy.Infrastructure.Database.Outbox.csproj" />
+    <Project Path="outbox/Wemogy.Infrastructure.Database.Outbox.UnitTests/Wemogy.Infrastructure.Database.Outbox.UnitTests.csproj" />
   </Folder>
 </Solution>

@@ -1,6 +1,7 @@
 using System.Threading.Tasks;
 using Shouldly;
 using Wemogy.Core.Errors.Exceptions;
+using Wemogy.Infrastructure.Database.Core.UnitTests.Extensions;
 using Wemogy.Infrastructure.Database.Core.UnitTests.Fakes.Entities;
 using Xunit;
 
@@ -31,6 +32,6 @@ public partial class RepositoryTestBase
         var entity = await MicrosoftUserRepository.CreateAsync(user);
 
         // Act & Assert
-        entity.ShouldBeEquivalentTo(user);
+        entity.ShouldBeEquivalentToIgnoringETag(user);
     }
 }

@@ -24,6 +24,11 @@ public class CosmosDatabaseRepositoryTests : RepositoryTestBase
             TestingConstants.DatabaseName,
             true,
             true),
+            () => CosmosDatabaseRepositoryFactory.CreateInstance<IFilteredUserRepository>(
+            TestingConstants.ConnectionString,
+            TestingConstants.DatabaseName,
+            true,
+            true),
             () => CosmosDatabaseRepositoryFactory.CreateInstance<IDataCenterRepository>(
             TestingConstants.ConnectionString,
             TestingConstants.DatabaseName,

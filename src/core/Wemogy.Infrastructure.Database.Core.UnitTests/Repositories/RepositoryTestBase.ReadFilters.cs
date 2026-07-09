@@ -16,10 +16,10 @@ public partial class RepositoryTestBase
         await ResetAsync();
         var user = User.Faker.Generate();
         user.Firstname = "John";
-        await MicrosoftUserRepository.CreateAsync(user);
+        await FilteredUserRepository.CreateAsync(user);
 
         // Act
-        var exception = await Record.ExceptionAsync(() => MicrosoftUserRepository.GetAsync(user.Id));
+        var exception = await Record.ExceptionAsync(() => FilteredUserRepository.GetAsync(user.Id));
 
         // Assert
         exception.ShouldNotBeNull();
@@ -33,13 +33,13 @@ public partial class RepositoryTestBase
         await ResetAsync();
         var user1 = User.Faker.Generate();
         user1.Firstname = "John";
-        await MicrosoftUserRepository.CreateAsync(user1);
+        await FilteredUserRepository.CreateAsync(user1);
         var user2 = User.Faker.Generate();
         user2.Firstname = "Not John";
-        await MicrosoftUserRepository.CreateAsync(user2);
+        await FilteredUserRepository.CreateAsync(user2);
 
         // Act
-        var result = await MicrosoftUserRepository.QueryAsync(x => true);
+        var result = await FilteredUserRepository.QueryAsync(x => true);
 
         // Assert
         result.ShouldHaveSingleItem();
@@ -53,13 +53,13 @@ public partial class RepositoryTestBase
         await ResetAsync();
         var user1 = User.Faker.Generate();
         user1.Firstname = "John";
-        await MicrosoftUserRepository.CreateAsync(user1);
+        await FilteredUserRepository.CreateAsync(user1);
         var user2 = User.Faker.Generate();
         user2.Firstname = "Not John";
-        await MicrosoftUserRepository.CreateAsync(user2);
+        await FilteredUserRepository.CreateAsync(user2);
 
         // Act
-        var result = await MicrosoftUserRepository.GetAllAsync();
+        var result = await FilteredUserRepository.GetAllAsync();
 
         // Assert
         result.ShouldHaveSingleItem();
@@ -73,14 +73,14 @@ public partial class RepositoryTestBase
         await ResetAsync();
         var user1 = User.Faker.Generate();
         user1.Firstname = "John";
-        await MicrosoftUserRepository.CreateAsync(user1);
+        await FilteredUserRepository.CreateAsync(user1);
         var user2 = User.Faker.Generate();
         user2.Firstname = "Not John";
-        await MicrosoftUserRepository.CreateAsync(user2);
+        await FilteredUserRepository.CreateAsync(user2);
         var count = 0;
 
         // Act
-        await MicrosoftUserRepository.IterateAsync(x => true, x =>
+        await FilteredUserRepository.IterateAsync(x => true, x =>
         {
             count++;
             x.Firstname.ShouldNotBe(user1.Firstname);

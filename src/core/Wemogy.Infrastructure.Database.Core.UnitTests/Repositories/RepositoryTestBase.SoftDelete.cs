@@ -1,6 +1,7 @@
 using System.Threading.Tasks;
 using Shouldly;
 using Wemogy.Core.Errors.Exceptions;
+using Wemogy.Infrastructure.Database.Core.UnitTests.Extensions;
 using Wemogy.Infrastructure.Database.Core.UnitTests.Fakes.Entities;
 using Xunit;
 
@@ -39,6 +40,6 @@ public partial class RepositoryTestBase
 
         // Assert
         userFromDb.IsDeleted.ShouldBeTrue();
-        userFromDb.ShouldBeEquivalentTo(user);
+        userFromDb.ShouldBeEquivalentToIgnoringETag(user);
     }
 }

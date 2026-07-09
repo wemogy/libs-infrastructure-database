@@ -30,7 +30,7 @@ public partial class RepositoryTestBase
         var user = User.Faker.Generate();
         user.IsDeleted = true;
         MicrosoftUserRepository.SoftDelete.Disable();
-        await MicrosoftUserRepository.CreateAsync(user);
+        user = await MicrosoftUserRepository.CreateAsync(user);
 
         // Act
         var userFromDb = await MicrosoftUserRepository.GetAsync(

@@ -13,10 +13,8 @@ public partial class MultiTenantDatabaseRepositoryTestsBase
     {
         // Arrange
         await ResetAsync();
-        var user1 = User.Faker.Generate();
-        var user2 = User.Faker.Generate();
-        await MicrosoftUserRepository.CreateAsync(user1);
-        await AppleUserRepository.CreateAsync(user2);
+        var user1 = await MicrosoftUserRepository.CreateAsync(User.Faker.Generate());
+        var user2 = await AppleUserRepository.CreateAsync(User.Faker.Generate());
 
         // Act
         var msUserFromDb = await MicrosoftUserRepository.GetAsync(
@@ -51,10 +49,8 @@ public partial class MultiTenantDatabaseRepositoryTestsBase
     {
         // Arrange
         await ResetAsync();
-        var user1 = User.Faker.Generate();
-        var user2 = User.Faker.Generate();
-        await MicrosoftUserRepository.CreateAsync(user1);
-        await AppleUserRepository.CreateAsync(user2);
+        var user1 = await MicrosoftUserRepository.CreateAsync(User.Faker.Generate());
+        var user2 = await AppleUserRepository.CreateAsync(User.Faker.Generate());
 
         // Act
         var msUserFromDb = await MicrosoftUserRepository.GetAsync(user1.Id);
@@ -80,10 +76,8 @@ public partial class MultiTenantDatabaseRepositoryTestsBase
     {
         // Arrange
         await ResetAsync();
-        var user1 = User.Faker.Generate();
-        var user2 = User.Faker.Generate();
-        await MicrosoftUserRepository.CreateAsync(user1);
-        await AppleUserRepository.CreateAsync(user2);
+        var user1 = await MicrosoftUserRepository.CreateAsync(User.Faker.Generate());
+        var user2 = await AppleUserRepository.CreateAsync(User.Faker.Generate());
 
         // Act
         var msUserFromDb = await MicrosoftUserRepository.GetAsync(u => u.Firstname == user1.Firstname);
@@ -109,10 +103,8 @@ public partial class MultiTenantDatabaseRepositoryTestsBase
     {
         // Arrange
         await ResetAsync();
-        var user1 = User.Faker.Generate();
-        var user2 = User.Faker.Generate();
-        await MicrosoftUserRepository.CreateAsync(user1);
-        await AppleUserRepository.CreateAsync(user2);
+        var user1 = await MicrosoftUserRepository.CreateAsync(User.Faker.Generate());
+        var user2 = await AppleUserRepository.CreateAsync(User.Faker.Generate());
 
         // Act
         var msUserFromDb = await MicrosoftUserRepository.GetAsync(u => u.TenantId == user1.TenantId);
@@ -130,13 +122,13 @@ public partial class MultiTenantDatabaseRepositoryTestsBase
     {
         // Arrange
         await ResetAsync();
-        var user1 = User.Faker.Generate();
-        user1.Firstname = "MS";
-        var user2 = User.Faker.Generate();
-        user2.TenantId = user1.TenantId; // fake same tenantId
-        user2.Firstname = "APPLE";
-        await MicrosoftUserRepository.CreateAsync(user1);
-        await AppleUserRepository.CreateAsync(user2);
+        var user1Raw = User.Faker.Generate();
+        user1Raw.Firstname = "MS";
+        var user2Raw = User.Faker.Generate();
+        user2Raw.TenantId = user1Raw.TenantId; // fake same tenantId
+        user2Raw.Firstname = "APPLE";
+        var user1 = await MicrosoftUserRepository.CreateAsync(user1Raw);
+        var user2 = await AppleUserRepository.CreateAsync(user2Raw);
 
         // Act
         var msUserFromDb = await MicrosoftUserRepository.GetAsync(
@@ -172,13 +164,13 @@ public partial class MultiTenantDatabaseRepositoryTestsBase
     {
         // Arrange
         await ResetAsync();
-        var user1 = User.Faker.Generate();
-        user1.Firstname = "MS";
-        var user2 = User.Faker.Generate();
-        user2.TenantId = user1.TenantId; // fake same tenantId
-        user2.Firstname = "APPLE";
-        await MicrosoftUserRepository.CreateAsync(user1);
-        await AppleUserRepository.CreateAsync(user2);
+        var user1Raw = User.Faker.Generate();
+        user1Raw.Firstname = "MS";
+        var user2Raw = User.Faker.Generate();
+        user2Raw.TenantId = user1Raw.TenantId; // fake same tenantId
+        user2Raw.Firstname = "APPLE";
+        var user1 = await MicrosoftUserRepository.CreateAsync(user1Raw);
+        var user2 = await AppleUserRepository.CreateAsync(user2Raw);
 
         // Act
         var msUserFromDb = await MicrosoftUserRepository.GetAsync(user1.Id);
@@ -204,13 +196,13 @@ public partial class MultiTenantDatabaseRepositoryTestsBase
     {
         // Arrange
         await ResetAsync();
-        var user1 = User.Faker.Generate();
-        user1.Firstname = "MS";
-        var user2 = User.Faker.Generate();
-        user2.TenantId = user1.TenantId; // fake same tenantId
-        user2.Firstname = "APPLE";
-        await MicrosoftUserRepository.CreateAsync(user1);
-        await AppleUserRepository.CreateAsync(user2);
+        var user1Raw = User.Faker.Generate();
+        user1Raw.Firstname = "MS";
+        var user2Raw = User.Faker.Generate();
+        user2Raw.TenantId = user1Raw.TenantId; // fake same tenantId
+        user2Raw.Firstname = "APPLE";
+        var user1 = await MicrosoftUserRepository.CreateAsync(user1Raw);
+        var user2 = await AppleUserRepository.CreateAsync(user2Raw);
 
         // Act
         var msUserFromDb = await MicrosoftUserRepository.GetAsync(u => u.Firstname == user1.Firstname);
@@ -236,13 +228,13 @@ public partial class MultiTenantDatabaseRepositoryTestsBase
     {
         // Arrange
         await ResetAsync();
-        var user1 = User.Faker.Generate();
-        user1.Firstname = "MS";
-        var user2 = User.Faker.Generate();
-        user2.TenantId = user1.TenantId; // fake same tenantId
-        user2.Firstname = "APPLE";
-        await MicrosoftUserRepository.CreateAsync(user1);
-        await AppleUserRepository.CreateAsync(user2);
+        var user1Raw = User.Faker.Generate();
+        user1Raw.Firstname = "MS";
+        var user2Raw = User.Faker.Generate();
+        user2Raw.TenantId = user1Raw.TenantId; // fake same tenantId
+        user2Raw.Firstname = "APPLE";
+        var user1 = await MicrosoftUserRepository.CreateAsync(user1Raw);
+        var user2 = await AppleUserRepository.CreateAsync(user2Raw);
 
         // Act - TODO: PartitionKey not supported
         var msUserFromDb = await MicrosoftUserRepository.GetAsync(u => u.TenantId == user1.TenantId);

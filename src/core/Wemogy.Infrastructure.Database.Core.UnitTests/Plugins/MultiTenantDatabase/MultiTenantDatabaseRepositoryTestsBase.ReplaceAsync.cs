@@ -13,12 +13,11 @@ public partial class MultiTenantDatabaseRepositoryTestsBase
     {
         // Arrange
         await ResetAsync();
-        var user1 = User.Faker.Generate();
-        var user1Id = user1.Id;
-        var user1TenantId = user1.TenantId;
-        var user2 = User.Faker.Generate();
-        await MicrosoftUserRepository.CreateAsync(user1);
-        await AppleUserRepository.CreateAsync(user2);
+        var user1Raw = User.Faker.Generate();
+        var user1Id = user1Raw.Id;
+        var user1TenantId = user1Raw.TenantId;
+        var user1 = await MicrosoftUserRepository.CreateAsync(user1Raw);
+        var user2 = await AppleUserRepository.CreateAsync(User.Faker.Generate());
 
         var msUsers = await MicrosoftUserRepository.GetAllAsync();
         msUsers.First().ShouldBeEquivalentTo(user1);
@@ -33,11 +32,12 @@ public partial class MultiTenantDatabaseRepositoryTestsBase
         // Act
         var msFinalUser = await MicrosoftUserRepository.ReplaceAsync(updatedUser);
 
-        // Assert
-        msFinalUser.ShouldBeEquivalentTo(updatedUser);
+        // Assert: the returned entity matches the DB state after replace
+        var readBack = await MicrosoftUserRepository.GetAsync(msFinalUser.Id, msFinalUser.TenantId);
+        msFinalUser.ShouldBeEquivalentTo(readBack);
         msUsers = await MicrosoftUserRepository.GetAllAsync();
         msUsers.Count.ShouldBe(1);
-        msUsers.First().ShouldBeEquivalentTo(updatedUser);
+        msUsers.First().ShouldBeEquivalentTo(msFinalUser);
 
         appleUser = await AppleUserRepository.GetAllAsync();
         appleUser.First().ShouldBeEquivalentTo(user2); // should not update

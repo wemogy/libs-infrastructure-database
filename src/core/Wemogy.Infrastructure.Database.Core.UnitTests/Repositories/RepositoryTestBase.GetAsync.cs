@@ -15,8 +15,7 @@ public partial class RepositoryTestBase
     {
         // Arrange
         await ResetAsync();
-        var user = User.Faker.Generate();
-        await MicrosoftUserRepository.CreateAsync(user);
+        var user = await MicrosoftUserRepository.CreateAsync(User.Faker.Generate());
 
         // Act
         var userFromDb = await MicrosoftUserRepository.GetAsync(user.Id);
@@ -30,8 +29,7 @@ public partial class RepositoryTestBase
     {
         // Arrange
         await ResetAsync();
-        var user = User.Faker.Generate();
-        await MicrosoftUserRepository.CreateAsync(user);
+        var user = await MicrosoftUserRepository.CreateAsync(User.Faker.Generate());
 
         // Act
         var userFromDb = await MicrosoftUserRepository.GetAsync(x => x.Id == user.Id);
@@ -45,8 +43,7 @@ public partial class RepositoryTestBase
     {
         // Arrange
         await ResetAsync();
-        var user = User.Faker.Generate();
-        await MicrosoftUserRepository.CreateAsync(user);
+        var user = await MicrosoftUserRepository.CreateAsync(User.Faker.Generate());
 
         // Act
         var userFromDb = await MicrosoftUserRepository.GetAsync(x => x.Id == user.Id && x.TenantId == user.TenantId);
@@ -71,8 +68,7 @@ public partial class RepositoryTestBase
     {
         // Arrange
         await ResetAsync();
-        var user = User.Faker.Generate();
-        await MicrosoftUserRepository.CreateAsync(user);
+        var user = await MicrosoftUserRepository.CreateAsync(User.Faker.Generate());
 
         // Act
         var userFromDb = await MicrosoftUserRepository.GetAsync(

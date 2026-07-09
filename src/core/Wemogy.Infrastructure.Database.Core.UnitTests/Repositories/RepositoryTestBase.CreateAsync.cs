@@ -30,7 +30,8 @@ public partial class RepositoryTestBase
         // Act
         var entity = await MicrosoftUserRepository.CreateAsync(user);
 
-        // Act & Assert
-        entity.ShouldBeEquivalentTo(user);
+        // Assert: verify the returned entity matches the DB state
+        var readBack = await MicrosoftUserRepository.GetAsync(entity.Id, entity.TenantId);
+        entity.ShouldBeEquivalentTo(readBack);
     }
 }

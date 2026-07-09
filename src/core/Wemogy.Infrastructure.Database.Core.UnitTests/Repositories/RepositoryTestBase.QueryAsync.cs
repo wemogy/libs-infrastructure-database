@@ -97,7 +97,11 @@ public partial class RepositoryTestBase
             2,
             10);
         await ResetAsync();
-        var users = User.Faker.Generate(10);
+
+        // Use a non-filtered firstname to ensure GeneralUserReadFilter doesn't reduce the count
+        var users = User.Faker
+            .RuleFor(x => x.Firstname, _ => "Alice")
+            .Generate(10);
         foreach (var user in users)
         {
             await MicrosoftUserRepository.CreateAsync(user);

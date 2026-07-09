@@ -16,7 +16,7 @@ public abstract partial class MultiTenantDatabaseRepositoryTestsBase
 
         var user = User.Faker.Generate();
         await MicrosoftUserRepository.CreateAsync(user);
-        await AppleUserRepository.CreateAsync(user);
+        var appleCreated = await AppleUserRepository.CreateAsync(user);
 
         // Act
         var updatedMsUser = await MicrosoftUserRepository.UpdateAsync(
@@ -30,7 +30,7 @@ public abstract partial class MultiTenantDatabaseRepositoryTestsBase
 
         // apple user should remain intact!
         var appleUser = await AppleUserRepository.GetAllAsync();
-        appleUser.First().ShouldBeEquivalentTo(user);
+        appleUser.First().ShouldBeEquivalentTo(appleCreated);
     }
 
     [Fact]
@@ -40,7 +40,7 @@ public abstract partial class MultiTenantDatabaseRepositoryTestsBase
         await ResetAsync();
         var user = User.Faker.Generate();
         await MicrosoftUserRepository.CreateAsync(user);
-        await AppleUserRepository.CreateAsync(user);
+        var appleCreated = await AppleUserRepository.CreateAsync(user);
 
         // Act
         var updatedUser = await MicrosoftUserRepository.UpdateAsync(
@@ -53,7 +53,7 @@ public abstract partial class MultiTenantDatabaseRepositoryTestsBase
 
         // apple user should remain intact!
         var appleUser = await AppleUserRepository.GetAllAsync();
-        appleUser.First().ShouldBeEquivalentTo(user);
+        appleUser.First().ShouldBeEquivalentTo(appleCreated);
     }
 
     private void UpdateAction(User u)

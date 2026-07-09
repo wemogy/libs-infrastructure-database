@@ -51,10 +51,15 @@ public static class ShouldlyExtensions
     private static void NormalizeETagProperties<T>(T entity)
         where T : class
     {
+        if (entity == null)
+        {
+            return;
+        }
+
         var properties = ETagPropertiesCache.GetOrAdd(
             typeof(T),
             t => t.GetProperties(BindingFlags.Public | BindingFlags.Instance)
-                  .Where(p => p.GetCustomAttribute<ETagAttribute>() != null)
+                  .Where(p => p.CanWrite && p.GetCustomAttribute<ETagAttribute>() != null)
                   .ToArray());
 
         foreach (var property in properties)

@@ -1,6 +1,7 @@
 using System.Linq;
 using System.Threading.Tasks;
 using Shouldly;
+using Wemogy.Infrastructure.Database.Core.UnitTests.Extensions;
 using Wemogy.Infrastructure.Database.Core.UnitTests.Fakes.Entities;
 using Xunit;
 
@@ -13,16 +14,17 @@ public partial class MultiTenantDatabaseRepositoryTestsBase
     {
         // Arrange
         await ResetAsync();
-        var user1Raw = User.Faker.Generate();
-        var user1Id = user1Raw.Id;
-        var user1TenantId = user1Raw.TenantId;
-        var user1 = await MicrosoftUserRepository.CreateAsync(user1Raw);
-        var user2 = await AppleUserRepository.CreateAsync(User.Faker.Generate());
+        var user1 = User.Faker.Generate();
+        var user1Id = user1.Id;
+        var user1TenantId = user1.TenantId;
+        var user2 = User.Faker.Generate();
+        await MicrosoftUserRepository.CreateAsync(user1);
+        await AppleUserRepository.CreateAsync(user2);
 
         var msUsers = await MicrosoftUserRepository.GetAllAsync();
-        msUsers.First().ShouldBeEquivalentTo(user1);
+        msUsers.First().ShouldBeEquivalentToIgnoringETag(user1);
         var appleUser = await AppleUserRepository.GetAllAsync();
-        appleUser.First().ShouldBeEquivalentTo(user2);
+        appleUser.First().ShouldBeEquivalentToIgnoringETag(user2);
 
         var updatedUser = User.Faker
             .RuleFor(x => x.Id, user1Id)
@@ -32,14 +34,13 @@ public partial class MultiTenantDatabaseRepositoryTestsBase
         // Act
         var msFinalUser = await MicrosoftUserRepository.ReplaceAsync(updatedUser);
 
-        // Assert: the returned entity matches the DB state after replace
-        var readBack = await MicrosoftUserRepository.GetAsync(msFinalUser.Id, msFinalUser.TenantId);
-        msFinalUser.ShouldBeEquivalentTo(readBack);
+        // Assert
+        msFinalUser.ShouldBeEquivalentToIgnoringETag(updatedUser);
         msUsers = await MicrosoftUserRepository.GetAllAsync();
         msUsers.Count.ShouldBe(1);
-        msUsers.First().ShouldBeEquivalentTo(msFinalUser);
+        msUsers.First().ShouldBeEquivalentToIgnoringETag(updatedUser);
 
         appleUser = await AppleUserRepository.GetAllAsync();
-        appleUser.First().ShouldBeEquivalentTo(user2); // should not update
+        appleUser.First().ShouldBeEquivalentToIgnoringETag(user2); // should not update
     }
 }

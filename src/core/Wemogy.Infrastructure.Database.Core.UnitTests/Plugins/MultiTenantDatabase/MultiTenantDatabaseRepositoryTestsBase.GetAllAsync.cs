@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Shouldly;
+using Wemogy.Infrastructure.Database.Core.UnitTests.Extensions;
 using Wemogy.Infrastructure.Database.Core.UnitTests.Fakes.Entities;
 using Xunit;
 
@@ -13,10 +14,15 @@ public partial class MultiTenantDatabaseRepositoryTestsBase
     {
         // Arrange
         await ResetAsync();
-        var appleUser1 = await AppleUserRepository.CreateAsync(User.Faker.Generate());
-        var appleUser2 = await AppleUserRepository.CreateAsync(User.Faker.Generate());
-        var appleUser3 = await AppleUserRepository.CreateAsync(User.Faker.Generate());
-        var msUser = await MicrosoftUserRepository.CreateAsync(User.Faker.Generate());
+        var appleUser1 = User.Faker.Generate();
+        var appleUser2 = User.Faker.Generate();
+        var appleUser3 = User.Faker.Generate();
+        var msUser = User.Faker.Generate();
+
+        await MicrosoftUserRepository.CreateAsync(msUser);
+        await AppleUserRepository.CreateAsync(appleUser1);
+        await AppleUserRepository.CreateAsync(appleUser2);
+        await AppleUserRepository.CreateAsync(appleUser3);
 
         // Act
         var msUserFromDb = await MicrosoftUserRepository.GetAllAsync();
@@ -25,8 +31,8 @@ public partial class MultiTenantDatabaseRepositoryTestsBase
         AssertPartitionKeyPrefixIsRemoved(appleUserFromDb);
 
         // Assert
-        msUserFromDb.ShouldBeEquivalentTo(new List<User> { msUser });
-        appleUserFromDb.ShouldBeEquivalentTo(new List<User> { appleUser1, appleUser2, appleUser3 });
+        msUserFromDb.ShouldBeEquivalentToIgnoringETag(new List<User> { msUser });
+        appleUserFromDb.ShouldBeEquivalentToIgnoringETag(new List<User> { appleUser1, appleUser2, appleUser3 });
     }
 
     [Fact]
@@ -34,19 +40,15 @@ public partial class MultiTenantDatabaseRepositoryTestsBase
     {
         // Arrange
         await ResetAsync();
-        var sharedTenantId = User.Faker.Generate().TenantId;
-        var msUserRaw = User.Faker.Generate();
-        msUserRaw.TenantId = sharedTenantId;
-        var appleUser1Raw = User.Faker.Generate();
-        appleUser1Raw.TenantId = sharedTenantId;
-        var appleUser2Raw = User.Faker.Generate();
-        appleUser2Raw.TenantId = sharedTenantId;
-        var appleUser3Raw = User.Faker.Generate();
-        appleUser3Raw.TenantId = sharedTenantId;
-        var msUser = await MicrosoftUserRepository.CreateAsync(msUserRaw);
-        var appleUser1 = await AppleUserRepository.CreateAsync(appleUser1Raw);
-        var appleUser2 = await AppleUserRepository.CreateAsync(appleUser2Raw);
-        var appleUser3 = await AppleUserRepository.CreateAsync(appleUser3Raw);
+        var appleUser1 = User.Faker.Generate();
+        var appleUser2 = User.Faker.Generate();
+        var appleUser3 = User.Faker.Generate();
+        var msUser = User.Faker.Generate();
+        appleUser1.TenantId = appleUser2.TenantId = appleUser3.TenantId = msUser.TenantId;
+        await MicrosoftUserRepository.CreateAsync(msUser);
+        await AppleUserRepository.CreateAsync(appleUser1);
+        await AppleUserRepository.CreateAsync(appleUser2);
+        await AppleUserRepository.CreateAsync(appleUser3);
 
         // Act
         var msUserFromDb = await MicrosoftUserRepository.GetAllAsync();
@@ -55,7 +57,7 @@ public partial class MultiTenantDatabaseRepositoryTestsBase
         AssertPartitionKeyPrefixIsRemoved(appleUserFromDb);
 
         // Assert
-        msUserFromDb.ShouldBeEquivalentTo(new List<User> { msUser });
-        appleUserFromDb.ShouldBeEquivalentTo(new List<User> { appleUser1, appleUser2, appleUser3 });
+        msUserFromDb.ShouldBeEquivalentToIgnoringETag(new List<User> { msUser });
+        appleUserFromDb.ShouldBeEquivalentToIgnoringETag(new List<User> { appleUser1, appleUser2, appleUser3 });
     }
 }

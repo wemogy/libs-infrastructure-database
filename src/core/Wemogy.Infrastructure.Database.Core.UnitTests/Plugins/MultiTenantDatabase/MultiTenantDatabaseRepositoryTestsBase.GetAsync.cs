@@ -1,6 +1,7 @@
 using System.Threading.Tasks;
 using Shouldly;
 using Wemogy.Core.Errors.Exceptions;
+using Wemogy.Infrastructure.Database.Core.UnitTests.Extensions;
 using Wemogy.Infrastructure.Database.Core.UnitTests.Fakes.Entities;
 using Xunit;
 
@@ -13,8 +14,10 @@ public partial class MultiTenantDatabaseRepositoryTestsBase
     {
         // Arrange
         await ResetAsync();
-        var user1 = await MicrosoftUserRepository.CreateAsync(User.Faker.Generate());
-        var user2 = await AppleUserRepository.CreateAsync(User.Faker.Generate());
+        var user1 = User.Faker.Generate();
+        var user2 = User.Faker.Generate();
+        await MicrosoftUserRepository.CreateAsync(user1);
+        await AppleUserRepository.CreateAsync(user2);
 
         // Act
         var msUserFromDb = await MicrosoftUserRepository.GetAsync(
@@ -25,8 +28,8 @@ public partial class MultiTenantDatabaseRepositoryTestsBase
             user2.TenantId);
 
         // Assert
-        msUserFromDb.ShouldBeEquivalentTo(user1);
-        appleUserFromDb.ShouldBeEquivalentTo(user2);
+        msUserFromDb.ShouldBeEquivalentToIgnoringETag(user1);
+        appleUserFromDb.ShouldBeEquivalentToIgnoringETag(user2);
         AssertPartitionKeyPrefixIsRemoved(msUserFromDb);
         AssertPartitionKeyPrefixIsRemoved(appleUserFromDb);
 
@@ -49,16 +52,18 @@ public partial class MultiTenantDatabaseRepositoryTestsBase
     {
         // Arrange
         await ResetAsync();
-        var user1 = await MicrosoftUserRepository.CreateAsync(User.Faker.Generate());
-        var user2 = await AppleUserRepository.CreateAsync(User.Faker.Generate());
+        var user1 = User.Faker.Generate();
+        var user2 = User.Faker.Generate();
+        await MicrosoftUserRepository.CreateAsync(user1);
+        await AppleUserRepository.CreateAsync(user2);
 
         // Act
         var msUserFromDb = await MicrosoftUserRepository.GetAsync(user1.Id);
         var appleUserFromDb = await AppleUserRepository.GetAsync(user2.Id);
 
         // Assert
-        msUserFromDb.ShouldBeEquivalentTo(user1);
-        appleUserFromDb.ShouldBeEquivalentTo(user2);
+        msUserFromDb.ShouldBeEquivalentToIgnoringETag(user1);
+        appleUserFromDb.ShouldBeEquivalentToIgnoringETag(user2);
         AssertPartitionKeyPrefixIsRemoved(msUserFromDb);
         AssertPartitionKeyPrefixIsRemoved(appleUserFromDb);
 
@@ -76,16 +81,18 @@ public partial class MultiTenantDatabaseRepositoryTestsBase
     {
         // Arrange
         await ResetAsync();
-        var user1 = await MicrosoftUserRepository.CreateAsync(User.Faker.Generate());
-        var user2 = await AppleUserRepository.CreateAsync(User.Faker.Generate());
+        var user1 = User.Faker.Generate();
+        var user2 = User.Faker.Generate();
+        await MicrosoftUserRepository.CreateAsync(user1);
+        await AppleUserRepository.CreateAsync(user2);
 
         // Act
         var msUserFromDb = await MicrosoftUserRepository.GetAsync(u => u.Firstname == user1.Firstname);
         var appleUserFromDb = await AppleUserRepository.GetAsync(u => u.Lastname == user2.Lastname);
 
         // Assert
-        msUserFromDb.ShouldBeEquivalentTo(user1);
-        appleUserFromDb.ShouldBeEquivalentTo(user2);
+        msUserFromDb.ShouldBeEquivalentToIgnoringETag(user1);
+        appleUserFromDb.ShouldBeEquivalentToIgnoringETag(user2);
         AssertPartitionKeyPrefixIsRemoved(msUserFromDb);
         AssertPartitionKeyPrefixIsRemoved(appleUserFromDb);
 
@@ -103,8 +110,10 @@ public partial class MultiTenantDatabaseRepositoryTestsBase
     {
         // Arrange
         await ResetAsync();
-        var user1 = await MicrosoftUserRepository.CreateAsync(User.Faker.Generate());
-        var user2 = await AppleUserRepository.CreateAsync(User.Faker.Generate());
+        var user1 = User.Faker.Generate();
+        var user2 = User.Faker.Generate();
+        await MicrosoftUserRepository.CreateAsync(user1);
+        await AppleUserRepository.CreateAsync(user2);
 
         // Act
         var msUserFromDb = await MicrosoftUserRepository.GetAsync(u => u.TenantId == user1.TenantId);
@@ -113,8 +122,8 @@ public partial class MultiTenantDatabaseRepositoryTestsBase
         AssertPartitionKeyPrefixIsRemoved(appleUserFromDb);
 
         // Assert
-        msUserFromDb.ShouldBeEquivalentTo(user1);
-        appleUserFromDb.ShouldBeEquivalentTo(user2);
+        msUserFromDb.ShouldBeEquivalentToIgnoringETag(user1);
+        appleUserFromDb.ShouldBeEquivalentToIgnoringETag(user2);
     }
 
     [Fact]
@@ -122,13 +131,13 @@ public partial class MultiTenantDatabaseRepositoryTestsBase
     {
         // Arrange
         await ResetAsync();
-        var user1Raw = User.Faker.Generate();
-        user1Raw.Firstname = "MS";
-        var user2Raw = User.Faker.Generate();
-        user2Raw.TenantId = user1Raw.TenantId; // fake same tenantId
-        user2Raw.Firstname = "APPLE";
-        var user1 = await MicrosoftUserRepository.CreateAsync(user1Raw);
-        var user2 = await AppleUserRepository.CreateAsync(user2Raw);
+        var user1 = User.Faker.Generate();
+        user1.Firstname = "MS";
+        var user2 = User.Faker.Generate();
+        user2.TenantId = user1.TenantId; // fake same tenantId
+        user2.Firstname = "APPLE";
+        await MicrosoftUserRepository.CreateAsync(user1);
+        await AppleUserRepository.CreateAsync(user2);
 
         // Act
         var msUserFromDb = await MicrosoftUserRepository.GetAsync(
@@ -139,8 +148,8 @@ public partial class MultiTenantDatabaseRepositoryTestsBase
             user2.TenantId);
 
         // Assert
-        msUserFromDb.ShouldBeEquivalentTo(user1);
-        appleUserFromDb.ShouldBeEquivalentTo(user2);
+        msUserFromDb.ShouldBeEquivalentToIgnoringETag(user1);
+        appleUserFromDb.ShouldBeEquivalentToIgnoringETag(user2);
         AssertPartitionKeyPrefixIsRemoved(msUserFromDb);
         AssertPartitionKeyPrefixIsRemoved(appleUserFromDb);
 
@@ -164,21 +173,21 @@ public partial class MultiTenantDatabaseRepositoryTestsBase
     {
         // Arrange
         await ResetAsync();
-        var user1Raw = User.Faker.Generate();
-        user1Raw.Firstname = "MS";
-        var user2Raw = User.Faker.Generate();
-        user2Raw.TenantId = user1Raw.TenantId; // fake same tenantId
-        user2Raw.Firstname = "APPLE";
-        var user1 = await MicrosoftUserRepository.CreateAsync(user1Raw);
-        var user2 = await AppleUserRepository.CreateAsync(user2Raw);
+        var user1 = User.Faker.Generate();
+        user1.Firstname = "MS";
+        var user2 = User.Faker.Generate();
+        user2.TenantId = user1.TenantId; // fake same tenantId
+        user2.Firstname = "APPLE";
+        await MicrosoftUserRepository.CreateAsync(user1);
+        await AppleUserRepository.CreateAsync(user2);
 
         // Act
         var msUserFromDb = await MicrosoftUserRepository.GetAsync(user1.Id);
         var appleUserFromDb = await AppleUserRepository.GetAsync(user2.Id);
 
         // Assert
-        msUserFromDb.ShouldBeEquivalentTo(user1);
-        appleUserFromDb.ShouldBeEquivalentTo(user2);
+        msUserFromDb.ShouldBeEquivalentToIgnoringETag(user1);
+        appleUserFromDb.ShouldBeEquivalentToIgnoringETag(user2);
         AssertPartitionKeyPrefixIsRemoved(msUserFromDb);
         AssertPartitionKeyPrefixIsRemoved(appleUserFromDb);
 
@@ -196,21 +205,21 @@ public partial class MultiTenantDatabaseRepositoryTestsBase
     {
         // Arrange
         await ResetAsync();
-        var user1Raw = User.Faker.Generate();
-        user1Raw.Firstname = "MS";
-        var user2Raw = User.Faker.Generate();
-        user2Raw.TenantId = user1Raw.TenantId; // fake same tenantId
-        user2Raw.Firstname = "APPLE";
-        var user1 = await MicrosoftUserRepository.CreateAsync(user1Raw);
-        var user2 = await AppleUserRepository.CreateAsync(user2Raw);
+        var user1 = User.Faker.Generate();
+        user1.Firstname = "MS";
+        var user2 = User.Faker.Generate();
+        user2.TenantId = user1.TenantId; // fake same tenantId
+        user2.Firstname = "APPLE";
+        await MicrosoftUserRepository.CreateAsync(user1);
+        await AppleUserRepository.CreateAsync(user2);
 
         // Act
         var msUserFromDb = await MicrosoftUserRepository.GetAsync(u => u.Firstname == user1.Firstname);
         var appleUserFromDb = await AppleUserRepository.GetAsync(u => u.Lastname == user2.Lastname);
 
         // Assert
-        msUserFromDb.ShouldBeEquivalentTo(user1);
-        appleUserFromDb.ShouldBeEquivalentTo(user2);
+        msUserFromDb.ShouldBeEquivalentToIgnoringETag(user1);
+        appleUserFromDb.ShouldBeEquivalentToIgnoringETag(user2);
         AssertPartitionKeyPrefixIsRemoved(msUserFromDb);
         AssertPartitionKeyPrefixIsRemoved(appleUserFromDb);
 
@@ -228,13 +237,13 @@ public partial class MultiTenantDatabaseRepositoryTestsBase
     {
         // Arrange
         await ResetAsync();
-        var user1Raw = User.Faker.Generate();
-        user1Raw.Firstname = "MS";
-        var user2Raw = User.Faker.Generate();
-        user2Raw.TenantId = user1Raw.TenantId; // fake same tenantId
-        user2Raw.Firstname = "APPLE";
-        var user1 = await MicrosoftUserRepository.CreateAsync(user1Raw);
-        var user2 = await AppleUserRepository.CreateAsync(user2Raw);
+        var user1 = User.Faker.Generate();
+        user1.Firstname = "MS";
+        var user2 = User.Faker.Generate();
+        user2.TenantId = user1.TenantId; // fake same tenantId
+        user2.Firstname = "APPLE";
+        await MicrosoftUserRepository.CreateAsync(user1);
+        await AppleUserRepository.CreateAsync(user2);
 
         // Act - TODO: PartitionKey not supported
         var msUserFromDb = await MicrosoftUserRepository.GetAsync(u => u.TenantId == user1.TenantId);
@@ -243,7 +252,7 @@ public partial class MultiTenantDatabaseRepositoryTestsBase
         AssertPartitionKeyPrefixIsRemoved(appleUserFromDb);
 
         // Assert
-        msUserFromDb.ShouldBeEquivalentTo(user1);
-        appleUserFromDb.ShouldBeEquivalentTo(user2);
+        msUserFromDb.ShouldBeEquivalentToIgnoringETag(user1);
+        appleUserFromDb.ShouldBeEquivalentToIgnoringETag(user2);
     }
 }

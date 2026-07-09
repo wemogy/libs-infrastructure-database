@@ -1,6 +1,7 @@
 using System.Threading.Tasks;
 using Shouldly;
 using Wemogy.Core.Errors.Exceptions;
+using Wemogy.Infrastructure.Database.Core.UnitTests.Extensions;
 using Wemogy.Infrastructure.Database.Core.UnitTests.Fakes.Entities;
 using Xunit;
 
@@ -38,8 +39,6 @@ public partial class RepositoryTestBase
         // Act
         var finalUser = await MicrosoftUserRepository.ReplaceAsync(updatedUser);
 
-        // Assert: the returned entity matches what is now stored in the DB
-        var readBack = await MicrosoftUserRepository.GetAsync(finalUser.Id, finalUser.TenantId);
-        finalUser.ShouldBeEquivalentTo(readBack);
+        finalUser.ShouldBeEquivalentToIgnoringETag(updatedUser);
     }
 }

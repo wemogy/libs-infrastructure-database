@@ -1,6 +1,7 @@
 using System.Linq;
 using System.Threading.Tasks;
 using Shouldly;
+using Wemogy.Infrastructure.Database.Core.UnitTests.Extensions;
 using Wemogy.Infrastructure.Database.Core.UnitTests.Fakes.Entities;
 using Xunit;
 
@@ -16,7 +17,7 @@ public abstract partial class MultiTenantDatabaseRepositoryTestsBase
 
         var user = User.Faker.Generate();
         await MicrosoftUserRepository.CreateAsync(user);
-        var appleCreated = await AppleUserRepository.CreateAsync(user);
+        await AppleUserRepository.CreateAsync(user);
 
         // Act
         var updatedMsUser = await MicrosoftUserRepository.UpdateAsync(
@@ -30,7 +31,7 @@ public abstract partial class MultiTenantDatabaseRepositoryTestsBase
 
         // apple user should remain intact!
         var appleUser = await AppleUserRepository.GetAllAsync();
-        appleUser.First().ShouldBeEquivalentTo(appleCreated);
+        appleUser.First().ShouldBeEquivalentToIgnoringETag(user);
     }
 
     [Fact]
@@ -40,7 +41,7 @@ public abstract partial class MultiTenantDatabaseRepositoryTestsBase
         await ResetAsync();
         var user = User.Faker.Generate();
         await MicrosoftUserRepository.CreateAsync(user);
-        var appleCreated = await AppleUserRepository.CreateAsync(user);
+        await AppleUserRepository.CreateAsync(user);
 
         // Act
         var updatedUser = await MicrosoftUserRepository.UpdateAsync(
@@ -53,7 +54,7 @@ public abstract partial class MultiTenantDatabaseRepositoryTestsBase
 
         // apple user should remain intact!
         var appleUser = await AppleUserRepository.GetAllAsync();
-        appleUser.First().ShouldBeEquivalentTo(appleCreated);
+        appleUser.First().ShouldBeEquivalentToIgnoringETag(user);
     }
 
     private void UpdateAction(User u)

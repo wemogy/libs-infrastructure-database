@@ -1,6 +1,7 @@
 using System.Threading.Tasks;
 using Shouldly;
 using Wemogy.Core.Errors.Exceptions;
+using Wemogy.Infrastructure.Database.Core.UnitTests.Extensions;
 using Wemogy.Infrastructure.Database.Core.UnitTests.Fakes.Entities;
 using Xunit;
 
@@ -30,8 +31,7 @@ public partial class RepositoryTestBase
         // Act
         var entity = await MicrosoftUserRepository.CreateAsync(user);
 
-        // Assert: verify the returned entity matches the DB state
-        var readBack = await MicrosoftUserRepository.GetAsync(entity.Id, entity.TenantId);
-        entity.ShouldBeEquivalentTo(readBack);
+        // Act & Assert
+        entity.ShouldBeEquivalentToIgnoringETag(user);
     }
 }

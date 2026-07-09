@@ -1,3 +1,5 @@
+using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
@@ -8,6 +10,8 @@ namespace Wemogy.Infrastructure.Database.Core.UnitTests.Extensions;
 
 public static class ShouldlyExtensions
 {
+    private static readonly ConcurrentDictionary<Type, PropertyInfo[]> ETagPropertiesCache = new();
+
     /// <summary>
     ///     Asserts that <paramref name="actual"/> is structurally equivalent to
     ///     <paramref name="expected"/>, ignoring any properties decorated with
@@ -28,7 +32,7 @@ public static class ShouldlyExtensions
     ///     <see cref="ETagAttribute"/> because those are assigned automatically by
     ///     the database and are not manually managed.
     /// </summary>
-    public static void ShouldBeEquivalentToIgnoringETag<T>(this List<T> actual, List<T> expected)
+    public static void ShouldBeEquivalentToIgnoringETag<T>(this IList<T> actual, IList<T> expected)
         where T : class
     {
         foreach (var item in actual)
@@ -47,9 +51,13 @@ public static class ShouldlyExtensions
     private static void NormalizeETagProperties<T>(T entity)
         where T : class
     {
-        foreach (var property in typeof(T)
-                     .GetProperties(BindingFlags.Public | BindingFlags.Instance)
-                     .Where(p => p.GetCustomAttribute<ETagAttribute>() != null))
+        var properties = ETagPropertiesCache.GetOrAdd(
+            typeof(T),
+            t => t.GetProperties(BindingFlags.Public | BindingFlags.Instance)
+                  .Where(p => p.GetCustomAttribute<ETagAttribute>() != null)
+                  .ToArray());
+
+        foreach (var property in properties)
         {
             property.SetValue(entity, null);
         }

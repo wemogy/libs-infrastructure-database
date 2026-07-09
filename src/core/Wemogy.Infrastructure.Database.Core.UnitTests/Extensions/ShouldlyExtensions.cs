@@ -1,17 +1,13 @@
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Linq;
-using System.Reflection;
 using Shouldly;
+using Wemogy.Core.Extensions;
 using Wemogy.Infrastructure.Database.Core.Attributes;
 
 namespace Wemogy.Infrastructure.Database.Core.UnitTests.Extensions;
 
 public static class ShouldlyExtensions
 {
-    private static readonly ConcurrentDictionary<Type, PropertyInfo[]> ETagPropertiesCache = new();
-
     /// <summary>
     ///     Asserts that <paramref name="actual"/> is structurally equivalent to
     ///     <paramref name="expected"/>, ignoring any properties decorated with
@@ -56,14 +52,15 @@ public static class ShouldlyExtensions
             return;
         }
 
-        var properties = ETagPropertiesCache.GetOrAdd(
-            typeof(T),
-            t => t.GetProperties(BindingFlags.Public | BindingFlags.Instance)
-                  .Where(p => p.CanWrite && p.GetCustomAttribute<ETagAttribute>() != null)
-                  .ToArray());
+        var properties = typeof(T).GetPropertiesByCustomAttribute<ETagAttribute>();
 
         foreach (var property in properties)
         {
+            if (!property.CanWrite)
+            {
+                continue;
+            }
+
             // Only set null for reference types and Nullable<T> value types
             if (!property.PropertyType.IsValueType ||
                 Nullable.GetUnderlyingType(property.PropertyType) != null)

@@ -9,8 +9,6 @@ public interface IEntityBase
 {
     public string Id { get; }
 
-    public string? ETag { get; }
-
     public DateTime CreatedAt { get; set; }
 
     public DateTime UpdatedAt { get; set; }

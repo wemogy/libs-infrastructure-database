@@ -59,7 +59,12 @@ public static class ShouldlyExtensions
 
         foreach (var property in properties)
         {
-            property.SetValue(entity, null);
+            // Only set null for reference types and Nullable<T> value types
+            if (!property.PropertyType.IsValueType ||
+                Nullable.GetUnderlyingType(property.PropertyType) != null)
+            {
+                property.SetValue(entity, null);
+            }
         }
     }
 }

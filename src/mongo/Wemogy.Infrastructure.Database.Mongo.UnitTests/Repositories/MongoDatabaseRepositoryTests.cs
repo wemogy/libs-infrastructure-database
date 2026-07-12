@@ -15,6 +15,10 @@ public class MongoDatabaseRepositoryTests : RepositoryTestBase
                 TestingConstants.ConnectionString,
                 TestingConstants.DatabaseName,
                 true),
+            () => MongoDatabaseRepositoryFactory.CreateInstance<IFilteredUserRepository>(
+                TestingConstants.ConnectionString,
+                TestingConstants.DatabaseName,
+                true),
             () => MongoDatabaseRepositoryFactory.CreateInstance<IDataCenterRepository>(
                 TestingConstants.ConnectionString,
                 TestingConstants.DatabaseName,

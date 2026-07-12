@@ -1,6 +1,7 @@
 using System.Threading.Tasks;
 using Shouldly;
 using Wemogy.Core.Errors.Exceptions;
+using Wemogy.Infrastructure.Database.Core.UnitTests.Extensions;
 using Wemogy.Infrastructure.Database.Core.UnitTests.Fakes.Entities;
 using Xunit;
 
@@ -27,8 +28,8 @@ public partial class MultiTenantDatabaseRepositoryTestsBase
             user2.TenantId);
 
         // Assert
-        msUserFromDb.ShouldBeEquivalentTo(user1);
-        appleUserFromDb.ShouldBeEquivalentTo(user2);
+        msUserFromDb.ShouldBeEquivalentToIgnoringETag(user1);
+        appleUserFromDb.ShouldBeEquivalentToIgnoringETag(user2);
         AssertPartitionKeyPrefixIsRemoved(msUserFromDb);
         AssertPartitionKeyPrefixIsRemoved(appleUserFromDb);
 
@@ -61,8 +62,8 @@ public partial class MultiTenantDatabaseRepositoryTestsBase
         var appleUserFromDb = await AppleUserRepository.GetAsync(user2.Id);
 
         // Assert
-        msUserFromDb.ShouldBeEquivalentTo(user1);
-        appleUserFromDb.ShouldBeEquivalentTo(user2);
+        msUserFromDb.ShouldBeEquivalentToIgnoringETag(user1);
+        appleUserFromDb.ShouldBeEquivalentToIgnoringETag(user2);
         AssertPartitionKeyPrefixIsRemoved(msUserFromDb);
         AssertPartitionKeyPrefixIsRemoved(appleUserFromDb);
 
@@ -90,8 +91,8 @@ public partial class MultiTenantDatabaseRepositoryTestsBase
         var appleUserFromDb = await AppleUserRepository.GetAsync(u => u.Lastname == user2.Lastname);
 
         // Assert
-        msUserFromDb.ShouldBeEquivalentTo(user1);
-        appleUserFromDb.ShouldBeEquivalentTo(user2);
+        msUserFromDb.ShouldBeEquivalentToIgnoringETag(user1);
+        appleUserFromDb.ShouldBeEquivalentToIgnoringETag(user2);
         AssertPartitionKeyPrefixIsRemoved(msUserFromDb);
         AssertPartitionKeyPrefixIsRemoved(appleUserFromDb);
 
@@ -121,8 +122,8 @@ public partial class MultiTenantDatabaseRepositoryTestsBase
         AssertPartitionKeyPrefixIsRemoved(appleUserFromDb);
 
         // Assert
-        msUserFromDb.ShouldBeEquivalentTo(user1);
-        appleUserFromDb.ShouldBeEquivalentTo(user2);
+        msUserFromDb.ShouldBeEquivalentToIgnoringETag(user1);
+        appleUserFromDb.ShouldBeEquivalentToIgnoringETag(user2);
     }
 
     [Fact]
@@ -147,8 +148,8 @@ public partial class MultiTenantDatabaseRepositoryTestsBase
             user2.TenantId);
 
         // Assert
-        msUserFromDb.ShouldBeEquivalentTo(user1);
-        appleUserFromDb.ShouldBeEquivalentTo(user2);
+        msUserFromDb.ShouldBeEquivalentToIgnoringETag(user1);
+        appleUserFromDb.ShouldBeEquivalentToIgnoringETag(user2);
         AssertPartitionKeyPrefixIsRemoved(msUserFromDb);
         AssertPartitionKeyPrefixIsRemoved(appleUserFromDb);
 
@@ -185,8 +186,8 @@ public partial class MultiTenantDatabaseRepositoryTestsBase
         var appleUserFromDb = await AppleUserRepository.GetAsync(user2.Id);
 
         // Assert
-        msUserFromDb.ShouldBeEquivalentTo(user1);
-        appleUserFromDb.ShouldBeEquivalentTo(user2);
+        msUserFromDb.ShouldBeEquivalentToIgnoringETag(user1);
+        appleUserFromDb.ShouldBeEquivalentToIgnoringETag(user2);
         AssertPartitionKeyPrefixIsRemoved(msUserFromDb);
         AssertPartitionKeyPrefixIsRemoved(appleUserFromDb);
 
@@ -217,8 +218,8 @@ public partial class MultiTenantDatabaseRepositoryTestsBase
         var appleUserFromDb = await AppleUserRepository.GetAsync(u => u.Lastname == user2.Lastname);
 
         // Assert
-        msUserFromDb.ShouldBeEquivalentTo(user1);
-        appleUserFromDb.ShouldBeEquivalentTo(user2);
+        msUserFromDb.ShouldBeEquivalentToIgnoringETag(user1);
+        appleUserFromDb.ShouldBeEquivalentToIgnoringETag(user2);
         AssertPartitionKeyPrefixIsRemoved(msUserFromDb);
         AssertPartitionKeyPrefixIsRemoved(appleUserFromDb);
 
@@ -251,7 +252,7 @@ public partial class MultiTenantDatabaseRepositoryTestsBase
         AssertPartitionKeyPrefixIsRemoved(appleUserFromDb);
 
         // Assert
-        msUserFromDb.ShouldBeEquivalentTo(user1);
-        appleUserFromDb.ShouldBeEquivalentTo(user2);
+        msUserFromDb.ShouldBeEquivalentToIgnoringETag(user1);
+        appleUserFromDb.ShouldBeEquivalentToIgnoringETag(user2);
     }
 }

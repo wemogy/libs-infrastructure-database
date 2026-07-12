@@ -1,6 +1,7 @@
 using System.Linq;
 using System.Threading.Tasks;
 using Shouldly;
+using Wemogy.Infrastructure.Database.Core.UnitTests.Extensions;
 using Wemogy.Infrastructure.Database.Core.UnitTests.Fakes.Entities;
 using Xunit;
 
@@ -30,7 +31,7 @@ public abstract partial class MultiTenantDatabaseRepositoryTestsBase
 
         // apple user should remain intact!
         var appleUser = await AppleUserRepository.GetAllAsync();
-        appleUser.First().ShouldBeEquivalentTo(user);
+        appleUser.First().ShouldBeEquivalentToIgnoringETag(user);
     }
 
     [Fact]
@@ -53,7 +54,7 @@ public abstract partial class MultiTenantDatabaseRepositoryTestsBase
 
         // apple user should remain intact!
         var appleUser = await AppleUserRepository.GetAllAsync();
-        appleUser.First().ShouldBeEquivalentTo(user);
+        appleUser.First().ShouldBeEquivalentToIgnoringETag(user);
     }
 
     private void UpdateAction(User u)

@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Shouldly;
+using Wemogy.Infrastructure.Database.Core.UnitTests.Extensions;
 using Wemogy.Infrastructure.Database.Core.UnitTests.Fakes.Entities;
 using Xunit;
 
@@ -30,8 +31,8 @@ public partial class MultiTenantDatabaseRepositoryTestsBase
         AssertPartitionKeyPrefixIsRemoved(appleUserFromDb);
 
         // Assert
-        msUserFromDb.ShouldBeEquivalentTo(new List<User> { msUser });
-        appleUserFromDb.ShouldBeEquivalentTo(new List<User> { appleUser1, appleUser2, appleUser3 });
+        msUserFromDb.ShouldBeEquivalentToIgnoringETag(new List<User> { msUser });
+        appleUserFromDb.ShouldBeEquivalentToIgnoringETag(new List<User> { appleUser1, appleUser2, appleUser3 });
     }
 
     [Fact]
@@ -56,7 +57,7 @@ public partial class MultiTenantDatabaseRepositoryTestsBase
         AssertPartitionKeyPrefixIsRemoved(appleUserFromDb);
 
         // Assert
-        msUserFromDb.ShouldBeEquivalentTo(new List<User> { msUser });
-        appleUserFromDb.ShouldBeEquivalentTo(new List<User> { appleUser1, appleUser2, appleUser3 });
+        msUserFromDb.ShouldBeEquivalentToIgnoringETag(new List<User> { msUser });
+        appleUserFromDb.ShouldBeEquivalentToIgnoringETag(new List<User> { appleUser1, appleUser2, appleUser3 });
     }
 }

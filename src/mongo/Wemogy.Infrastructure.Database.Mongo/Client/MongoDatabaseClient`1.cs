@@ -197,6 +197,26 @@ namespace Wemogy.Infrastructure.Database.Mongo.Client
             throw new NotSupportedException();
         }
 
+        public IBatchContext CreateBatch(string partitionKey)
+        {
+            throw new NotSupportedException();
+        }
+
+        public IBatchOperation CreateBatchOperationForCreate(TEntity entity)
+        {
+            throw new NotSupportedException();
+        }
+
+        public IBatchOperation CreateBatchOperationForReplace(TEntity entity)
+        {
+            throw new NotSupportedException();
+        }
+
+        public IBatchOperation CreateBatchOperationForDelete(string id, string partitionKey)
+        {
+            throw new NotSupportedException();
+        }
+
         public async Task DeleteAsync(string id, string partitionKey)
         {
             var filter = GetEntityFilterDefinition(

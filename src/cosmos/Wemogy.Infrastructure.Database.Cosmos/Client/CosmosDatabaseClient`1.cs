@@ -11,6 +11,7 @@ using Wemogy.Core.Errors;
 using Wemogy.Infrastructure.Database.Core.Abstractions;
 using Wemogy.Infrastructure.Database.Core.Errors;
 using Wemogy.Infrastructure.Database.Core.ValueObjects;
+using Wemogy.Infrastructure.Database.Cosmos.Batch;
 using Wemogy.Infrastructure.Database.Cosmos.Extensions;
 using Wemogy.Infrastructure.Database.Cosmos.Models;
 
@@ -212,6 +213,32 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Client
                 });
 
             return upsertResponse.Resource;
+        }
+
+        public IBatchContext CreateBatch(string partitionKey)
+        {
+            var cosmosPartitionKey = new PartitionKey<string>(partitionKey).CosmosPartitionKey;
+            return new CosmosBatchContext(_container, cosmosPartitionKey);
+        }
+
+        public IBatchOperation CreateBatchOperationForCreate(TEntity entity)
+        {
+            return new CosmosActionBatchOperation(batch => batch.CreateItem(entity));
+        }
+
+        public IBatchOperation CreateBatchOperationForReplace(TEntity entity)
+        {
+            var id = ResolveIdValue(entity);
+            var eTag = ResolveETagValue(entity);
+            return new CosmosActionBatchOperation(batch => batch.ReplaceItem(
+                id,
+                entity,
+                new TransactionalBatchItemRequestOptions { IfMatchEtag = eTag }));
+        }
+
+        public IBatchOperation CreateBatchOperationForDelete(string id, string partitionKey)
+        {
+            return new CosmosActionBatchOperation(batch => batch.DeleteItem(id));
         }
 
         public Task DeleteAsync(string id, string partitionKey)

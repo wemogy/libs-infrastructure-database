@@ -51,4 +51,19 @@ public interface IDatabaseClient<TEntity> : IDatabaseClient
     Task<TEntity> UpsertAsync(TEntity entity);
 
     Task<TEntity> UpsertAsync(TEntity entity, string partitionKey);
+
+    /// <summary>
+    ///     Creates a new batch context scoped to the given partition key.
+    ///     All operations added to this context must target the same container and partition key.
+    /// </summary>
+    IBatchContext CreateBatch(string partitionKey);
+
+    /// <summary>Returns a batch operation that creates <paramref name="entity"/>.</summary>
+    IBatchOperation CreateBatchOperationForCreate(TEntity entity);
+
+    /// <summary>Returns a batch operation that replaces <paramref name="entity"/>.</summary>
+    IBatchOperation CreateBatchOperationForReplace(TEntity entity);
+
+    /// <summary>Returns a batch operation that deletes the entity with the given <paramref name="id"/>.</summary>
+    IBatchOperation CreateBatchOperationForDelete(string id, string partitionKey);
 }

@@ -1,6 +1,8 @@
 using Microsoft.Extensions.DependencyInjection;
+using Wemogy.Infrastructure.Database.Core.Abstractions;
 using Wemogy.Infrastructure.Database.Core.Setup;
 using Wemogy.Infrastructure.Database.Mongo.Factories;
+using Wemogy.Infrastructure.Database.Mongo.Outbox;
 
 namespace Wemogy.Infrastructure.Database.Mongo.Setup
 {
@@ -17,8 +19,14 @@ namespace Wemogy.Infrastructure.Database.Mongo.Setup
                 databaseName,
                 enableLogging);
 
-            return serviceCollection
+            var environment = serviceCollection
                 .AddDatabase(mongoDatabaseClientFactory);
+
+            environment.Services.AddSingleton(
+                typeof(IOutboxEventSource<,>),
+                typeof(MongoOutboxEventSource<,>));
+
+            return environment;
         }
     }
 }

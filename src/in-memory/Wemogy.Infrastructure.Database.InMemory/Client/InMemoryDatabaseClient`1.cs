@@ -9,8 +9,10 @@ using FastExpressionCompiler;
 using Wemogy.Core.Errors;
 using Wemogy.Core.Extensions;
 using Wemogy.Infrastructure.Database.Core.Abstractions;
+using Wemogy.Infrastructure.Database.Core.Attributes;
 using Wemogy.Infrastructure.Database.Core.Errors;
 using Wemogy.Infrastructure.Database.Core.ValueObjects;
+using Wemogy.Infrastructure.Database.InMemory.Batch;
 using Wemogy.Infrastructure.Database.InMemory.Extensions;
 
 namespace Wemogy.Infrastructure.Database.InMemory.Client
@@ -20,6 +22,9 @@ namespace Wemogy.Infrastructure.Database.InMemory.Client
     {
         private static readonly Dictionary<Type, Dictionary<string, List<TEntity>>> Database =
             new Dictionary<Type, Dictionary<string, List<TEntity>>>();
+
+        private static readonly Dictionary<Type, Dictionary<string, string>> ETagStore =
+            new Dictionary<Type, Dictionary<string, string>>();
 
         public InMemoryDatabaseClient()
         {
@@ -32,9 +37,23 @@ namespace Wemogy.Infrastructure.Database.InMemory.Client
                     typeof(TEntity),
                     entityPartitions);
             }
+
+            if (!ETagStore.TryGetValue(typeof(TEntity), out _))
+            {
+                ETagStore[typeof(TEntity)] = new Dictionary<string, string>();
+            }
         }
 
         private Dictionary<string, List<TEntity>> EntityPartitions => Database[typeof(TEntity)];
+
+        private Dictionary<string, string> EntityETags => ETagStore[typeof(TEntity)];
+
+        private static void SetETagOnEntity(TEntity entity, string eTag)
+        {
+            typeof(TEntity)
+                .GetPropertyByCustomAttribute<ETagAttribute>()
+                ?.SetValue(entity, eTag);
+        }
 
         public Task<TEntity> GetAsync(string id, string partitionKey, CancellationToken cancellationToken)
         {
@@ -166,6 +185,10 @@ namespace Wemogy.Infrastructure.Database.InMemory.Client
                     $"Entity with id {id} already exists");
             }
 
+            var newETag = Guid.NewGuid().ToString();
+            EntityETags[id] = newETag;
+            SetETagOnEntity(entity, newETag);
+
             entities.Add(entity.Clone());
             return Task.FromResult(entity.Clone());
         }
@@ -194,6 +217,18 @@ namespace Wemogy.Infrastructure.Database.InMemory.Client
                     partitionKeyValue,
                     hint: typeof(TEntity).Name);
             }
+
+            var incomingETag = ResolveETagValue(entity);
+            if (incomingETag != null && EntityETags.TryGetValue(id, out var storedETag) && incomingETag != storedETag)
+            {
+                throw Error.PreconditionFailed(
+                    "EtagMismatch",
+                    $"The eTag of the entity with id {id} does not match the stored version");
+            }
+
+            var newETag = Guid.NewGuid().ToString();
+            EntityETags[id] = newETag;
+            SetETagOnEntity(entity, newETag);
 
             entities.Remove(existingEntity);
             entities.Add(entity.Clone());
@@ -274,6 +309,7 @@ namespace Wemogy.Infrastructure.Database.InMemory.Client
             }
 
             entities.Remove(entity);
+            EntityETags.Remove(id);
             return Task.CompletedTask;
         }
 
@@ -291,6 +327,26 @@ namespace Wemogy.Infrastructure.Database.InMemory.Client
             }
 
             return Task.CompletedTask;
+        }
+
+        public IBatchContext CreateBatch(string partitionKey)
+        {
+            return new InMemoryBatchContext();
+        }
+
+        public IBatchOperation CreateBatchOperationForCreate(TEntity entity)
+        {
+            return new InMemoryFuncBatchOperation(async () => { await CreateAsync(entity); });
+        }
+
+        public IBatchOperation CreateBatchOperationForReplace(TEntity entity)
+        {
+            return new InMemoryFuncBatchOperation(async () => { await ReplaceAsync(entity); });
+        }
+
+        public IBatchOperation CreateBatchOperationForDelete(string id, string partitionKey)
+        {
+            return new InMemoryFuncBatchOperation(() => DeleteAsync(id, partitionKey));
         }
     }
 }

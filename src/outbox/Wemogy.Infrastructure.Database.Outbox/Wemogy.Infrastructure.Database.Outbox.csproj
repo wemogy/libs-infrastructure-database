@@ -2,30 +2,22 @@
   <PropertyGroup>
     <TargetFrameworks>net8.0;net9.0;net10.0</TargetFrameworks>
     <IsPackable>true</IsPackable>
-    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
   </PropertyGroup>
-
   <PropertyGroup>
-    <PackageId>Wemogy.Infrastructure.Database.Cosmos</PackageId>
+    <PackageId>Wemogy.Infrastructure.Database.Outbox</PackageId>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <Authors>wemogy GmbH</Authors>
     <Company>wemogy GmbH</Company>
-    <PackageDescription>Implementation for Azure Cosmos DB</PackageDescription>
+    <PackageDescription>Outbox pattern implementation for Wemogy Infrastructure Database</PackageDescription>
     <PackageTags>wemogy</PackageTags>
     <RepositoryUrl>https://github.com/wemogy/libs-infrastructure-database</RepositoryUrl>
   </PropertyGroup>
-
-  <ItemGroup>
-    <PackageReference Include="Microsoft.Azure.Cosmos" />
-    <PackageReference Include="Microsoft.Extensions.Logging.Console" />
-    <PackageReference Include="NuGetizer">
-      <PrivateAssets>all</PrivateAssets>
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-    </PackageReference>
-  </ItemGroup>
-
   <ItemGroup>
     <ProjectReference Include="..\..\core\Wemogy.Infrastructure.Database.Core\Wemogy.Infrastructure.Database.Core.csproj" />
-    <ProjectReference Include="..\..\outbox\Wemogy.Infrastructure.Database.Outbox\Wemogy.Infrastructure.Database.Outbox.csproj" />
+    <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" />
+    <PackageReference Include="NuGetizer">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
   </ItemGroup>
 </Project>

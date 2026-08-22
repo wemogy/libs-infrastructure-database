@@ -81,6 +81,7 @@ namespace Wemogy.Infrastructure.Database.InMemory.Client
 
             foreach (var entity in entities)
             {
+                cancellationToken.ThrowIfCancellationRequested();
                 await callback(entity.Clone());
             }
         }
@@ -109,6 +110,7 @@ namespace Wemogy.Infrastructure.Database.InMemory.Client
 
             foreach (var entity in results)
             {
+                cancellationToken.ThrowIfCancellationRequested();
                 await callback(entity.Clone());
             }
         }
@@ -130,9 +132,9 @@ namespace Wemogy.Infrastructure.Database.InMemory.Client
 
             lock (Gate)
             {
-                var entities = GetOrCreatePartition(partitionKeyValue);
-
-                if (entities.Any(x => ResolveIdValue(x) == id))
+                if (FindEntity(
+                        partitionKeyValue,
+                        id) != null)
                 {
                     throw Error.Conflict(
                         "AlreadyExists",
@@ -140,7 +142,7 @@ namespace Wemogy.Infrastructure.Database.InMemory.Client
                 }
 
                 var eTag = NextETag();
-                entities.Add(Copy(entity, eTag));
+                GetOrCreatePartition(partitionKeyValue).Add(Copy(entity, eTag));
 
                 return Task.FromResult(Copy(entity, eTag));
             }
@@ -153,11 +155,11 @@ namespace Wemogy.Infrastructure.Database.InMemory.Client
 
             lock (Gate)
             {
-                var existingEntity = FindEntity(
+                var index = FindEntityIndex(
                     partitionKeyValue,
                     id);
 
-                if (existingEntity == null)
+                if (index < 0)
                 {
                     throw DatabaseError.EntityNotFound(
                         id,
@@ -165,17 +167,18 @@ namespace Wemogy.Infrastructure.Database.InMemory.Client
                         hint: typeof(TEntity).Name);
                 }
 
+                var entities = Partitions[partitionKeyValue];
+
                 EnsureETagMatches(
                     entity,
-                    existingEntity,
+                    entities[index],
                     id,
                     partitionKeyValue);
 
-                var entities = Partitions[partitionKeyValue];
                 var eTag = NextETag();
 
-                // replaced in place, so an unordered iteration keeps the insertion order
-                entities[entities.IndexOf(existingEntity)] = Copy(entity, eTag);
+                // replaced in place, so an iteration of this partition keeps the insertion order
+                entities[index] = Copy(entity, eTag);
 
                 return Task.FromResult(Copy(entity, eTag));
             }
@@ -195,17 +198,17 @@ namespace Wemogy.Infrastructure.Database.InMemory.Client
             lock (Gate)
             {
                 var entities = GetOrCreatePartition(partitionKey);
-                var existingEntity = entities.FirstOrDefault(x => ResolveIdValue(x) == id);
+                var index = entities.FindIndex(x => ResolveIdValue(x) == id);
                 var eTag = NextETag();
 
                 // an upsert carries no precondition, mirroring a Cosmos upsert without IfMatch
-                if (existingEntity == null)
+                if (index < 0)
                 {
                     entities.Add(Copy(entity, eTag));
                 }
                 else
                 {
-                    entities[entities.IndexOf(existingEntity)] = Copy(entity, eTag);
+                    entities[index] = Copy(entity, eTag);
                 }
 
                 return Task.FromResult(Copy(entity, eTag));
@@ -280,14 +283,22 @@ namespace Wemogy.Infrastructure.Database.InMemory.Client
 
         private TEntity? FindEntity(string partitionKey, string id)
         {
+            var index = FindEntityIndex(
+                partitionKey,
+                id);
+            return index < 0 ? null : Partitions[partitionKey][index];
+        }
+
+        private int FindEntityIndex(string partitionKey, string id)
+        {
             if (!Partitions.TryGetValue(
                     partitionKey,
                     out var entities))
             {
-                return null;
+                return -1;
             }
 
-            return entities.FirstOrDefault(x => ResolveIdValue(x) == id);
+            return entities.FindIndex(x => ResolveIdValue(x) == id);
         }
 
         /// <summary>

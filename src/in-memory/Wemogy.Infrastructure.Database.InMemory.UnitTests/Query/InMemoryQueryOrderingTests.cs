@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Shouldly;
 using Wemogy.Infrastructure.Database.Core.Enums;
+using Wemogy.Infrastructure.Database.Core.UnitTests.Fakes.Entities;
 using Wemogy.Infrastructure.Database.Core.ValueObjects;
 using Wemogy.Infrastructure.Database.InMemory.Query;
 using Wemogy.Infrastructure.Database.InMemory.UnitTests.Fakes;
@@ -79,6 +80,85 @@ public class InMemoryQueryOrderingTests
 
         // Assert
         result.Select(x => $"{x.Name}{x.Rank}").ShouldBe(new[] { "a1", "a2", "b1" });
+    }
+
+    [Fact]
+    public void ApplySortings_ShouldCompareStringsOrdinally()
+    {
+        // Arrange: these four values order differently under a culture aware comparison, which
+        // would make both the order and every page depend on the culture of the running machine
+        var entities = Entities("Zebra", "apple", "a-b", "ab");
+
+        // Act
+        var result = InMemoryQueryOrdering.ApplySortings(
+            entities,
+            ParametersFor(Sorting("name")));
+
+        // Assert: ordinal order, which is what the SQL based providers use
+        Names(result).ShouldBe(new[] { "Zebra", "a-b", "ab", "apple" });
+    }
+
+    [Fact]
+    public void ApplySortings_ShouldSortOnANestedProperty()
+    {
+        // Arrange
+        var entities = new List<QueryEntity>
+        {
+            new QueryEntity { Address = new QueryEntityAddress { City = "Munich" } },
+            new QueryEntity { Address = new QueryEntityAddress { City = "Berlin" } }
+        };
+
+        // Act
+        var result = InMemoryQueryOrdering.ApplySortings(
+            entities,
+            ParametersFor(Sorting("address.city")));
+
+        // Assert
+        result.Select(x => x.Address!.City).ShouldBe(new[] { "Berlin", "Munich" });
+    }
+
+    [Fact]
+    public void ApplySortings_ShouldTreatANullIntermediateAsANullKey()
+    {
+        // Arrange: an entity whose nested property is null must not take the whole query down.
+        // The SQL based providers treat the missing path as undefined and still return the row.
+        var entities = new List<QueryEntity>
+        {
+            new QueryEntity { Address = new QueryEntityAddress { City = "Berlin" } },
+            new QueryEntity { Address = null }
+        };
+
+        // Act
+        var result = InMemoryQueryOrdering.ApplySortings(
+            entities,
+            ParametersFor(Sorting("address.city")));
+
+        // Assert
+        result.Count.ShouldBe(2);
+        result[0].Address.ShouldBeNull();
+    }
+
+    [Fact]
+    public void ApplySearchAfter_ShouldTreatANullIntermediateAsANullKey()
+    {
+        // Arrange
+        var entities = new List<QueryEntity>
+        {
+            new QueryEntity { Address = new QueryEntityAddress { City = "Berlin" } },
+            new QueryEntity { Address = null }
+        };
+
+        // Act
+        var result = InMemoryQueryOrdering.ApplySearchAfter(
+            entities,
+            ParametersFor(
+                Sorting(
+                    "address.city",
+                    searchAfter: "\"Amsterdam\"")));
+
+        // Assert: the null key sorts before any value, so only Berlin is after the cursor
+        result.Count.ShouldBe(1);
+        result[0].Address!.City.ShouldBe("Berlin");
     }
 
     [Fact]

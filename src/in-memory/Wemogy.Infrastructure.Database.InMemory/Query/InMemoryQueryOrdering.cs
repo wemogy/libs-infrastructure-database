@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Linq.Expressions;
 using FastExpressionCompiler;
 using Newtonsoft.Json;
 using Wemogy.Core.Extensions;
@@ -42,14 +43,22 @@ namespace Wemogy.Infrastructure.Database.InMemory.Query
                 if (ordered == null)
                 {
                     ordered = sorting.IsAscending
-                        ? entities.OrderBy(keySelector)
-                        : entities.OrderByDescending(keySelector);
+                        ? entities.OrderBy(
+                            keySelector,
+                            SortKeyComparer.Instance)
+                        : entities.OrderByDescending(
+                            keySelector,
+                            SortKeyComparer.Instance);
                 }
                 else
                 {
                     ordered = sorting.IsAscending
-                        ? ordered.ThenBy(keySelector)
-                        : ordered.ThenByDescending(keySelector);
+                        ? ordered.ThenBy(
+                            keySelector,
+                            SortKeyComparer.Instance)
+                        : ordered.ThenByDescending(
+                            keySelector,
+                            SortKeyComparer.Instance);
                 }
             }
 
@@ -94,7 +103,7 @@ namespace Wemogy.Infrastructure.Database.InMemory.Query
         {
             foreach (var column in cursor)
             {
-                var comparison = Comparer<object>.Default.Compare(
+                var comparison = SortKeyComparer.Instance.Compare(
                     column.KeySelector(entity),
                     column.Value);
 
@@ -109,9 +118,67 @@ namespace Wemogy.Infrastructure.Database.InMemory.Query
             return false;
         }
 
-        private static Func<T, object> KeySelector<T>(QuerySorting sorting)
+        /// <summary>
+        ///     Builds the sort key accessor for the sorting's property path. Unlike
+        ///     <c>GetOrderByExpression</c> it guards every intermediate step of the path, so an
+        ///     entity whose nested property is null sorts as a null key instead of throwing. That
+        ///     matches the SQL based providers, where a missing path is simply undefined.
+        /// </summary>
+        private static Func<T, object?> KeySelector<T>(QuerySorting sorting)
         {
-            return sorting.GetOrderByExpression<T>().CompileFast();
+            var parameter = Expression.Parameter(
+                typeof(T),
+                "x");
+            var propertyMembers = sorting.OrderBy.Split('.');
+
+            Expression body = parameter;
+            Expression? guard = null;
+
+            for (var i = 0; i < propertyMembers.Length; i++)
+            {
+                // the parameter itself is never null, so only the intermediate results need a guard
+                if (i > 0 && CanBeNull(body.Type))
+                {
+                    var notNull = Expression.NotEqual(
+                        body,
+                        Expression.Constant(
+                            null,
+                            body.Type));
+                    guard = guard == null
+                        ? notNull
+                        : Expression.AndAlso(
+                            guard,
+                            notNull);
+                }
+
+                body = Expression.PropertyOrField(
+                    body,
+                    propertyMembers[i]);
+            }
+
+            Expression key = Expression.Convert(
+                body,
+                typeof(object));
+
+            if (guard != null)
+            {
+                key = Expression.Condition(
+                    guard,
+                    key,
+                    Expression.Constant(
+                        null,
+                        typeof(object)));
+            }
+
+            return Expression.Lambda<Func<T, object?>>(
+                    key,
+                    parameter)
+                .CompileFast();
+        }
+
+        private static bool CanBeNull(Type type)
+        {
+            return !type.IsValueType || Nullable.GetUnderlyingType(type) != null;
         }
 
         private static object? DeserializeSearchAfter<T>(QuerySorting sorting)
@@ -122,16 +189,41 @@ namespace Wemogy.Infrastructure.Database.InMemory.Query
                 propertyType);
         }
 
+        /// <summary>
+        ///     Compares sort keys the way the SQL based providers do: strings ordinally rather than
+        ///     by the current culture. <see cref="Comparer{T}.Default"/> would delegate to
+        ///     <see cref="string.CompareTo(string)"/>, which is culture sensitive and would make
+        ///     both the order and every page depend on the culture of the running machine.
+        /// </summary>
+        private sealed class SortKeyComparer : IComparer<object?>
+        {
+            public static readonly SortKeyComparer Instance = new SortKeyComparer();
+
+            public int Compare(object? x, object? y)
+            {
+                if (x is string left && y is string right)
+                {
+                    return string.CompareOrdinal(
+                        left,
+                        right);
+                }
+
+                return Comparer<object>.Default.Compare(
+                    x,
+                    y);
+            }
+        }
+
         private sealed class SearchAfterColumn<T>
         {
-            public SearchAfterColumn(Func<T, object> keySelector, object? value, bool isAscending)
+            public SearchAfterColumn(Func<T, object?> keySelector, object? value, bool isAscending)
             {
                 KeySelector = keySelector;
                 Value = value;
                 IsAscending = isAscending;
             }
 
-            public Func<T, object> KeySelector { get; }
+            public Func<T, object?> KeySelector { get; }
 
             public object? Value { get; }
 

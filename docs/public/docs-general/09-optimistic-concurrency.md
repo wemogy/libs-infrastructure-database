@@ -5,7 +5,9 @@ read the same entity and both write it back, the second write would silently
 overwrite the first. With an eTag guard the second write is rejected instead, so no
 update is lost.
 
-This feature is currently implemented for the **Azure Cosmos DB** provider.
+This feature is implemented for the **Azure Cosmos DB** and the **in-memory** provider,
+with the same semantics, so concurrency behaviour can be covered by unit tests against
+the in-memory provider.
 
 ## Opting in
 

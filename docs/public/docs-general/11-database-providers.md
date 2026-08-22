@@ -57,6 +57,17 @@ Provider specifics:
 - [Optimistic concurrency](./09-optimistic-concurrency.md) via the `[ETag]` attribute is supported,
   with the same semantics as Cosmos DB: every write assigns a new eTag, a `ReplaceAsync` with a
   stale eTag fails the precondition, and an `UpsertAsync` carries no precondition.
+- Sort keys are compared ordinally, matching Cosmos DB, so the order does not depend on the culture
+  of the machine running the tests.
+
+:::caution Known divergence
+
+`QuerySorting.SearchAfter` combined with `SortOrder.Descending` behaves differently per provider.
+The in-memory provider walks the cursor in the sort direction; the Cosmos provider always builds a
+`>` comparison and therefore returns the opposite half of the result set. Descending keyset
+pagination that passes against the in-memory provider is *not* proof that it works against Cosmos.
+
+:::
 
 :::tip Testing strategy
 

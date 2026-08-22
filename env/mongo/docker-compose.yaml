@@ -11,7 +11,11 @@ services:
     volumes:
       - ./init-scripts:/docker-entrypoint-initdb.d
     healthcheck:
-      test: ['CMD', 'mongosh', '--quiet', '--eval', "db.adminCommand('ping').ok"]
+      # probe the routable address rather than 127.0.0.1: while the entrypoint
+      # seeds the database it runs a temporary mongod bound to loopback only, and
+      # a loopback probe reports healthy against that one, so `up --wait` would
+      # return before the real server accepts connections
+      test: ['CMD', 'mongosh', '--quiet', '--host', 'mongodb', '--eval', "db.adminCommand('ping').ok"]
       interval: 3s
       timeout: 3s
       retries: 20

@@ -22,10 +22,12 @@ jobs:
           docker compose -f env/mongo/docker-compose.yaml up -d --wait
 
       # .NET Tests
+      # the version input is only meaningful for the release workflow, the test
+      # run just needs the projects compiled
       - name: Build .NET
         uses: ./.github/actions/dotnet
         with:
-          version: ${{ steps.release-version.outputs.next-version }}${{ github.event.inputs.version && 'pre' || '' }}
+          version: test
 
       # Connection strings and database names come from the appsettings.json of
       # the test projects and point at the containers started above, so the test
@@ -35,13 +37,15 @@ jobs:
         shell: bash
         run: dotnet test -c Release /p:CollectCoverage=true -m:1
 
-      - name: Stop containers
-        # the containers should be stopped regardless of
-        # the test result
+      # the containers should be stopped regardless of the test result, and a
+      # failing teardown of one stack must not leave the other one running
+      - name: Stop Cosmos container
         if: always()
-        run: |
-          docker compose -f env/cosmos/docker-compose.yaml down
-          docker compose -f env/mongo/docker-compose.yaml down
+        run: docker compose -f env/cosmos/docker-compose.yaml down
+
+      - name: Stop Mongo container
+        if: always()
+        run: docker compose -f env/mongo/docker-compose.yaml down
 
       - name: Code Coverage Summary Report
         uses: irongut/CodeCoverageSummary@v1.0.2
@@ -53,9 +57,12 @@ jobs:
 
       - name: Add Coverage PR Comment
         uses: marocchino/sticky-pull-request-comment@v2
-        # forks only get a read-only GITHUB_TOKEN on pull_request, so the comment
-        # is skipped there instead of failing the job
-        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+        # fork and Dependabot PRs only get a read-only GITHUB_TOKEN on
+        # pull_request, so the comment is skipped there instead of failing the job
+        if: >-
+          github.event_name == 'pull_request'
+          && github.event.pull_request.head.repo.full_name == github.repository
+          && github.actor != 'dependabot[bot]'
         with:
           recreate: true
           path: code-coverage-results.md

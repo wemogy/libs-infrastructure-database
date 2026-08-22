@@ -2,7 +2,7 @@ name: Tests
 
 on:
   workflow_dispatch:
-  pull_request_target:
+  pull_request:
     branches:
       - main
 
@@ -10,20 +10,16 @@ jobs:
   tests:
     name: Tests
     runs-on: ubuntu-latest
-    # pull_request_target runs in the base repo context so secrets are available
-    # for fork PRs. The workflow file itself always comes from the base branch
-    # (trusted), but the checked-out code is from the PR head. Only enable this
-    # if you trust that contributors cannot exfiltrate secrets through test code.
     permissions:
       contents: read
       pull-requests: write
     steps:
-      - uses: actions/checkout@v2
-        with:
-          ref: ${{ github.event.pull_request.head.sha }}
+      - uses: actions/checkout@v5
 
       - name: Start containers
-        run: docker compose -f env/mongo/docker-compose.yaml up -d
+        run: |
+          docker compose -f env/cosmos/docker-compose.yaml up -d --wait
+          docker compose -f env/mongo/docker-compose.yaml up -d --wait
 
       # .NET Tests
       - name: Build .NET
@@ -31,19 +27,21 @@ jobs:
         with:
           version: ${{ steps.release-version.outputs.next-version }}${{ github.event.inputs.version && 'pre' || '' }}
 
+      # Connection strings and database names come from the appsettings.json of
+      # the test projects and point at the containers started above, so the test
+      # run needs no credentials for a deployed database.
       - name: Test .NET Solution
         working-directory: src
         shell: bash
         run: dotnet test -c Release /p:CollectCoverage=true -m:1
-        env:
-          COSMOS_CONNECTION_STRING: ${{ secrets.COSMOS_CONNECTION_STRING }}
-          COSMOS_DATABASE_NAME: infrastructuredbtests
 
       - name: Stop containers
         # the containers should be stopped regardless of
         # the test result
         if: always()
-        run: docker compose -f env/mongo/docker-compose.yaml down
+        run: |
+          docker compose -f env/cosmos/docker-compose.yaml down
+          docker compose -f env/mongo/docker-compose.yaml down
 
       - name: Code Coverage Summary Report
         uses: irongut/CodeCoverageSummary@v1.0.2
@@ -55,7 +53,9 @@ jobs:
 
       - name: Add Coverage PR Comment
         uses: marocchino/sticky-pull-request-comment@v2
-        if: github.event_name == 'pull_request_target'
+        # forks only get a read-only GITHUB_TOKEN on pull_request, so the comment
+        # is skipped there instead of failing the job
+        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
         with:
           recreate: true
           path: code-coverage-results.md

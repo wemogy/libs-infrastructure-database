@@ -1,26 +1,26 @@
-version: '3.6'
 services:
   cosmosdb:
-    image: mcr.microsoft.com/cosmosdb/linux/azure-cosmos-emulator
-    hostname: cosmosdb
+    # Linux-based vNext emulator (GA since 2026-06-02): runs natively on x64 and
+    # ARM64, boots in seconds and needs a fraction of the memory of the legacy
+    # mcr.microsoft.com/cosmosdb/linux/azure-cosmos-emulator image.
+    image: mcr.microsoft.com/cosmosdb/linux/azure-cosmos-emulator:vnext-latest
     container_name: cosmosdb
-    mem_limit: 3g
-    cpus: 2.0
     ports:
-      - '8081:8081'
-      - '10251:10251'
-      - '10252:10252'
-      - '10254:10254'
+      - '8081:8081' # gateway endpoint
+      - '8080:8080' # health probe
+      - '1234:1234' # data explorer
     environment:
-      - AZURE_COSMOS_EMULATOR_PARTITION_COUNT=10
-      - AZURE_COSMOS_EMULATOR_ENABLE_DATA_PERSISTENCE=true
-      - AZURE_COSMOS_EMULATOR_IP_ADDRESS_OVERRIDE=127.0.0.1
-  cosmosdb-setup:
-    environment:
-      - CONNECTION_STRING=AccountEndpoint=https://127.0.0.1:8081/;AccountKey=C2y6yDjf5/R+ob0N8A7Cgv30VRDJIWEHLM+4QDU5DE2nQ9nDuVTqobD4b8mGGyPMbIZnqyMsEcaGQy67XIw/Jw==
-    network_mode: host
-    image: robinmanuelthiel/cosmos-db-setup:2.0.0
-    command:
-      - "{\"databaseName\": \"infrastructuredbtests\", \"containers\": [{\"name\": \"users\", \"partitionKey\": \"/tenantId\"}, {\"name\": \"datacenters\", \"partitionKey\": \"/partitionKey\"}]}"
-    depends_on:
-      - cosmosdb
+      # the .NET SDK does not support the emulator's default HTTP mode
+      - PROTOCOL=https
+      # run ./init-scripts before the emulator accepts requests, which replaces
+      # the separate cosmos-db-setup container the legacy emulator needed
+      - ENABLE_INIT_DATA=true
+      - ENABLE_TELEMETRY=false
+    volumes:
+      - ./init-scripts:/init:ro
+    healthcheck:
+      test: ['CMD', 'curl', '--fail', 'http://localhost:8080/ready']
+      interval: 3s
+      timeout: 3s
+      retries: 40
+      start_period: 5s

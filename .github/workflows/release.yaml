@@ -45,7 +45,6 @@ jobs:
         uses: ./.github/actions/dotnet
         with:
           version: ${{ github.event.inputs.version || steps.release-version.outputs.version }}
-          cosmos-connection-string: ${{ secrets.COSMOS_CONNECTION_STRING }}
       - name: Create Nuget package(s)
         run: dotnet pack --configuration Release /p:VersionPrefix=${{ github.event.inputs.version || steps.release-version.outputs.version }}
         working-directory: src

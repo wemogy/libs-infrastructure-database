@@ -15,7 +15,6 @@
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
     <PackageVersion Include="NuGetizer" Version="1.4.7" />
     <PackageVersion Include="Shouldly" Version="4.3.0" />
-    <PackageVersion Include="System.Linq.Dynamic.Core" Version="1.7.0" />
     <PackageVersion Include="Wemogy.Configuration" Version="2.0.0" />
     <PackageVersion Include="Wemogy.Core" Version="5.0.1" />
     <PackageVersion Include="Wemogy.StyleCop" Version="0.2.2" />

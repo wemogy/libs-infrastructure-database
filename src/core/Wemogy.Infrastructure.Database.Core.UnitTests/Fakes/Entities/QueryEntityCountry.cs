@@ -1,4 +1,4 @@
-namespace Wemogy.Infrastructure.Database.Cosmos.UnitTests.Fakes;
+namespace Wemogy.Infrastructure.Database.Core.UnitTests.Fakes.Entities;
 
 /// <summary>
 ///     Second level of nesting, used to verify the chained null-check expressions.

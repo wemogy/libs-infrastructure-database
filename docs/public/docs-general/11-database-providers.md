@@ -50,8 +50,13 @@ var repository = InMemoryDatabaseRepositoryFactory.CreateInstance<IUserRepositor
 Provider specifics:
 
 - No external dependency or connection string.
-- State lives for the lifetime of the factory instance.
+- The store is shared per entity type for the whole process, so every repository over the same
+  entity sees the same data regardless of which factory created it. Reset it between tests with
+  `DeleteAsync(x => true)`.
 - [Multi-tenancy](./04-multi-tenancy.md) is supported.
+- [Optimistic concurrency](./09-optimistic-concurrency.md) via the `[ETag]` attribute is supported,
+  with the same semantics as Cosmos DB: every write assigns a new eTag, a `ReplaceAsync` with a
+  stale eTag fails the precondition, and an `UpsertAsync` carries no precondition.
 
 :::tip Testing strategy
 
@@ -69,4 +74,4 @@ logic and tests stay provider-independent.
 | [Soft delete](./07-soft-delete.md)                           | ✅        | ✅        |
 | [Read & property filters](./08-filters.md)                   | ✅        | ✅        |
 | [Multi-tenancy](./04-multi-tenancy.md)                       | ✅        | ✅        |
-| [Optimistic concurrency (ETag)](./09-optimistic-concurrency.md) | ✅        | ❌        |
+| [Optimistic concurrency (ETag)](./09-optimistic-concurrency.md) | ✅        | ✅        |

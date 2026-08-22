@@ -3,9 +3,9 @@ using System.Collections.Generic;
 using System.Linq.Expressions;
 using Shouldly;
 using Wemogy.Infrastructure.Database.Core.Enums;
+using Wemogy.Infrastructure.Database.Core.UnitTests.Fakes.Entities;
 using Wemogy.Infrastructure.Database.Core.ValueObjects;
 using Wemogy.Infrastructure.Database.Cosmos.Extensions;
-using Wemogy.Infrastructure.Database.Cosmos.UnitTests.Fakes;
 using Xunit;
 
 namespace Wemogy.Infrastructure.Database.Cosmos.UnitTests.Extensions;

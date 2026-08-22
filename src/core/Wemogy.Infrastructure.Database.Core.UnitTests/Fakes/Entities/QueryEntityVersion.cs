@@ -1,4 +1,4 @@
-namespace Wemogy.Infrastructure.Database.Cosmos.UnitTests.Fakes;
+namespace Wemogy.Infrastructure.Database.Core.UnitTests.Fakes.Entities;
 
 /// <summary>
 ///     Item type of <see cref="QueryEntity.Versions"/>.

@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 
-namespace Wemogy.Infrastructure.Database.Cosmos.UnitTests.Fakes;
+namespace Wemogy.Infrastructure.Database.Core.UnitTests.Fakes.Entities;
 
 /// <summary>
 ///     Nested reference type of <see cref="QueryEntity"/>.

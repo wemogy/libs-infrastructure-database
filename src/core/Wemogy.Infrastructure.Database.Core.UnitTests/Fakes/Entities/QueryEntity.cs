@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace Wemogy.Infrastructure.Database.Cosmos.UnitTests.Fakes;
+namespace Wemogy.Infrastructure.Database.Core.UnitTests.Fakes.Entities;
 
 /// <summary>
 ///     Plain fake used by the query expression builder tests. It intentionally covers every

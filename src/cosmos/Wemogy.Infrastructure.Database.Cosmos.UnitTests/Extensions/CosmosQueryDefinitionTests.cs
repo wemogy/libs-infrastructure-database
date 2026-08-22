@@ -373,13 +373,7 @@ public class CosmosQueryDefinitionTests
             $"OR (c.lastname = {parameters[0].Name} AND c.age > {parameters[1].Name}))");
     }
 
-    [Fact(Skip =
-        "Known defect: an unfiltered IQueryable stringifies to the container link, which the " +
-        "builder blanks out and then feeds into SplitOnFirstOccurrence(\"FROM root\").Last(), " +
-        "throwing InvalidOperationException: Sequence contains no elements " +
-        "(QueryParametersExtensions.cs:631). Reachable whenever a repository without a read " +
-        "filter or soft delete queries by QueryParameters. Un-skip once the JOIN extraction " +
-        "returns early for a blank generalFilterSql.")]
+    [Fact]
     public void GetQueryDefinition_ShouldNotAddAWhereClauseForAnUnfilteredGeneralFilter()
     {
         // Arrange: an untouched IQueryable stringifies to the container link, not to SQL
@@ -395,6 +389,47 @@ public class CosmosQueryDefinitionTests
 
         // Assert
         queryText.ShouldBe("SELECT VALUE c FROM users c");
+    }
+
+    [Fact]
+    public void GetQueryDefinition_ShouldKeepTheOwnFiltersForAnUnfilteredGeneralFilter()
+    {
+        // Arrange
+        var container = GetContainer();
+        var generalFilter = container.GetItemLinqQueryable<QueryEntity>();
+        var queryParameters = ParametersFor(
+            Filter(
+                "firstname",
+                "\"John\"",
+                Comparator.Equals));
+
+        // Act
+        var queryDefinition = Build(
+            queryParameters,
+            generalFilter,
+            container);
+
+        // Assert: nothing is spliced in, but the caller's own filters must survive
+        Normalize(queryDefinition.QueryText).ShouldBe(
+            "SELECT VALUE c FROM users c WHERE c.firstname = " +
+            queryDefinition.GetQueryParameters().Single().Name);
+    }
+
+    [Fact]
+    public void GetQueryDefinition_ShouldNotAddAJoinForAnUnfilteredGeneralFilter()
+    {
+        // Arrange
+        var container = GetContainer();
+
+        // Act
+        var queryText = Normalize(
+            Build(
+                new QueryParameters { Take = 5 },
+                container.GetItemLinqQueryable<QueryEntity>(),
+                container).QueryText);
+
+        // Assert
+        queryText.ShouldBe("SELECT VALUE c FROM users c OFFSET 0 LIMIT 5");
     }
 
     [Fact]
@@ -444,12 +479,11 @@ public class CosmosQueryDefinitionTests
         // Arrange
         var container = GetContainer();
 
-        // Act: a filtered queryable, because an unfiltered one hits the defect pinned by
-        // GetQueryDefinition_ShouldNotAddAWhereClauseForAnUnfilteredGeneralFilter
+        // Act
         var feedIterator = container.GetItemQueryIterator<QueryEntity, string>(
             new QueryParameters(),
             new MappingMetadata(),
-            container.GetItemLinqQueryable<QueryEntity>().Where(x => !x.Tags.Contains("deleted")),
+            container.GetItemLinqQueryable<QueryEntity>(),
             null);
 
         // Assert: building the iterator must not require a reachable account
@@ -468,7 +502,7 @@ public class CosmosQueryDefinitionTests
             new QueryParameters(),
             new MappingMetadata(),
             false,
-            container.GetItemLinqQueryable<QueryEntity>().Where(x => !x.Tags.Contains("deleted")),
+            container.GetItemLinqQueryable<QueryEntity>(),
             null);
 
         // Assert

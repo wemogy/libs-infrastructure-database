@@ -478,8 +478,11 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Extensions
                 var complexPropertyExpression = GetPropertyExpression(
                     pathToTheComplexProperty,
                     parameterExpression);
+                // ResolvePropertyType understands the dot separated path used here. Wemogy.Core's
+                // ResolvePropertyTypeOfPropertyPath does not: it splits on '/' and drops the first
+                // segment, so every dot path resolved to an empty property name and threw.
                 var complexPropertyType =
-                    typeof(T).ResolvePropertyTypeOfPropertyPath(pathToTheComplexProperty); // will be a list for now
+                    ResolvePropertyType<T>(pathToTheComplexProperty); // will be a list for now
                 var innerParameterExpressionType =
                     complexPropertyType.GenericTypeArguments.First(); // List<Version> ==> Version
 
@@ -490,9 +493,13 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Extensions
                         innerParameterExpressionType,
                         innerParameterExpressionName);
 
-                // build the query filter for the inner parameter expression
+                // build the query filter for the inner parameter expression. Everything after the
+                // kind and its '>' is the property path inside the collection item, e.g.
+                // versions<ANY>name ==> name. Substring is taken from the original identifier,
+                // because re-joining the split segments dropped the first character of the path.
                 var innerQueryFilter = queryFilter.Clone();
-                innerQueryFilter.Property = complexTypeIdentifierEndSplitted.Skip(1).Join(">").Substring(1);
+                innerQueryFilter.Property = complexTypeIdentifierSplitted[1]
+                    .Substring(complexPropertyKind.Length + 1);
 
                 var innerExpression = typeof(QueryParametersExtensions)
                     .GetMethod(nameof(GetQueryFilterExpression))?.MakeGenericMethod(innerParameterExpressionType)
@@ -627,25 +634,31 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Extensions
                     generalFilterSql = string.Empty;
                 }
 
-                // extract JOIN condition
-                var join = generalFilterSql.SplitOnFirstOccurrence("FROM root").Last().SplitOnLastOccurrence("WHERE")
-                    .First().Trim();
-                join = join
-                    .Replace(
-                        "root[",
-                        "c[")
-                    .Replace(
-                        "FROM root",
-                        "FROM c");
-                join = join.Replace(
-                    "\\\"",
-                    "\"");
-                if (!string.IsNullOrWhiteSpace(join))
+                // extract JOIN condition. An unfiltered IQueryable has no SQL to extract it from,
+                // and SplitOnFirstOccurrence returns an empty array for an empty string, so Last()
+                // would throw "Sequence contains no elements".
+                if (!string.IsNullOrWhiteSpace(generalFilterSql))
                 {
-                    logger?.LogDebug("JOIN");
-                    logger?.LogDebug(join);
-                    joinStatement = join;
-                    logger?.LogDebug($"Join statement: {joinStatement}");
+                    var join = generalFilterSql.SplitOnFirstOccurrence("FROM root").Last()
+                        .SplitOnLastOccurrence("WHERE")
+                        .First().Trim();
+                    join = join
+                        .Replace(
+                            "root[",
+                            "c[")
+                        .Replace(
+                            "FROM root",
+                            "FROM c");
+                    join = join.Replace(
+                        "\\\"",
+                        "\"");
+                    if (!string.IsNullOrWhiteSpace(join))
+                    {
+                        logger?.LogDebug("JOIN");
+                        logger?.LogDebug(join);
+                        joinStatement = join;
+                        logger?.LogDebug($"Join statement: {joinStatement}");
+                    }
                 }
 
                 if (!string.IsNullOrWhiteSpace(generalFilterSql))

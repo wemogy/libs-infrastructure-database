@@ -6,4 +6,6 @@ namespace Wemogy.Infrastructure.Database.Cosmos.UnitTests.Fakes;
 public class QueryEntityVersion
 {
     public string Name { get; set; } = string.Empty;
+
+    public QueryEntityCountry? Origin { get; set; }
 }

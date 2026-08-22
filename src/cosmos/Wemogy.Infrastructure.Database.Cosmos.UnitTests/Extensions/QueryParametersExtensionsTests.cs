@@ -254,12 +254,7 @@ public class QueryParametersExtensionsTests
             .ShouldBeTrue();
     }
 
-    [Fact(Skip =
-        "Known defect: GetQueryFilterExpression resolves the complex property via " +
-        "Wemogy.Core's ResolvePropertyTypeOfPropertyPath, which expects a slash-separated path " +
-        "and drops its first segment. For the dot-separated path passed here it always resolves " +
-        "to an empty property name and throws. Un-skip once the call site uses " +
-        "QueryParametersExtensions.ResolvePropertyType<T> instead.")]
+    [Fact]
     public void GetLambdaExpression_ShouldBuildAComplexAnyFilter()
     {
         // Arrange: "versions<ANY>name" means "any item of the Versions list matches"
@@ -290,6 +285,147 @@ public class QueryParametersExtensionsTests
                 })
             .ShouldBeFalse();
         predicate(new QueryEntity { Versions = null! }).ShouldBeFalse();
+    }
+
+    [Fact]
+    public void GetLambdaExpression_ShouldBuildAComplexAnyFilterWithANonEqualsComparator()
+    {
+        // Arrange: the comparator applies to the sub property of the collection item
+        var queryParameters = ParametersFor(
+            Filter(
+                "versions<ANY>name",
+                "\"v1\"",
+                Comparator.StartsWith));
+
+        // Act
+        var predicate = queryParameters.GetLambdaExpression<QueryEntity>().Compile();
+
+        // Assert
+        predicate(
+                new QueryEntity
+                {
+                    Versions = new List<QueryEntityVersion> { new QueryEntityVersion { Name = "v1.2" } }
+                })
+            .ShouldBeTrue();
+        predicate(
+                new QueryEntity
+                {
+                    Versions = new List<QueryEntityVersion> { new QueryEntityVersion { Name = "v2.0" } }
+                })
+            .ShouldBeFalse();
+    }
+
+    [Fact]
+    public void GetLambdaExpression_ShouldBuildAComplexAnyFilterOnANestedCollection()
+    {
+        // Arrange: the path to the collection is itself nested, which is the case that the
+        // slash-based path resolver could never handle
+        var queryParameters = ParametersFor(
+            Filter(
+                "address.versions<ANY>name",
+                "\"v1\"",
+                Comparator.Equals));
+
+        // Act
+        var predicate = queryParameters.GetLambdaExpression<QueryEntity>().Compile();
+
+        // Assert
+        predicate(
+                new QueryEntity
+                {
+                    Address = new QueryEntityAddress
+                    {
+                        Versions = new List<QueryEntityVersion> { new QueryEntityVersion { Name = "v1" } }
+                    }
+                })
+            .ShouldBeTrue();
+        predicate(
+                new QueryEntity
+                {
+                    Address = new QueryEntityAddress
+                    {
+                        Versions = new List<QueryEntityVersion> { new QueryEntityVersion { Name = "v0" } }
+                    }
+                })
+            .ShouldBeFalse();
+    }
+
+    [Fact]
+    public void GetLambdaExpression_ShouldBuildAComplexAnyFilterOnANestedSubProperty()
+    {
+        // Arrange: the part behind the kind is a path, not a single member
+        var queryParameters = ParametersFor(
+            Filter(
+                "versions<ANY>origin.name",
+                "\"Germany\"",
+                Comparator.Equals));
+
+        // Act
+        var predicate = queryParameters.GetLambdaExpression<QueryEntity>().Compile();
+
+        // Assert
+        predicate(
+                new QueryEntity
+                {
+                    Versions = new List<QueryEntityVersion>
+                    {
+                        new QueryEntityVersion { Origin = new QueryEntityCountry { Name = "Germany" } }
+                    }
+                })
+            .ShouldBeTrue();
+        predicate(
+                new QueryEntity
+                {
+                    Versions = new List<QueryEntityVersion>
+                    {
+                        new QueryEntityVersion { Origin = new QueryEntityCountry { Name = "France" } }
+                    }
+                })
+            .ShouldBeFalse();
+
+        // a null sub property must not throw either
+        predicate(
+                new QueryEntity
+                {
+                    Versions = new List<QueryEntityVersion> { new QueryEntityVersion { Origin = null } }
+                })
+            .ShouldBeFalse();
+    }
+
+    [Fact]
+    public void GetLambdaExpression_ShouldNotThrowIfTheParentOfANestedCollectionIsNull()
+    {
+        // Arrange
+        var queryParameters = ParametersFor(
+            Filter(
+                "address.versions<ANY>name",
+                "\"v1\"",
+                Comparator.Equals));
+
+        // Act
+        var predicate = queryParameters.GetLambdaExpression<QueryEntity>().Compile();
+
+        // Assert: the null check is added for the path to the collection, not only for the item
+        predicate(new QueryEntity { Address = null }).ShouldBeFalse();
+        predicate(new QueryEntity { Address = new QueryEntityAddress { Versions = null! } }).ShouldBeFalse();
+    }
+
+    [Fact]
+    public void GetLambdaExpression_ShouldThrowForAnUnknownComplexProperty()
+    {
+        // Arrange
+        var queryParameters = ParametersFor(
+            Filter(
+                "doesNotExist<ANY>name",
+                "\"v1\"",
+                Comparator.Equals));
+
+        // Act
+        var exception = Record.Exception(() => queryParameters.GetLambdaExpression<QueryEntity>());
+
+        // Assert: an unresolvable path must name the property it could not find
+        exception.ShouldNotBeNull();
+        exception.Message.ShouldContain("DoesNotExist");
     }
 
     [Fact]

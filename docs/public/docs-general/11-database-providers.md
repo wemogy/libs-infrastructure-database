@@ -60,7 +60,6 @@ Provider specifics:
 - Sort keys are compared ordinally, matching Cosmos DB, so the order does not depend on the culture
   of the machine running the tests.
 
-
 :::tip Testing strategy
 
 Reference the in-memory package in your test project and Cosmos DB in your

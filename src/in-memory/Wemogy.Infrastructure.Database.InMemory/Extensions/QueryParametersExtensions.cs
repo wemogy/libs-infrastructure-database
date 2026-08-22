@@ -82,12 +82,19 @@ namespace Wemogy.Infrastructure.Database.InMemory.Extensions
                     new[] { propertyType });
             }
 
+            // the cursor has to move in the direction the column is ordered in. Comparing with
+            // "greater than" for a descending column returns the half of the result set the caller
+            // has already paged through.
             Expression searchExpr;
             if (comparisonMethod == null)
             {
-                searchExpr = Expression.GreaterThan(
-                    propertyExpression,
-                    searchAfterValueExpression);
+                searchExpr = querySorting.IsAscending
+                    ? Expression.GreaterThan(
+                        propertyExpression,
+                        searchAfterValueExpression)
+                    : Expression.LessThan(
+                        propertyExpression,
+                        searchAfterValueExpression);
             }
             else
             {
@@ -95,9 +102,13 @@ namespace Wemogy.Infrastructure.Database.InMemory.Extensions
                     propertyExpression,
                     comparisonMethod,
                     searchAfterValueExpression);
-                searchExpr = Expression.GreaterThan(
-                    callExpr,
-                    Expression.Constant(0));
+                searchExpr = querySorting.IsAscending
+                    ? Expression.GreaterThan(
+                        callExpr,
+                        Expression.Constant(0))
+                    : Expression.LessThan(
+                        callExpr,
+                        Expression.Constant(0));
             }
 
             var myLambda =

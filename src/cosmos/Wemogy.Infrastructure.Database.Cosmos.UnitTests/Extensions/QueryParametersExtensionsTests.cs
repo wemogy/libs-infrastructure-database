@@ -879,6 +879,67 @@ public class QueryParametersExtensionsTests
     }
 
     [Fact]
+    public void GetSearchAfterExpression_ShouldInvertTheComparisonForADescendingSorting()
+    {
+        // Arrange: a descending page continues at the values below the cursor
+        var querySorting = new QuerySorting
+        {
+            OrderBy = "firstname",
+            SortOrder = SortOrder.Descending,
+            SearchAfter = "\"John\""
+        };
+
+        // Act
+        var predicate = querySorting.GetSearchAfterExpression<QueryEntity>().Compile();
+
+        // Assert
+        predicate(new QueryEntity { Firstname = "Anna" }).ShouldBeTrue();
+        predicate(new QueryEntity { Firstname = "John" }).ShouldBeFalse();
+        predicate(new QueryEntity { Firstname = "Zoe" }).ShouldBeFalse();
+    }
+
+    [Fact]
+    public void GetSearchAfterExpression_ShouldInvertTheDateTimeComparisonForADescendingSorting()
+    {
+        // Arrange: DateTime takes the branch without a CompareTo call
+        var querySorting = new QuerySorting
+        {
+            OrderBy = "createdAt",
+            SortOrder = SortOrder.Descending,
+            SearchAfter = "\"2023-01-01T00:00:00Z\""
+        };
+
+        // Act
+        var predicate = querySorting.GetSearchAfterExpression<QueryEntity>().Compile();
+
+        // Assert
+        predicate(new QueryEntity { CreatedAt = new DateTime(2022, 1, 1, 0, 0, 0, DateTimeKind.Utc) })
+            .ShouldBeTrue();
+        predicate(new QueryEntity { CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc) })
+            .ShouldBeFalse();
+    }
+
+    [Fact]
+    public void GetSearchAfterExpression_ShouldInvertTheGuidComparisonForADescendingSorting()
+    {
+        // Arrange: Guid is compared as a string
+        var querySorting = new QuerySorting
+        {
+            OrderBy = "tenantId",
+            SortOrder = SortOrder.Descending,
+            SearchAfter = "\"ffffffff-ffff-ffff-ffff-ffffffffffff\""
+        };
+
+        // Act
+        var predicate = querySorting.GetSearchAfterExpression<QueryEntity>().Compile();
+
+        // Assert
+        predicate(new QueryEntity { TenantId = Guid.Empty }).ShouldBeTrue();
+        predicate(new QueryEntity { TenantId = Guid.Parse("ffffffff-ffff-ffff-ffff-ffffffffffff") })
+            .ShouldBeFalse();
+    }
+
+    [Fact]
     public void GetSearchAfterExpression_ShouldCompareNumbersWithCompareTo()
     {
         // Arrange

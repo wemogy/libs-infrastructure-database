@@ -366,11 +366,13 @@ public class CosmosQueryDefinitionTests
         var queryDefinition = Build(queryParameters);
 
         // Assert
+        // one parameter per comparison: the leading term's ">", then the tie-breaker term's
+        // "=" for the same column plus the ">" of the next one
         var parameters = queryDefinition.GetQueryParameters();
-        parameters.Select(x => x.Value).ShouldBe(new object[] { "Doe", 30L });
+        parameters.Select(x => x.Value).ShouldBe(new object[] { "Doe", "Doe", 30L });
         Normalize(queryDefinition.QueryText).ShouldContain(
             $"WHERE ((c.lastname > {parameters[0].Name}) " +
-            $"OR (c.lastname = {parameters[0].Name} AND c.age > {parameters[1].Name}))");
+            $"OR (c.lastname = {parameters[1].Name} AND c.age > {parameters[2].Name}))");
     }
 
     [Fact]
@@ -427,9 +429,10 @@ public class CosmosQueryDefinitionTests
         // Assert: each column keeps its own direction, and the tie-breaker turns the preceding
         // comparison into an equality
         var parameters = queryDefinition.GetQueryParameters();
+        parameters.Select(x => x.Value).ShouldBe(new object[] { "Doe", "Doe", 30L });
         Normalize(queryDefinition.QueryText).ShouldContain(
             $"WHERE ((c.lastname > {parameters[0].Name}) " +
-            $"OR (c.lastname = {parameters[0].Name} AND c.age < {parameters[1].Name}))");
+            $"OR (c.lastname = {parameters[1].Name} AND c.age < {parameters[2].Name}))");
     }
 
     [Fact]
@@ -462,7 +465,7 @@ public class CosmosQueryDefinitionTests
         var parameters = queryDefinition.GetQueryParameters();
         Normalize(queryDefinition.QueryText).ShouldContain(
             $"WHERE ((c.lastname < {parameters[0].Name}) " +
-            $"OR (c.lastname = {parameters[0].Name} AND c.age < {parameters[1].Name}))");
+            $"OR (c.lastname = {parameters[1].Name} AND c.age < {parameters[2].Name}))");
     }
 
     [Fact]

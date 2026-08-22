@@ -15,14 +15,13 @@ public partial class MultiTenantDatabaseRepository<TEntity>
     /// <returns>The upserted entity.</returns>
     public async Task<TEntity> UpsertAsync(TEntity entity)
     {
+        var removePartitionKeyPrefixAction = AddPartitionKeyPrefix(entity);
+
         try
         {
-            var removePartitionKeyPrefixAction = AddPartitionKeyPrefix(entity);
-
             // the entity the provider returns carries the values it assigned itself, e.g. the eTag
             var upsertedEntity = await _databaseRepository.UpsertAsync(entity);
 
-            removePartitionKeyPrefixAction();
             RemovePartitionKeyPrefix(upsertedEntity);
 
             return upsertedEntity;
@@ -31,6 +30,13 @@ public partial class MultiTenantDatabaseRepository<TEntity>
         {
             CleanupException(e);
             throw;
+        }
+        finally
+        {
+            // rolled back in a finally: if the write throws, a caller that retries with the same
+            // instance would prefix the already prefixed value and address a partition that no read
+            // path composes, so the retried write would silently disappear
+            removePartitionKeyPrefixAction();
         }
     }
 
@@ -43,17 +49,16 @@ public partial class MultiTenantDatabaseRepository<TEntity>
     /// <returns>The upserted entity.</returns>
     public async Task<TEntity> UpsertAsync(TEntity entity, string partitionKey)
     {
+        // the entity's own partition key has to be prefixed as well, otherwise the stored
+        // document would disagree with the partition it was written to
+        var removePartitionKeyPrefixAction = AddPartitionKeyPrefix(entity);
+
         try
         {
-            // the entity's own partition key has to be prefixed as well, otherwise the stored
-            // document would disagree with the partition it was written to
-            var removePartitionKeyPrefixAction = AddPartitionKeyPrefix(entity);
-
             var upsertedEntity = await _databaseRepository.UpsertAsync(
                 entity,
                 BuildComposedPartitionKey(partitionKey));
 
-            removePartitionKeyPrefixAction();
             RemovePartitionKeyPrefix(upsertedEntity);
 
             return upsertedEntity;
@@ -62,6 +67,13 @@ public partial class MultiTenantDatabaseRepository<TEntity>
         {
             CleanupException(e);
             throw;
+        }
+        finally
+        {
+            // rolled back in a finally: if the write throws, a caller that retries with the same
+            // instance would prefix the already prefixed value and address a partition that no read
+            // path composes, so the retried write would silently disappear
+            removePartitionKeyPrefixAction();
         }
     }
 }

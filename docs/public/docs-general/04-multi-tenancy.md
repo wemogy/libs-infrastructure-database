@@ -65,3 +65,17 @@ The result is indexed under the ```apple_production__{ID}``` partition key and t
 When querying/getting the entity out of the repository, the prefix is automatically removed.
 
 Predicate support is also included, meaning that you can use the partition-key as filter in a predicate and the prefixing is automatically done via the library as well.
+
+:::caution Upgrading from a version before the upsert fix
+
+`UpsertAsync` used to write to the **unprefixed** partition key, so documents it created were never
+readable through a multi-tenant repository - every read path composes or `StartsWith`-filters the
+prefix. Those documents are not migrated automatically: an upsert of the same id now lands in
+`{tenantId}__{partitionKey}` and leaves the old copy behind as an orphan, still visible to a
+non-multi-tenant repository over the same container.
+
+If your deployment used `UpsertAsync` through a multi-tenant repository, back the affected documents
+up and re-write them through the repository, or delete the unprefixed copies once the data has been
+migrated.
+
+:::

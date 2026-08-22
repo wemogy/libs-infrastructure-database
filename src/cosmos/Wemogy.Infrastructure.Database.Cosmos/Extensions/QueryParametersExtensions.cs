@@ -87,12 +87,19 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Extensions
                     new[] { propertyType });
             }
 
+            // the cursor has to move in the direction the column is ordered in. Comparing with
+            // "greater than" for a descending column returns the half of the result set the caller
+            // has already paged through.
             Expression searchExpr;
             if (comparisonMethod == null)
             {
-                searchExpr = Expression.GreaterThan(
-                    propertyExpression,
-                    searchAfterValueExpression);
+                searchExpr = querySorting.IsAscending
+                    ? Expression.GreaterThan(
+                        propertyExpression,
+                        searchAfterValueExpression)
+                    : Expression.LessThan(
+                        propertyExpression,
+                        searchAfterValueExpression);
             }
             else
             {
@@ -100,9 +107,13 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Extensions
                     propertyExpression,
                     comparisonMethod,
                     searchAfterValueExpression);
-                searchExpr = Expression.GreaterThan(
-                    callExpr,
-                    Expression.Constant(0));
+                searchExpr = querySorting.IsAscending
+                    ? Expression.GreaterThan(
+                        callExpr,
+                        Expression.Constant(0))
+                    : Expression.LessThan(
+                        callExpr,
+                        Expression.Constant(0));
             }
 
             var myLambda =
@@ -857,37 +868,42 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Extensions
             }
 
             var sortingQueryDefinition = new QueryDefinitionFilterCondition();
-            var previousQueryDefinition = new QueryDefinitionFilterCondition();
+
+            // Only the leading sortings that carry a cursor take part in it.
+            var searchAfterSortings = queryParameters.Sortings
+                .TakeWhile(x => x.ContainsSearchAfter)
+                .ToList();
 
             // c.Name > "A"
             // OR (c.Name = "A" AND c.createdAt > DT)
             // OR (c.Name = "A" AND c.createdAt = DT AND c.id > ID)
-            foreach (var sorting in queryParameters.Sortings)
+            for (var i = 0; i < searchAfterSortings.Count; i++)
             {
-                if (!sorting.ContainsSearchAfter)
+                var term = new QueryDefinitionFilterCondition();
+
+                // every preceding column has to be equal for this term to decide
+                for (var j = 0; j < i; j++)
                 {
-                    break;
+                    AppendSearchAfterCondition(
+                        term,
+                        searchAfterSortings[j],
+                        "=",
+                        mappingMetadata);
                 }
 
                 // the cursor has to move in the direction the column is ordered in. Comparing with
                 // ">" for a descending column returns the half of the result set the caller has
                 // already paged through.
-                var comparisonOperator = sorting.IsAscending ? ">" : "<";
-                var condition = $"c.{sorting.OrderBy} {comparisonOperator} @paramHere";
-
-                previousQueryDefinition.ReplaceComparisonsWithEquals();
-
-                // mappingMetadata.Deserialize(propertyName, value)
-                previousQueryDefinition.And(
-                    condition,
-                    mappingMetadata.Deserialize(
-                        sorting.OrderBy,
-                        sorting.SearchAfter!));
+                AppendSearchAfterCondition(
+                    term,
+                    searchAfterSortings[i],
+                    searchAfterSortings[i].IsAscending ? ">" : "<",
+                    mappingMetadata);
 
                 sortingQueryDefinition.Or(
-                    previousQueryDefinition.QueryText,
+                    term.QueryText,
                     true);
-                sortingQueryDefinition.MergeParameters(previousQueryDefinition);
+                sortingQueryDefinition.MergeParameters(term);
             }
 
             result.And(
@@ -896,6 +912,19 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Extensions
             result.MergeParameters(sortingQueryDefinition);
 
             return result;
+        }
+
+        private static void AppendSearchAfterCondition(
+            QueryDefinitionFilterCondition term,
+            QuerySorting sorting,
+            string comparisonOperator,
+            MappingMetadata mappingMetadata)
+        {
+            term.And(
+                $"c.{sorting.OrderBy} {comparisonOperator} @paramHere",
+                mappingMetadata.Deserialize(
+                    sorting.OrderBy,
+                    sorting.SearchAfter!));
         }
 
         private static QueryDefinitionFilterCondition GetQueryDefinitionSort(this QueryParameters queryParameters)

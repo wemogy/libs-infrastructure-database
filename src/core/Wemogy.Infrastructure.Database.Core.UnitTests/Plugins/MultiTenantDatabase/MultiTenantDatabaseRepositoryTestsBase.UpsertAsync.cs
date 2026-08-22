@@ -21,6 +21,11 @@ public partial class MultiTenantDatabaseRepositoryTestsBase
 
         // Assert: an upsert that does not scope to the tenant writes somewhere the tenant cannot
         // read from afterwards
+        // asserted first: ShouldBeEquivalentToIgnoringETag normalizes the eTag of both instances
+        // away. Returning the provider's entity rather than the caller's is what carries the
+        // assigned eTag back to the caller.
+        upsertedUser.ETag.ShouldNotBeNullOrEmpty();
+
         upsertedUser.ShouldBeEquivalentToIgnoringETag(user);
         AssertPartitionKeyPrefixIsRemoved(upsertedUser);
 

@@ -112,15 +112,6 @@ var repository = CosmosDatabaseRepositoryFactory.CreateInstance<IUserRepository>
 var repository = InMemoryDatabaseRepositoryFactory.CreateInstance<IUserRepository>();
 ```
 
-##### MongoDB repository factory
-
-```csharp
-var repository = MongoDatabaseRepositoryFactory.CreateInstance<IUserRepository>(
-                "CONNECTION_STRING_HERE",
-                "DATABASE_NAME",
-                true);
-```
-
 ### Dependency Injection
 
 ```csharp

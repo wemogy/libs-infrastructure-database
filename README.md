@@ -6,7 +6,6 @@ Currently Supported:
 
 - Local In Memory Database
 - Azure Cosmos DB
-- MongoDB
 
 ## Getting started
 
@@ -36,20 +35,6 @@ Initialize the Database Client Factory centrally.
 
 ```csharp
 var databaseClientFactory = new CosmosDatabaseClientFactory("<CONNECTION_STRING>", "<DATABASE_NAME>");
-```
-
-### MongoDB
-
-Install the [NuGet package](https://www.nuget.org/packages/Wemogy.Infrastructure.Database.Mongo) into your project.
-
-```bash
-dotnet add package Wemogy.Infrastructure.Database.Mongo
-```
-
-Initialize the Database Client Factory centrally.
-
-```csharp
-var databaseClientFactory = new MongoDatabaseClientFactory("<CONNECTION_STRING>", "<DATABASE_NAME>");
 ```
 
 ## Define and register Repositories
@@ -101,12 +86,4 @@ Checkout the full [Documentation](http://libs-infrastructure-database.docs.wemog
 
 ```bash
 docker compose -f env/cosmos/docker-compose.yaml up
-```
-
-### MongoDB
-
-#### Initialize & start the MongoDB emulator
-
-```bash
-docker compose -f env/mongo/docker-compose.yaml up
 ```

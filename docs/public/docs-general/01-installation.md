@@ -8,7 +8,6 @@ use.
 | ---------------------------------------- | --------------------------------------------------- |
 | `Wemogy.Infrastructure.Database.Core`    | Provider-independent abstractions (entities, repositories, attributes, filters). Referenced transitively by every provider package. |
 | `Wemogy.Infrastructure.Database.Cosmos`  | Azure Cosmos DB implementation.                     |
-| `Wemogy.Infrastructure.Database.Mongo`   | MongoDB implementation.                             |
 | `Wemogy.Infrastructure.Database.InMemory`| In-memory implementation, primarily for unit tests. |
 
 ## Supported frameworks
@@ -31,15 +30,11 @@ Add the provider package you need; it pulls in the core package automatically.
 dotnet add package Wemogy.Infrastructure.Database.Cosmos
 ```
 
-```bash title="MongoDB"
-dotnet add package Wemogy.Infrastructure.Database.Mongo
-```
-
 ```bash title="In-Memory (unit tests)"
 dotnet add package Wemogy.Infrastructure.Database.InMemory
 ```
 
-A common setup references the in-memory package in your test project and the real
-provider (Cosmos or Mongo) in your application project, so the exact same
-repository code can be exercised against an in-memory database during tests. See
+A common setup references the in-memory package in your test project and Cosmos DB
+in your application project, so the exact same repository code can be exercised
+against an in-memory database during tests. See
 [Database Providers](./11-database-providers.md) for provider-specific details.

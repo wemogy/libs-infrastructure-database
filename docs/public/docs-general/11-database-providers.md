@@ -60,14 +60,6 @@ Provider specifics:
 - Sort keys are compared ordinally, matching Cosmos DB, so the order does not depend on the culture
   of the machine running the tests.
 
-:::caution Known divergence
-
-`QuerySorting.SearchAfter` combined with `SortOrder.Descending` behaves differently per provider.
-The in-memory provider walks the cursor in the sort direction; the Cosmos provider always builds a
-`>` comparison and therefore returns the opposite half of the result set. Descending keyset
-pagination that passes against the in-memory provider is *not* proof that it works against Cosmos.
-
-:::
 
 :::tip Testing strategy
 

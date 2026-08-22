@@ -869,9 +869,13 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Extensions
                     break;
                 }
 
-                var condition = $"c.{sorting.OrderBy} > @paramHere";
+                // the cursor has to move in the direction the column is ordered in. Comparing with
+                // ">" for a descending column returns the half of the result set the caller has
+                // already paged through.
+                var comparisonOperator = sorting.IsAscending ? ">" : "<";
+                var condition = $"c.{sorting.OrderBy} {comparisonOperator} @paramHere";
 
-                previousQueryDefinition.ReplaceGreaterThanWithEquals();
+                previousQueryDefinition.ReplaceComparisonsWithEquals();
 
                 // mappingMetadata.Deserialize(propertyName, value)
                 previousQueryDefinition.And(

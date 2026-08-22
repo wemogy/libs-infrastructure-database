@@ -110,11 +110,39 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Models
                 withBrackets);
         }
 
+        /// <summary>
+        ///     Turns every "greater than" of the accumulated condition into an equality.
+        /// </summary>
+        /// <remarks>
+        ///     Superseded by <see cref="ReplaceComparisonsWithEquals"/>, which also covers "less
+        ///     than" and is therefore the right choice for a chain whose columns can be sorted in
+        ///     different directions. Kept for compatibility.
+        /// </remarks>
         public void ReplaceGreaterThanWithEquals()
         {
             QueryText = QueryText.Replace(
                 ">",
                 "=");
+        }
+
+        /// <summary>
+        ///     Turns every comparison of the accumulated condition into an equality. This is how the
+        ///     search-after chain builds its tie-breakers: <c>c.a &gt; A</c> becomes <c>c.a = A</c>
+        ///     before the comparison of the next column is appended.
+        ///     <para>
+        ///         Both directions are rewritten, because the columns of one chain can be sorted
+        ///         differently, e.g. <c>ORDER BY a ASC, b DESC</c>.
+        ///     </para>
+        /// </summary>
+        public void ReplaceComparisonsWithEquals()
+        {
+            QueryText = QueryText
+                .Replace(
+                    ">",
+                    "=")
+                .Replace(
+                    "<",
+                    "=");
         }
 
         public void MergeParameters(QueryDefinitionFilterCondition queryDefinitionFilterCondition)

@@ -11,11 +11,15 @@ public partial class MultiTenantDatabaseRepository<TEntity>
         {
             var removePartitionKeyPrefixAction = AddPartitionKeyPrefix(entity);
 
-            await _databaseRepository.CreateAsync(entity);
+            // the entity the provider returns carries the values it assigned itself, e.g. the
+            // eTag. Returning the caller's instance instead would drop them, which switches
+            // optimistic concurrency off for multi-tenant repositories.
+            var createdEntity = await _databaseRepository.CreateAsync(entity);
 
             removePartitionKeyPrefixAction();
+            RemovePartitionKeyPrefix(createdEntity);
 
-            return entity;
+            return createdEntity;
         }
         catch (Exception e)
         {

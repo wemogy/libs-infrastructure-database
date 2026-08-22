@@ -58,4 +58,35 @@ public abstract class DatabaseClientBase<TEntity>
     {
         return (string?)_eTagPropertyInfo?.GetValue(entity);
     }
+
+    /// <summary>
+    ///     Gets a value indicating whether the entity type opts into optimistic concurrency via the
+    ///     <see cref="ETagAttribute"/> <em>and</em> the eTag can be assigned.
+    ///     <para>
+    ///         A getter-only eTag property cannot be maintained, so optimistic concurrency stays
+    ///         off for it rather than failing every write. <see cref="IEntityBase"/> only declares
+    ///         the getter, so an entity implementing it directly can end up in that shape.
+    ///     </para>
+    /// </summary>
+    protected bool SupportsETag => _eTagPropertyInfo is { CanWrite: true };
+
+    /// <summary>
+    ///     Assigns the eTag value of the entity. Does nothing if the entity does not opt into
+    ///     optimistic concurrency via the <see cref="ETagAttribute"/>.
+    ///     <para>
+    ///         Needed by clients that own the stored value themselves instead of receiving it from
+    ///         the database, e.g. the in-memory client. Providers like Cosmos get the eTag assigned
+    ///         by their serializer.
+    ///     </para>
+    /// </summary>
+    protected void SetETagValue(TEntity entity, string? eTag)
+    {
+        if (!SupportsETag)
+        {
+            return;
+        }
+
+        // works for init-only properties too, the init accessor is a regular setter for reflection
+        _eTagPropertyInfo!.SetValue(entity, eTag);
+    }
 }

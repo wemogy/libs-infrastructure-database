@@ -50,8 +50,24 @@ var repository = InMemoryDatabaseRepositoryFactory.CreateInstance<IUserRepositor
 Provider specifics:
 
 - No external dependency or connection string.
-- State lives for the lifetime of the factory instance.
+- The store is shared per entity type for the whole process, so every repository over the same
+  entity sees the same data regardless of which factory created it. Reset it between tests with
+  `DeleteAsync(x => true)`.
 - [Multi-tenancy](./04-multi-tenancy.md) is supported.
+- [Optimistic concurrency](./09-optimistic-concurrency.md) via the `[ETag]` attribute is supported,
+  with the same semantics as Cosmos DB: every write assigns a new eTag, a `ReplaceAsync` with a
+  stale eTag fails the precondition, and an `UpsertAsync` carries no precondition.
+- Sort keys are compared ordinally, matching Cosmos DB, so the order does not depend on the culture
+  of the machine running the tests.
+
+:::caution Known divergence
+
+`QuerySorting.SearchAfter` combined with `SortOrder.Descending` behaves differently per provider.
+The in-memory provider walks the cursor in the sort direction; the Cosmos provider always builds a
+`>` comparison and therefore returns the opposite half of the result set. Descending keyset
+pagination that passes against the in-memory provider is *not* proof that it works against Cosmos.
+
+:::
 
 :::tip Testing strategy
 
@@ -69,4 +85,4 @@ logic and tests stay provider-independent.
 | [Soft delete](./07-soft-delete.md)                           | ✅        | ✅        |
 | [Read & property filters](./08-filters.md)                   | ✅        | ✅        |
 | [Multi-tenancy](./04-multi-tenancy.md)                       | ✅        | ✅        |
-| [Optimistic concurrency (ETag)](./09-optimistic-concurrency.md) | ✅        | ❌        |
+| [Optimistic concurrency (ETag)](./09-optimistic-concurrency.md) | ✅        | ✅        |

@@ -6,10 +6,10 @@ using System.Text.RegularExpressions;
 using Microsoft.Azure.Cosmos;
 using Shouldly;
 using Wemogy.Infrastructure.Database.Core.Enums;
+using Wemogy.Infrastructure.Database.Core.UnitTests.Fakes.Entities;
 using Wemogy.Infrastructure.Database.Core.ValueObjects;
 using Wemogy.Infrastructure.Database.Cosmos.Extensions;
 using Wemogy.Infrastructure.Database.Cosmos.Models;
-using Wemogy.Infrastructure.Database.Cosmos.UnitTests.Fakes;
 using Xunit;
 
 namespace Wemogy.Infrastructure.Database.Cosmos.UnitTests.Extensions;

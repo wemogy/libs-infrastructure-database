@@ -7,8 +7,13 @@ public partial class MultiTenantDatabaseRepository<TEntity>
     public async Task<TEntity> ReplaceAsync(TEntity entity)
     {
         var removePartitionKeyPrefixAction = AddPartitionKeyPrefix(entity);
-        await _databaseRepository.ReplaceAsync(entity);
+
+        // see CreateAsync: the provider's entity carries the new eTag, the caller's does not
+        var replacedEntity = await _databaseRepository.ReplaceAsync(entity);
+
         removePartitionKeyPrefixAction();
-        return entity;
+        RemovePartitionKeyPrefix(replacedEntity);
+
+        return replacedEntity;
     }
 }

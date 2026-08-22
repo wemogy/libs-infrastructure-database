@@ -55,8 +55,10 @@ jobs:
           format: 'markdown'
           output: 'both'
 
+      # updates the existing comment in place via message-id, rather than
+      # deleting it and posting a new one at the bottom of the PR on every run
       - name: Add Coverage PR Comment
-        uses: marocchino/sticky-pull-request-comment@v2
+        uses: mshick/add-pr-comment@v3
         # fork and Dependabot PRs only get a read-only GITHUB_TOKEN on
         # pull_request, so the comment is skipped there instead of failing the job
         if: >-
@@ -64,5 +66,5 @@ jobs:
           && github.event.pull_request.head.repo.full_name == github.repository
           && github.actor != 'dependabot[bot]'
         with:
-          recreate: true
-          path: code-coverage-results.md
+          message-id: code-coverage
+          message-path: code-coverage-results.md

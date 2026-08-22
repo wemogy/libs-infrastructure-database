@@ -16,8 +16,4 @@
     <Project Path="in-memory/Wemogy.Infrastructure.Database.InMemory.UnitTests/Wemogy.Infrastructure.Database.InMemory.UnitTests.csproj" />
     <Project Path="in-memory/Wemogy.Infrastructure.Database.InMemory/Wemogy.Infrastructure.Database.InMemory.csproj" />
   </Folder>
-  <Folder Name="/mongo/">
-    <Project Path="mongo/Wemogy.Infrastructure.Database.Mongo.UnitTests/Wemogy.Infrastructure.Database.Mongo.UnitTests.csproj" />
-    <Project Path="mongo/Wemogy.Infrastructure.Database.Mongo/Wemogy.Infrastructure.Database.Mongo.csproj" />
-  </Folder>
 </Solution>

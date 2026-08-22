@@ -366,11 +366,132 @@ public class CosmosQueryDefinitionTests
         var queryDefinition = Build(queryParameters);
 
         // Assert
+        // one parameter per comparison: the leading term's ">", then the tie-breaker term's
+        // "=" for the same column plus the ">" of the next one
         var parameters = queryDefinition.GetQueryParameters();
-        parameters.Select(x => x.Value).ShouldBe(new object[] { "Doe", 30L });
+        parameters.Select(x => x.Value).ShouldBe(new object[] { "Doe", "Doe", 30L });
         Normalize(queryDefinition.QueryText).ShouldContain(
             $"WHERE ((c.lastname > {parameters[0].Name}) " +
-            $"OR (c.lastname = {parameters[0].Name} AND c.age > {parameters[1].Name}))");
+            $"OR (c.lastname = {parameters[1].Name} AND c.age > {parameters[2].Name}))");
+    }
+
+    [Fact]
+    public void GetQueryDefinition_ShouldBuildTheSearchAfterChainForADescendingSorting()
+    {
+        // Arrange: a descending page continues at the values *below* the cursor
+        var queryParameters = new QueryParameters
+        {
+            Sortings = new List<QuerySorting>
+            {
+                new QuerySorting
+                {
+                    OrderBy = "lastname",
+                    SortOrder = SortOrder.Descending,
+                    SearchAfter = "\"Doe\""
+                }
+            }
+        };
+
+        // Act
+        var queryDefinition = Build(queryParameters);
+
+        // Assert
+        // a single column chain is one bracketed term inside the bracketed chain
+        var parameter = queryDefinition.GetQueryParameters().Single();
+        Normalize(queryDefinition.QueryText).ShouldContain($"WHERE ((c.lastname < {parameter.Name}))");
+    }
+
+    [Fact]
+    public void GetQueryDefinition_ShouldBuildTheSearchAfterChainForAMixedSortOrder()
+    {
+        // Arrange: ascending leading column, descending tie-breaker
+        var queryParameters = new QueryParameters
+        {
+            Sortings = new List<QuerySorting>
+            {
+                new QuerySorting
+                {
+                    OrderBy = "lastname",
+                    SearchAfter = "\"Doe\""
+                },
+                new QuerySorting
+                {
+                    OrderBy = "age",
+                    SortOrder = SortOrder.Descending,
+                    SearchAfter = "30"
+                }
+            }
+        };
+
+        // Act
+        var queryDefinition = Build(queryParameters);
+
+        // Assert: each column keeps its own direction, and the tie-breaker turns the preceding
+        // comparison into an equality
+        var parameters = queryDefinition.GetQueryParameters();
+        parameters.Select(x => x.Value).ShouldBe(new object[] { "Doe", "Doe", 30L });
+        Normalize(queryDefinition.QueryText).ShouldContain(
+            $"WHERE ((c.lastname > {parameters[0].Name}) " +
+            $"OR (c.lastname = {parameters[1].Name} AND c.age < {parameters[2].Name}))");
+    }
+
+    [Fact]
+    public void GetQueryDefinition_ShouldBuildTheSearchAfterChainForAnAllDescendingSortOrder()
+    {
+        // Arrange
+        var queryParameters = new QueryParameters
+        {
+            Sortings = new List<QuerySorting>
+            {
+                new QuerySorting
+                {
+                    OrderBy = "lastname",
+                    SortOrder = SortOrder.Descending,
+                    SearchAfter = "\"Doe\""
+                },
+                new QuerySorting
+                {
+                    OrderBy = "age",
+                    SortOrder = SortOrder.Descending,
+                    SearchAfter = "30"
+                }
+            }
+        };
+
+        // Act
+        var queryDefinition = Build(queryParameters);
+
+        // Assert
+        var parameters = queryDefinition.GetQueryParameters();
+        Normalize(queryDefinition.QueryText).ShouldContain(
+            $"WHERE ((c.lastname < {parameters[0].Name}) " +
+            $"OR (c.lastname = {parameters[1].Name} AND c.age < {parameters[2].Name}))");
+    }
+
+    [Fact]
+    public void GetQueryDefinition_ShouldOrderDescendingAndPageInTheSameDirection()
+    {
+        // Arrange: the ORDER BY direction and the cursor comparison have to agree, otherwise the
+        // query returns the half of the result set the caller already paged through
+        var queryParameters = new QueryParameters
+        {
+            Sortings = new List<QuerySorting>
+            {
+                new QuerySorting
+                {
+                    OrderBy = "lastname",
+                    SortOrder = SortOrder.Descending,
+                    SearchAfter = "\"Doe\""
+                }
+            }
+        };
+
+        // Act
+        var queryText = Normalize(Build(queryParameters).QueryText);
+
+        // Assert
+        queryText.ShouldContain("c.lastname <");
+        queryText.ShouldContain("ORDER BY c.lastname DESC");
     }
 
     [Fact]

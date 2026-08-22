@@ -35,27 +35,6 @@ Provider specifics:
   connection mode and relaxed certificate validation) for use with the local
   Cosmos DB emulator.
 
-## MongoDB
-
-Package: `Wemogy.Infrastructure.Database.Mongo`
-
-```csharp
-var repository = MongoDatabaseRepositoryFactory.CreateInstance<IUserRepository>(
-    "CONNECTION_STRING_HERE",
-    "DATABASE_NAME",
-    true);
-```
-
-Or via dependency injection:
-
-```csharp
-var databaseClientFactory = new MongoDatabaseClientFactory("CONNECTION_STRING_HERE", "DATABASE_NAME");
-
-services
-    .AddDatabase(databaseClientFactory)
-    .AddRepository<IUserRepository>();
-```
-
 ## In-Memory
 
 Package: `Wemogy.Infrastructure.Database.InMemory`
@@ -76,18 +55,18 @@ Provider specifics:
 
 :::tip Testing strategy
 
-Reference the in-memory package in your test project and the real provider (Cosmos
-or Mongo) in your application. Because both implement the same `IDatabaseClient`,
-your repository logic and tests stay provider-independent.
+Reference the in-memory package in your test project and Cosmos DB in your
+application. Because both implement the same `IDatabaseClient`, your repository
+logic and tests stay provider-independent.
 
 :::
 
 ## Feature support matrix
 
-| Feature                                                      | Cosmos DB | MongoDB | In-Memory |
-| ----------------------------------------------------------- | :-------: | :-----: | :-------: |
-| CRUD, querying, [sorting & pagination](./05-sorting-pagination.md) | ✅        | ✅      | ✅        |
-| [Soft delete](./07-soft-delete.md)                           | ✅        | ✅      | ✅        |
-| [Read & property filters](./08-filters.md)                   | ✅        | ✅      | ✅        |
-| [Multi-tenancy](./04-multi-tenancy.md)                       | ✅        | ❌      | ✅        |
-| [Optimistic concurrency (ETag)](./09-optimistic-concurrency.md) | ✅        | ❌      | ❌        |
+| Feature                                                      | Cosmos DB | In-Memory |
+| ----------------------------------------------------------- | :-------: | :-------: |
+| CRUD, querying, [sorting & pagination](./05-sorting-pagination.md) | ✅        | ✅        |
+| [Soft delete](./07-soft-delete.md)                           | ✅        | ✅        |
+| [Read & property filters](./08-filters.md)                   | ✅        | ✅        |
+| [Multi-tenancy](./04-multi-tenancy.md)                       | ✅        | ✅        |
+| [Optimistic concurrency (ETag)](./09-optimistic-concurrency.md) | ✅        | ❌        |

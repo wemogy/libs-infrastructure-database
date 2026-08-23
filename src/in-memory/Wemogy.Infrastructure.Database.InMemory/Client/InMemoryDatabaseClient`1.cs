@@ -9,6 +9,8 @@ using Wemogy.Core.Errors;
 using Wemogy.Core.Extensions;
 using Wemogy.Infrastructure.Database.Core.Abstractions;
 using Wemogy.Infrastructure.Database.Core.Errors;
+using Wemogy.Infrastructure.Database.Core.Models;
+using Wemogy.Infrastructure.Database.Core.Repositories;
 using Wemogy.Infrastructure.Database.Core.ValueObjects;
 using Wemogy.Infrastructure.Database.InMemory.Extensions;
 using Wemogy.Infrastructure.Database.InMemory.Query;
@@ -259,6 +261,67 @@ namespace Wemogy.Infrastructure.Database.InMemory.Client
                 ResolvePartitionKeyValue);
         }
 
+        public Task<TEntity> PatchAsync(
+            string id,
+            string partitionKey,
+            Action<IPatchOperations<TEntity>> operations,
+            Expression<Func<TEntity, bool>>? condition,
+            CancellationToken cancellationToken)
+        {
+            try
+            {
+                // a patch that is applied in process still must not touch the store after the
+                // caller cancelled, the way the Cosmos provider does not once it passes the token on
+                cancellationToken.ThrowIfCancellationRequested();
+
+                // collected and compiled inside the try as well, so a rejected path or an empty
+                // patch faults the returned task like every other failure of this method does
+                var patchOperations = PatchOperationsBuilder<TEntity>.Build(operations);
+
+                // the condition is compiled and evaluated in process. That accepts more than the
+                // Cosmos provider does, whose LINQ provider has to translate the condition into SQL
+                // - a condition that passes here can still be rejected there, which is what the
+                // Cosmos tests are for
+                var compiledCondition = condition?.CompileFast();
+
+                lock (Gate)
+                {
+                    var index = FindEntityIndex(
+                        partitionKey,
+                        id);
+
+                    if (index < 0)
+                    {
+                        throw DatabaseError.EntityNotFound(
+                            id,
+                            partitionKey,
+                            hint: typeof(TEntity).Name);
+                    }
+
+                    var entities = Partitions[partitionKey];
+                    var patchedEntity = BuildPatchedEntity(
+                        entities[index],
+                        id,
+                        partitionKey,
+                        patchOperations,
+                        compiledCondition,
+                        null);
+
+                    // replaced in place, so an iteration of this partition keeps the insertion order
+                    entities[index] = patchedEntity;
+
+                    return Task.FromResult(patchedEntity.Clone());
+                }
+            }
+            catch (Exception e)
+            {
+                // the patch is applied in process, so without this the failure would be thrown
+                // before the task is even returned, while the Cosmos provider faults the task. A
+                // caller that composes patches with Task.WhenAll would see two behaviours
+                return Task.FromException<TEntity>(e);
+            }
+        }
+
         /// <summary>
         ///     Applies the operations of a transactional batch atomically. Every operation is
         ///     validated against a working copy of the partition first and the copy only replaces
@@ -352,6 +415,32 @@ namespace Wemogy.Infrastructure.Database.InMemory.Client
                 return;
             }
 
+            if (operation.Kind == InMemoryTransactionalBatchOperationKind.Patch)
+            {
+                var idToPatch = operation.Id!;
+                var indexToPatch = FindEntityIndex(
+                    entities,
+                    idToPatch);
+
+                if (indexToPatch < 0)
+                {
+                    throw TransactionalBatchError.EntityNotFound(
+                        operationIndex,
+                        idToPatch,
+                        partitionKey,
+                        typeof(TEntity).Name);
+                }
+
+                entities[indexToPatch] = BuildPatchedEntity(
+                    entities[indexToPatch],
+                    idToPatch,
+                    partitionKey,
+                    operation.PatchOperations!,
+                    operation.PatchCondition,
+                    operationIndex);
+                return;
+            }
+
             var entity = operation.Entity!;
             var id = ResolveIdValue(entity);
             var existingIndex = FindEntityIndex(
@@ -408,6 +497,62 @@ namespace Wemogy.Infrastructure.Database.InMemory.Client
 
                     break;
             }
+        }
+
+        /// <summary>
+        ///     Returns a patched copy of the stored entity. The stored entity is left untouched, so
+        ///     a patch that fails half way through - or a batch that fails after it - cannot leave
+        ///     a partially patched document behind.
+        /// </summary>
+        /// <param name="storedEntity">The entity as it is stored</param>
+        /// <param name="id">The id of the entity, for the error messages</param>
+        /// <param name="partitionKey">The partition of the entity, for the error messages</param>
+        /// <param name="operations">The operations to apply</param>
+        /// <param name="condition">The compiled condition that has to hold, null when unconditional</param>
+        /// <param name="batchOperationIndex">
+        ///     The index of the operation inside the batch that carries the patch, null for a
+        ///     standalone patch. Only the message differs, the error code does not.
+        /// </param>
+        private TEntity BuildPatchedEntity(
+            TEntity storedEntity,
+            string id,
+            string partitionKey,
+            IReadOnlyList<DatabasePatchOperation> operations,
+            Func<TEntity, bool>? condition,
+            int? batchOperationIndex)
+        {
+            // the condition is evaluated against the stored state, and nothing is written when it
+            // does not hold - the check and the update are one act, like they are in Cosmos.
+            // Against a copy of it: this provider accepts conditions Cosmos could not translate,
+            // including ones calling a method, and evaluating a condition must not be able to
+            // change what is stored
+            if (condition != null && !condition(storedEntity.Clone()))
+            {
+                throw batchOperationIndex.HasValue
+                    ? PatchError.ConditionNotMet(
+                        batchOperationIndex.Value,
+                        id,
+                        partitionKey)
+                    : PatchError.ConditionNotMet(
+                        id,
+                        partitionKey);
+            }
+
+            // a patch bumps the eTag, the same way a replace does
+            var patchedEntity = Copy(storedEntity, NextETag());
+
+            foreach (var operation in operations)
+            {
+                InMemoryPatchApplier.Apply(
+                    patchedEntity,
+                    operation,
+                    id,
+                    partitionKey);
+            }
+
+            // a Set can carry a reference-typed value the caller still holds on to; copied once
+            // more so the store stays independent of it, like every other write path of this client
+            return patchedEntity.Clone();
         }
 
         private TEntity? FindEntity(string partitionKey, string id)

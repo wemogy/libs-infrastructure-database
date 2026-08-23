@@ -1,10 +1,13 @@
 using System;
 using System.Collections.Generic;
+using System.Linq.Expressions;
 using System.Net;
+using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Azure.Cosmos;
 using Wemogy.Infrastructure.Database.Core.Errors;
+using Wemogy.Infrastructure.Database.Core.Models;
 using Wemogy.Infrastructure.Database.Core.Repositories;
 
 namespace Wemogy.Infrastructure.Database.Cosmos.Client
@@ -29,8 +32,10 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Client
             };
 
         private readonly TransactionalBatch _batch;
+        private readonly Container _container;
         private readonly Func<TEntity, string> _resolveIdValue;
         private readonly Func<TEntity, string?> _resolveETagValue;
+        private readonly Func<MemberInfo, string> _serializeMemberName;
 
         /// <summary>
         ///     The id each operation addresses, by operation index. Cosmos reports a failure by
@@ -39,24 +44,38 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Client
         private readonly List<string> _operationIds = new List<string>();
 
         /// <summary>
+        ///     The condition of each patch operation, by operation index, null when the patch is
+        ///     unconditional. A 412 means "the condition did not hold" for a patch and "the eTag is
+        ///     stale" for a replace, and the caller has to be able to tell those apart even when
+        ///     one batch carries both.
+        /// </summary>
+        private readonly Dictionary<int, string?> _patchOperationConditions = new Dictionary<int, string?>();
+
+        /// <summary>
         ///     Initializes a new instance of the <see cref="CosmosTransactionalBatch{TEntity}"/> class.
         /// </summary>
         /// <param name="batch">The Cosmos batch to record the operations in</param>
+        /// <param name="container">The container the batch runs against, used to translate a patch condition</param>
         /// <param name="partitionKey">The logical partition every operation of the batch acts on</param>
         /// <param name="resolveIdValue">Reads the id value of an entity</param>
         /// <param name="resolvePartitionKeyValue">Reads the partition key value of an entity</param>
         /// <param name="resolveETagValue">Reads the eTag value of an entity, null if it does not opt into optimistic concurrency</param>
+        /// <param name="serializeMemberName">Returns how a member is named in the document</param>
         public CosmosTransactionalBatch(
             TransactionalBatch batch,
+            Container container,
             string partitionKey,
             Func<TEntity, string> resolveIdValue,
             Func<TEntity, string> resolvePartitionKeyValue,
-            Func<TEntity, string?> resolveETagValue)
+            Func<TEntity, string?> resolveETagValue,
+            Func<MemberInfo, string> serializeMemberName)
             : base(partitionKey, resolvePartitionKeyValue)
         {
             _batch = batch;
+            _container = container;
             _resolveIdValue = resolveIdValue;
             _resolveETagValue = resolveETagValue;
+            _serializeMemberName = serializeMemberName;
         }
 
         /// <inheritdoc />
@@ -108,6 +127,37 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Client
         }
 
         /// <inheritdoc />
+        protected override void ApplyPatch(
+            string id,
+            IReadOnlyList<DatabasePatchOperation> operations,
+            Expression<Func<TEntity, bool>>? condition)
+        {
+            // translated first: a refused path or a condition the provider cannot express throws
+            // here, and an operation that was never recorded must not leave an id behind - the
+            // indexes of the bookkeeping have to keep matching the operations of the batch
+            var patchOperations = CosmosPatchTranslator.ToPatchOperations(
+                operations,
+                _serializeMemberName);
+            var filterPredicate = CosmosPatchTranslator.ToFilterPredicate(
+                _container,
+                condition);
+
+            _patchOperationConditions.Add(
+                _operationIds.Count,
+                condition?.ToString());
+            _operationIds.Add(id);
+
+            _batch.PatchItem(
+                id,
+                patchOperations,
+                new TransactionalBatchPatchItemRequestOptions
+                {
+                    EnableContentResponseOnWrite = false,
+                    FilterPredicate = filterPredicate
+                });
+        }
+
+        /// <inheritdoc />
         protected override async Task ExecuteCoreAsync(CancellationToken cancellationToken)
         {
             using var response = await _batch.ExecuteAsync(cancellationToken);
@@ -135,15 +185,18 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Client
 
                 return TranslateFailure(
                     index,
-                    result.StatusCode);
+                    result.StatusCode,
+                    response.ErrorMessage);
             }
 
             return TransactionalBatchError.Failed((int)response.StatusCode);
         }
 
-        private Exception TranslateFailure(int operationIndex, HttpStatusCode statusCode)
+        private Exception TranslateFailure(int operationIndex, HttpStatusCode statusCode, string? errorMessage)
         {
             var id = _operationIds[operationIndex];
+            var isPatch = _patchOperationConditions.ContainsKey(operationIndex);
+            var patchCondition = ResolvePatchCondition(operationIndex);
 
             switch (statusCode)
             {
@@ -157,16 +210,56 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Client
                         id,
                         PartitionKey,
                         typeof(TEntity).Name);
+
+                // the same status covers two different answers: a patch condition that did not
+                // hold, and a replace whose eTag is stale. Only an operation that carried a
+                // condition can be the former
+                case HttpStatusCode.PreconditionFailed when patchCondition != null:
+                    return PatchError.ConditionNotMet(
+                        operationIndex,
+                        id,
+                        PartitionKey);
                 case HttpStatusCode.PreconditionFailed:
                     return TransactionalBatchError.ETagMismatch(
                         operationIndex,
                         id,
                         PartitionKey);
+
+                // a bad request on a patch covers two rejections, the filter predicate and the
+                // operations themselves, and only the message of the response tells them apart
+                case HttpStatusCode.BadRequest
+                    when patchCondition != null && CosmosPatchTranslator.IsFilterPredicateFailure(errorMessage):
+                    return PatchError.ConditionNotSupported(
+                        patchCondition,
+                        "the database refused the filter predicate it was translated into");
+
+                // reported as a patch failure whether or not the patch carried a condition, so it
+                // stays the same error the in-memory provider raises for the same cause
+                case HttpStatusCode.BadRequest when isPatch:
+                    return PatchError.Failed(
+                        operationIndex,
+                        id,
+                        PartitionKey,
+                        "the database refused the patch");
                 default:
                     return TransactionalBatchError.Failed(
                         operationIndex,
                         (int)statusCode);
             }
+        }
+
+        /// <summary>
+        ///     Returns the condition the patch operation at the given index carried, or null when
+        ///     the operation is not a patch or was unconditional. Whether the operation is a patch
+        ///     at all is a separate question, answered by the presence of the key.
+        /// </summary>
+        private string? ResolvePatchCondition(int operationIndex)
+        {
+            return _patchOperationConditions.TryGetValue(
+                operationIndex,
+                out var condition)
+                ? condition
+                : null;
         }
     }
 }

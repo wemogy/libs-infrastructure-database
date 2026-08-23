@@ -19,4 +19,8 @@ public class KeyedEntity
     public string Name { get; set; } = string.Empty;
 
     public int Rank { get; set; }
+
+    public KeyedEntityDetails Details { get; set; } = new KeyedEntityDetails();
+
+    public KeyedEntityAmount Amount { get; set; }
 }

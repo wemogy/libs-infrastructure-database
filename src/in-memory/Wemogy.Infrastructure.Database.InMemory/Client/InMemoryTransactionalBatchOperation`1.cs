@@ -1,3 +1,7 @@
+using System;
+using System.Collections.Generic;
+using Wemogy.Infrastructure.Database.Core.Models;
+
 namespace Wemogy.Infrastructure.Database.InMemory.Client
 {
     /// <summary>
@@ -11,11 +15,15 @@ namespace Wemogy.Infrastructure.Database.InMemory.Client
         private InMemoryTransactionalBatchOperation(
             InMemoryTransactionalBatchOperationKind kind,
             TEntity? entity,
-            string? id)
+            string? id,
+            IReadOnlyList<DatabasePatchOperation>? patchOperations = null,
+            Func<TEntity, bool>? patchCondition = null)
         {
             Kind = kind;
             Entity = entity;
             Id = id;
+            PatchOperations = patchOperations;
+            PatchCondition = patchCondition;
         }
 
         public InMemoryTransactionalBatchOperationKind Kind { get; }
@@ -26,9 +34,22 @@ namespace Wemogy.Infrastructure.Database.InMemory.Client
         public TEntity? Entity { get; }
 
         /// <summary>
-        ///     The id to delete, null for every other kind, which carries the id on its entity.
+        ///     The id to delete or to patch, null for every other kind, which carries the id on
+        ///     its entity.
         /// </summary>
         public string? Id { get; }
+
+        /// <summary>
+        ///     The operations to apply, set for a <see cref="InMemoryTransactionalBatchOperationKind.Patch"/>
+        ///     only.
+        /// </summary>
+        public IReadOnlyList<DatabasePatchOperation>? PatchOperations { get; }
+
+        /// <summary>
+        ///     The compiled condition that has to hold for a patch to be applied, null when the
+        ///     patch is unconditional.
+        /// </summary>
+        public Func<TEntity, bool>? PatchCondition { get; }
 
         public static InMemoryTransactionalBatchOperation<TEntity> Create(TEntity entity)
         {
@@ -60,6 +81,19 @@ namespace Wemogy.Infrastructure.Database.InMemory.Client
                 InMemoryTransactionalBatchOperationKind.Delete,
                 null,
                 id);
+        }
+
+        public static InMemoryTransactionalBatchOperation<TEntity> Patch(
+            string id,
+            IReadOnlyList<DatabasePatchOperation> patchOperations,
+            Func<TEntity, bool>? patchCondition)
+        {
+            return new InMemoryTransactionalBatchOperation<TEntity>(
+                InMemoryTransactionalBatchOperationKind.Patch,
+                null,
+                id,
+                patchOperations,
+                patchCondition);
         }
     }
 }

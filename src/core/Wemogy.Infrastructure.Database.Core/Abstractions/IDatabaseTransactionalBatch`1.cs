@@ -1,3 +1,5 @@
+using System;
+using System.Linq.Expressions;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -53,6 +55,22 @@ public interface IDatabaseTransactionalBatch<TEntity>
     /// <param name="id">The id of the entity to delete</param>
     /// <returns>The same batch, so calls can be chained</returns>
     IDatabaseTransactionalBatch<TEntity> Delete(string id);
+
+    /// <summary>
+    ///     Applies a partial update to the document with the given id, optionally only if the
+    ///     condition holds. A condition that does not hold fails the <em>whole</em> batch with a
+    ///     <see cref="Wemogy.Core.Errors.Exceptions.ConflictErrorException"/> and the code
+    ///     <c>PatchConditionNotMet</c>, which a caller can tell apart from the stale eTag of a
+    ///     <see cref="Replace"/> in the same batch.
+    /// </summary>
+    /// <param name="id">The id of the document to patch</param>
+    /// <param name="operations">Adds the operations to apply, e.g. <c>p => p.Increment(x => x.Balance, 1)</c></param>
+    /// <param name="condition">An optional condition that has to hold for the patch to be applied</param>
+    /// <returns>The same batch, so calls can be chained</returns>
+    IDatabaseTransactionalBatch<TEntity> Patch(
+        string id,
+        Action<IPatchOperations<TEntity>> operations,
+        Expression<Func<TEntity, bool>>? condition = null);
 
     /// <summary>
     ///     Executes every operation atomically. A batch with no operations completes without

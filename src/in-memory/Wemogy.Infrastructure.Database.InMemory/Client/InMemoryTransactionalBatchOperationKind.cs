@@ -8,6 +8,7 @@ namespace Wemogy.Infrastructure.Database.InMemory.Client
         Create,
         Replace,
         Upsert,
-        Delete
+        Delete,
+        Patch
     }
 }

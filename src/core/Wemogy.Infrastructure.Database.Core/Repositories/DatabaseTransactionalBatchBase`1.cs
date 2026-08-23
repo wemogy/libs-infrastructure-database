@@ -1,8 +1,11 @@
 using System;
+using System.Collections.Generic;
+using System.Linq.Expressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Wemogy.Infrastructure.Database.Core.Abstractions;
 using Wemogy.Infrastructure.Database.Core.Errors;
+using Wemogy.Infrastructure.Database.Core.Models;
 
 namespace Wemogy.Infrastructure.Database.Core.Repositories;
 
@@ -89,6 +92,24 @@ public abstract class DatabaseTransactionalBatchBase<TEntity> : IDatabaseTransac
     }
 
     /// <inheritdoc />
+    public IDatabaseTransactionalBatch<TEntity> Patch(
+        string id,
+        Action<IPatchOperations<TEntity>> operations,
+        Expression<Func<TEntity, bool>>? condition = null)
+    {
+        EnsureNotExecuted();
+        EnsureCapacity();
+
+        // a patch addresses an id, like a delete, so there is no entity to check the partition of
+        ApplyPatch(
+            id,
+            PatchOperationsBuilder<TEntity>.Build(operations),
+            condition);
+        OperationCount++;
+        return this;
+    }
+
+    /// <inheritdoc />
     public async Task ExecuteAsync(CancellationToken cancellationToken = default)
     {
         // a batch is single-use: the providers consume their recorded operations, so a second
@@ -132,6 +153,17 @@ public abstract class DatabaseTransactionalBatchBase<TEntity> : IDatabaseTransac
     /// </summary>
     /// <param name="id">The id of the entity to delete</param>
     protected abstract void ApplyDelete(string id);
+
+    /// <summary>
+    ///     Records a patch operation. Called after the operations have been validated.
+    /// </summary>
+    /// <param name="id">The id of the document to patch</param>
+    /// <param name="operations">The validated operations to apply</param>
+    /// <param name="condition">An optional condition that has to hold for the patch to be applied</param>
+    protected abstract void ApplyPatch(
+        string id,
+        IReadOnlyList<DatabasePatchOperation> operations,
+        Expression<Func<TEntity, bool>>? condition);
 
     /// <summary>
     ///     Executes the recorded operations atomically. Only called when the batch holds at least

@@ -674,22 +674,9 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Extensions
 
                 if (!string.IsNullOrWhiteSpace(generalFilterSql))
                 {
-                    // extract the WHERE condition from the SQL query
-                    generalFilterSql = generalFilterSql.Split("WHERE").LastOrDefault();
-                    generalFilterSql = generalFilterSql?.Remove(generalFilterSql.Length - 2);
-
-                    // remove whitespace at begin and end
-                    generalFilterSql = generalFilterSql?.Trim();
-
-                    // replace the root alias, which is used by converting with the c alias which we are using for the container
-                    generalFilterSql = generalFilterSql?.Replace(
-                        "root[",
-                        "c[");
-
-                    // remove escape character before quotes
-                    generalFilterSql = generalFilterSql?.Replace(
-                        "\\\"",
-                        "\"");
+                    // extract the WHERE condition from the SQL query. The same extraction turns a
+                    // patch condition into a filter predicate, so it lives in one place
+                    generalFilterSql = CosmosLinqQueryExtensions.ExtractWhereFragment(generalFilterSql);
                 }
 
                 if (!string.IsNullOrWhiteSpace(generalFilterSql))

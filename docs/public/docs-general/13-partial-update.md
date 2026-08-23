@@ -129,7 +129,7 @@ patch therefore asks for the write response and pays its request charge; the bat
 | --- | --- | --- |
 | Condition did not hold | `ConflictErrorException` | `PatchConditionNotMet` |
 | Document does not exist | `NotFoundErrorException` | `EntityNotFound` |
-| Path is not a chain of member accesses, or is not writable | `UnexpectedErrorException` | `PatchPathNotSupported` |
+| Path is not a chain of member accesses, is not writable, or addresses a member the operation cannot be applied to | `UnexpectedErrorException` | `PatchPathNotSupported` |
 | Path targets the id, the partition key or the eTag | `UnexpectedErrorException` | `PatchPathNotAllowed` |
 | More than ten operations | `UnexpectedErrorException` | `PatchOperationLimitExceeded` |
 | No operations | `UnexpectedErrorException` | `PatchIsEmpty` |
@@ -158,6 +158,11 @@ The path errors are thrown while the operations are collected, before any I/O.
   exists for.
 - **`decimal` increments.** Cosmos DB increments a field as a 64-bit integer or as a double.
   Narrowing a `decimal` to a `double` would silently lose precision on values that are usually
-  money, so there is no overload that does it. Keep such a value in a `long` of minor units, or
-  read-modify-write it with `UpdateAsync`.
+  money, so there is no overload that does it, and a cast that reaches one is refused with
+  `PatchPathNotSupported`. Keep such a value in a `long` of minor units, or read-modify-write it
+  with `UpdateAsync`.
+- **A fractional increment of an integral field.** `Increment(x => x.LoginCount, 0.5)` on an `int`
+  binds to the `double` overload, and the two providers could only disagree about the result -
+  Cosmos DB would store a non-integral number in a field the entity reads back as an `int`. It is
+  refused with `PatchPathNotSupported`; increment an integral field by a whole number.
 - **Patching across documents or partitions.**

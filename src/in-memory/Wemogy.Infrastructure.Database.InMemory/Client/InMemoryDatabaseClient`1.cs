@@ -268,16 +268,18 @@ namespace Wemogy.Infrastructure.Database.InMemory.Client
             Expression<Func<TEntity, bool>>? condition,
             CancellationToken cancellationToken)
         {
-            var patchOperations = PatchOperationsBuilder<TEntity>.Build(operations);
-
-            // the condition is compiled and evaluated in process. That accepts more than the Cosmos
-            // provider does, whose LINQ provider has to translate the condition into SQL - a
-            // condition that passes here can still be rejected there, which is what the Cosmos
-            // tests are for
-            var compiledCondition = condition?.CompileFast();
-
             try
             {
+                // collected and compiled inside the try as well, so a rejected path or an empty
+                // patch faults the returned task like every other failure of this method does
+                var patchOperations = PatchOperationsBuilder<TEntity>.Build(operations);
+
+                // the condition is compiled and evaluated in process. That accepts more than the
+                // Cosmos provider does, whose LINQ provider has to translate the condition into SQL
+                // - a condition that passes here can still be rejected there, which is what the
+                // Cosmos tests are for
+                var compiledCondition = condition?.CompileFast();
+
                 lock (Gate)
                 {
                     var index = FindEntityIndex(
@@ -541,7 +543,9 @@ namespace Wemogy.Infrastructure.Database.InMemory.Client
                     partitionKey);
             }
 
-            return patchedEntity;
+            // a Set can carry a reference-typed value the caller still holds on to; copied once
+            // more so the store stays independent of it, like every other write path of this client
+            return patchedEntity.Clone();
         }
 
         private TEntity? FindEntity(string partitionKey, string id)

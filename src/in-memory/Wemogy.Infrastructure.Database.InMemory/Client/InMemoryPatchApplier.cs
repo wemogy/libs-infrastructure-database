@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Reflection;
 using Wemogy.Infrastructure.Database.Core.Errors;
 using Wemogy.Infrastructure.Database.Core.Models;
@@ -18,11 +19,12 @@ namespace Wemogy.Infrastructure.Database.InMemory.Client
             string id,
             string partitionKey)
         {
-            var owner = ResolveOwner(
+            var owners = ResolveOwners(
                 target,
                 operation,
                 id,
                 partitionKey);
+            var owner = owners[owners.Count - 1];
             var member = operation.Path[operation.Path.Count - 1];
 
             var value = operation.Kind == DatabasePatchOperationKind.Set
@@ -35,24 +37,39 @@ namespace Wemogy.Infrastructure.Database.InMemory.Client
                 owner,
                 member,
                 value);
+
+            // reflection hands out a boxed copy of a value type, so writing a member of one would
+            // be lost without assigning the copy back to the member it came from. Walked from the
+            // innermost owner outwards, so a chain of value types is written back completely
+            for (var i = owners.Count - 1; i > 0; i--)
+            {
+                if (owners[i].GetType().IsValueType)
+                {
+                    SetValue(
+                        owners[i - 1],
+                        operation.Path[i - 1],
+                        owners[i]);
+                }
+            }
         }
 
         /// <summary>
-        ///     Walks the path down to the object that owns its last member, so <c>x => x.Inner.Value</c>
-        ///     resolves to the <c>Inner</c> instance.
+        ///     Walks the path and returns every object it passes through, the entity first and the
+        ///     object that owns the last member of the path last, so <c>x => x.Inner.Value</c>
+        ///     resolves to <c>[entity, Inner]</c>.
         /// </summary>
-        private static object ResolveOwner(
+        private static List<object> ResolveOwners(
             object target,
             DatabasePatchOperation operation,
             string id,
             string partitionKey)
         {
-            var owner = target;
+            var owners = new List<object> { target };
 
             for (var i = 0; i < operation.Path.Count - 1; i++)
             {
                 var value = GetValue(
-                    owner,
+                    owners[i],
                     operation.Path[i]);
 
                 // Cosmos cannot patch a field of an object that is not there either, it answers
@@ -65,10 +82,10 @@ namespace Wemogy.Infrastructure.Database.InMemory.Client
                         $"the path {operation.PathDescription} passes through {operation.Path[i].Name}, which is null");
                 }
 
-                owner = value;
+                owners.Add(value);
             }
 
-            return owner;
+            return owners;
         }
 
         /// <summary>

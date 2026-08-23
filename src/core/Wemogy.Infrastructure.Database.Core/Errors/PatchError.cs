@@ -41,13 +41,18 @@ public static class PatchError
 
     /// <summary>
     ///     The path of an operation is not a chain of member accesses, e.g. a method call, an
-    ///     indexer or a cast to an unrelated type.
+    ///     indexer or a cast to an unrelated type, or the member it addresses cannot carry the
+    ///     operation.
     /// </summary>
-    public static UnexpectedErrorException PathNotSupported(string path)
+    public static UnexpectedErrorException PathNotSupported(string path, string? reason = null)
     {
+        var explanation = string.IsNullOrEmpty(reason)
+            ? "a path has to be a chain of member accesses, e.g. x => x.Balance or x => x.Inner.Value, and its last member has to be writable"
+            : reason!;
+
         return Error.Unexpected(
             "PatchPathNotSupported",
-            $"The patch path {path} is not supported: a path has to be a chain of member accesses, e.g. x => x.Balance or x => x.Inner.Value, and its last member has to be writable");
+            $"The patch path {path} is not supported: {explanation}");
     }
 
     /// <summary>

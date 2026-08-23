@@ -25,6 +25,12 @@ public class PatchOperationsBuilder<TEntity> : IPatchOperations<TEntity>
     /// </summary>
     public const int MaxOperationCount = 10;
 
+    private static readonly HashSet<Type> IntegralTypes = new HashSet<Type>
+    {
+        typeof(sbyte), typeof(byte), typeof(short), typeof(ushort), typeof(int), typeof(uint),
+        typeof(long), typeof(ulong)
+    };
+
     private static readonly HashSet<Type> NumericTypes = new HashSet<Type>
     {
         typeof(sbyte), typeof(byte), typeof(short), typeof(ushort), typeof(int), typeof(uint),
@@ -56,7 +62,7 @@ public class PatchOperationsBuilder<TEntity> : IPatchOperations<TEntity>
             DatabasePatchOperationKind.Set,
             path,
             value,
-            false);
+            null);
     }
 
     /// <inheritdoc />
@@ -66,7 +72,7 @@ public class PatchOperationsBuilder<TEntity> : IPatchOperations<TEntity>
             DatabasePatchOperationKind.Increment,
             path,
             value,
-            true);
+            typeof(long));
     }
 
     /// <inheritdoc />
@@ -76,7 +82,7 @@ public class PatchOperationsBuilder<TEntity> : IPatchOperations<TEntity>
             DatabasePatchOperationKind.Increment,
             path,
             value,
-            true);
+            typeof(double));
     }
 
     /// <summary>
@@ -96,7 +102,7 @@ public class PatchOperationsBuilder<TEntity> : IPatchOperations<TEntity>
         return _operations;
     }
 
-    private static IReadOnlyList<MemberInfo> ResolvePath(LambdaExpression path, bool requireNumericMember)
+    private static IReadOnlyList<MemberInfo> ResolvePath(LambdaExpression path, Type? incrementValueType)
     {
         var pathDescription = path.ToString();
         var members = new List<MemberInfo>();
@@ -129,11 +135,12 @@ public class PatchOperationsBuilder<TEntity> : IPatchOperations<TEntity>
             members,
             pathDescription);
 
-        if (requireNumericMember)
+        if (incrementValueType != null)
         {
-            EnsureLastMemberIsNumeric(
+            EnsureLastMemberIsIncrementable(
                 members,
-                pathDescription);
+                pathDescription,
+                incrementValueType);
         }
 
         return members;
@@ -199,7 +206,10 @@ public class PatchOperationsBuilder<TEntity> : IPatchOperations<TEntity>
         }
     }
 
-    private static void EnsureLastMemberIsNumeric(IReadOnlyList<MemberInfo> members, string pathDescription)
+    private static void EnsureLastMemberIsIncrementable(
+        IReadOnlyList<MemberInfo> members,
+        string pathDescription,
+        Type incrementValueType)
     {
         var member = members[members.Count - 1];
         var memberType = member switch
@@ -211,7 +221,32 @@ public class PatchOperationsBuilder<TEntity> : IPatchOperations<TEntity>
 
         if (memberType == null || !IsNumeric(memberType))
         {
-            throw PatchError.PathNotSupported(pathDescription);
+            throw PatchError.PathNotSupported(
+                pathDescription,
+                "only a numeric member can be incremented");
+        }
+
+        var underlyingMemberType = Nullable.GetUnderlyingType(memberType) ?? memberType;
+
+        // a decimal is deliberately not incrementable: Cosmos DB increments a field as a 64-bit
+        // integer or as a double, and narrowing a decimal to a double would silently lose precision
+        // on values that are usually money. Reachable through an explicit cast in the path, which
+        // UnwrapNumericConversion unwraps, so it has to be refused here
+        if (underlyingMemberType == typeof(decimal))
+        {
+            throw PatchError.PathNotSupported(
+                pathDescription,
+                "a decimal member cannot be incremented, because the database increments a field as a 64-bit integer or as a double and narrowing a decimal to a double would lose precision. Keep such a value in a long of minor units, or read-modify-write it");
+        }
+
+        // a fractional increment on an integral field is refused instead of silently disagreeing
+        // between the providers: Cosmos DB would store a non-integral number in a field the entity
+        // reads back as an int, while the in-memory provider rounds the result to the member type
+        if (incrementValueType == typeof(double) && IntegralTypes.Contains(underlyingMemberType))
+        {
+            throw PatchError.PathNotSupported(
+                pathDescription,
+                $"an integral member cannot be incremented by a floating point value; increment {member.Name} by a whole number instead");
         }
     }
 
@@ -224,7 +259,7 @@ public class PatchOperationsBuilder<TEntity> : IPatchOperations<TEntity>
         DatabasePatchOperationKind kind,
         Expression<Func<TEntity, TValue>> path,
         object? value,
-        bool requireNumericMember)
+        Type? incrementValueType)
     {
         if (_operations.Count >= MaxOperationCount)
         {
@@ -234,7 +269,7 @@ public class PatchOperationsBuilder<TEntity> : IPatchOperations<TEntity>
         _operations.Add(
             new DatabasePatchOperation(
                 kind,
-                ResolvePath(path, requireNumericMember),
+                ResolvePath(path, incrementValueType),
                 value));
 
         return this;

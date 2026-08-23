@@ -60,6 +60,36 @@ public class PatchOperationsBuilderTests
         exception.Code.ShouldBe("PatchPathNotSupported");
     }
 
+    [Fact]
+    public void Build_ShouldRejectAFractionalIncrementOfAnIntegralMember()
+    {
+        // Act & Assert: it binds to the double overload, and the providers could only disagree
+        // about the result of storing 0.5 in a field the entity reads back as an int
+        var exception = Should.Throw<UnexpectedErrorException>(
+            () => PatchOperationsBuilder<PatchTarget>.Build(p => p.Increment(x => x.Counter, 0.5)));
+        exception.Code.ShouldBe("PatchPathNotSupported");
+    }
+
+    [Fact]
+    public void Build_ShouldRejectIncrementingADecimalMember()
+    {
+        // Act & Assert: the cast is the only way to reach an increment of a decimal, and money
+        // must not travel through a double
+        var exception = Should.Throw<UnexpectedErrorException>(
+            () => PatchOperationsBuilder<PatchTarget>.Build(p => p.Increment(x => (double)x.Money, 1.5)));
+        exception.Code.ShouldBe("PatchPathNotSupported");
+    }
+
+    [Fact]
+    public void Build_ShouldAllowSettingADecimalMember()
+    {
+        // Act: only incrementing a decimal is refused, writing one is not
+        var operations = PatchOperationsBuilder<PatchTarget>.Build(p => p.Set(x => x.Money, 9.99m));
+
+        // Assert
+        operations.Single().Value.ShouldBe(9.99m);
+    }
+
     [Theory]
     [InlineData(nameof(PatchTarget.Id))]
     [InlineData(nameof(PatchTarget.PartitionKey))]

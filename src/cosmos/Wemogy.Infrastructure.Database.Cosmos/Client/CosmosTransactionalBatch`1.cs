@@ -201,18 +201,23 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Client
                         id,
                         PartitionKey,
                         typeof(TEntity).Name);
-                case HttpStatusCode.PreconditionFailed:
+                case HttpStatusCode.PreconditionFailed
+                    when _patchOperationConditions.TryGetValue(
+                             operationIndex,
+                             out var failedCondition) && failedCondition != null:
+
                     // the same status covers two different answers: a patch condition that did not
-                    // hold, and a replace whose eTag is stale
-                    return _patchOperationConditions.ContainsKey(operationIndex)
-                        ? PatchError.ConditionNotMet(
-                            operationIndex,
-                            id,
-                            PartitionKey)
-                        : TransactionalBatchError.ETagMismatch(
-                            operationIndex,
-                            id,
-                            PartitionKey);
+                    // hold, and a replace whose eTag is stale. Only an operation that carried a
+                    // condition can be the former
+                    return PatchError.ConditionNotMet(
+                        operationIndex,
+                        id,
+                        PartitionKey);
+                case HttpStatusCode.PreconditionFailed:
+                    return TransactionalBatchError.ETagMismatch(
+                        operationIndex,
+                        id,
+                        PartitionKey);
                 case HttpStatusCode.BadRequest
                     when _patchOperationConditions.TryGetValue(
                              operationIndex,

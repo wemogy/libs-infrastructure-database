@@ -14,8 +14,6 @@ using Wemogy.Infrastructure.Database.Core.ValueObjects;
 using Wemogy.Infrastructure.Database.Cosmos.Helpers;
 using Wemogy.Infrastructure.Database.Cosmos.Models;
 
-#pragma warning disable CS8602
-
 // ReSharper disable All
 
 namespace Wemogy.Infrastructure.Database.Cosmos.Extensions

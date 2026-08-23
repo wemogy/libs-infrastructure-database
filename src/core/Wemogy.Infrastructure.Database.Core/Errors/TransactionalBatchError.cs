@@ -35,6 +35,18 @@ public static class TransactionalBatchError
     }
 
     /// <summary>
+    ///     A batch was executed twice, or an operation was added to it after it had been executed.
+    ///     A batch is single-use: its providers consume the recorded operations, so a second
+    ///     execution would replay every write on one provider and silently do nothing on another.
+    /// </summary>
+    public static UnexpectedErrorException AlreadyExecuted()
+    {
+        return Error.Unexpected(
+            "TransactionalBatchAlreadyExecuted",
+            "A transactional batch is single-use and has already been executed. Build a new batch instead of reusing this one");
+    }
+
+    /// <summary>
     ///     A <c>Create</c> operation of the batch addressed an id that already exists.
     /// </summary>
     public static ConflictErrorException AlreadyExists(int operationIndex, string id)

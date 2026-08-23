@@ -64,6 +64,7 @@ valid — the replace sees what the create added.
 | `Replace` / `Delete` on a missing entity | `NotFoundErrorException` | `EntityNotFound` |
 | Stale eTag on `Replace` | `PreconditionFailedErrorException` | `EtagMismatch` |
 | Any other batch failure | `FailureErrorException` | `TransactionalBatchFailed` |
+| Executing a batch twice, or adding to an executed batch | `UnexpectedErrorException` | `TransactionalBatchAlreadyExecuted` |
 
 Optimistic concurrency carries over: a `Replace` of an entity that opts into
 [eTags](./09-optimistic-concurrency.md) sends the eTag it was read with as a
@@ -79,7 +80,9 @@ precondition, and a mismatch fails the **whole** batch.
   that passes its test against the in-memory provider is not too large for Cosmos DB.
 - **An empty batch is a no-op.** `ExecuteAsync` on a batch without operations returns
   without a round trip and does not throw, so a batch built in a loop needs no guard.
-- **Single-use and not thread-safe.** Build a batch from one thread and execute it once.
+- **Single-use and not thread-safe.** Build a batch from one thread and execute it once. A
+  second `ExecuteAsync`, or an operation added after the execution, throws instead of replaying
+  the writes.
 
 :::caution No entities are returned, and no retry happens
 
@@ -102,6 +105,11 @@ A [multi-tenant](./04-multi-tenancy.md) repository prefixes the partition key of
 every entity added to it with the tenant id, just like its other write methods do. Pass the
 unprefixed partition key, exactly as you would to `GetAsync`; the instance you hand to `Create`,
 `Replace` or `Upsert` is not modified, the batch works on a copy of it.
+
+That copy is taken when the operation is *added*, while a plain repository reads the entity when
+the batch is *executed*. Mutating an entity after adding it to a batch therefore reaches the store
+through a plain repository but not through a multi-tenant one — do not rely on either: set the
+entity up before you add it.
 
 ## Not supported
 

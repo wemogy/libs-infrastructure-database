@@ -24,6 +24,8 @@ public abstract class DatabaseTransactionalBatchBase<TEntity> : IDatabaseTransac
 
     private readonly Func<TEntity, string> _resolvePartitionKeyValue;
 
+    private bool _executed;
+
     /// <summary>
     ///     Initializes a new instance of the <see cref="DatabaseTransactionalBatchBase{TEntity}"/> class.
     /// </summary>
@@ -46,6 +48,7 @@ public abstract class DatabaseTransactionalBatchBase<TEntity> : IDatabaseTransac
     /// <inheritdoc />
     public IDatabaseTransactionalBatch<TEntity> Create(TEntity entity)
     {
+        EnsureNotExecuted();
         EnsureCapacity();
         EnsureSamePartition(entity);
         ApplyCreate(entity);
@@ -56,6 +59,7 @@ public abstract class DatabaseTransactionalBatchBase<TEntity> : IDatabaseTransac
     /// <inheritdoc />
     public IDatabaseTransactionalBatch<TEntity> Replace(TEntity entity)
     {
+        EnsureNotExecuted();
         EnsureCapacity();
         EnsureSamePartition(entity);
         ApplyReplace(entity);
@@ -66,6 +70,7 @@ public abstract class DatabaseTransactionalBatchBase<TEntity> : IDatabaseTransac
     /// <inheritdoc />
     public IDatabaseTransactionalBatch<TEntity> Upsert(TEntity entity)
     {
+        EnsureNotExecuted();
         EnsureCapacity();
         EnsureSamePartition(entity);
         ApplyUpsert(entity);
@@ -76,6 +81,7 @@ public abstract class DatabaseTransactionalBatchBase<TEntity> : IDatabaseTransac
     /// <inheritdoc />
     public IDatabaseTransactionalBatch<TEntity> Delete(string id)
     {
+        EnsureNotExecuted();
         EnsureCapacity();
         ApplyDelete(id);
         OperationCount++;
@@ -83,11 +89,24 @@ public abstract class DatabaseTransactionalBatchBase<TEntity> : IDatabaseTransac
     }
 
     /// <inheritdoc />
-    public Task ExecuteAsync(CancellationToken cancellationToken = default)
+    public async Task ExecuteAsync(CancellationToken cancellationToken = default)
     {
+        // a batch is single-use: the providers consume their recorded operations, so a second
+        // execution would either replay every write or silently do nothing, depending on the
+        // provider. Failing instead keeps both providers on the same, predictable semantics
+        EnsureNotExecuted();
+        _executed = true;
+
         // an empty batch is a no-op instead of an error: a caller that collects operations in a
         // loop should not have to guard the execution with a count check
-        return OperationCount == 0 ? Task.CompletedTask : ExecuteCoreAsync(cancellationToken);
+        if (OperationCount == 0)
+        {
+            return;
+        }
+
+        // awaited instead of returned, so a provider that applies its operations synchronously
+        // faults the returned task like the asynchronous ones instead of throwing before it
+        await ExecuteCoreAsync(cancellationToken);
     }
 
     /// <summary>
@@ -121,6 +140,14 @@ public abstract class DatabaseTransactionalBatchBase<TEntity> : IDatabaseTransac
     /// <param name="cancellationToken">Token to cancel the execution</param>
     /// <returns>A task that completes when every operation has been applied</returns>
     protected abstract Task ExecuteCoreAsync(CancellationToken cancellationToken);
+
+    private void EnsureNotExecuted()
+    {
+        if (_executed)
+        {
+            throw TransactionalBatchError.AlreadyExecuted();
+        }
+    }
 
     private void EnsureCapacity()
     {

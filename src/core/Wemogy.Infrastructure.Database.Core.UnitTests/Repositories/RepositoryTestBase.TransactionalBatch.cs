@@ -276,6 +276,38 @@ public partial class RepositoryTestBase
         persistedNewUser.Firstname.ShouldBe(newUser.Firstname);
     }
 
+    [Fact]
+    public async Task TransactionalBatch_ShouldThrowWhenExecutedTwice()
+    {
+        // Arrange
+        await ResetAsync();
+        var partitionKey = NewPartitionKey();
+        var userToDelete = await MicrosoftUserRepository.CreateAsync(NewUser(partitionKey));
+        var userToUpsert = NewUser(partitionKey);
+        var batch = MicrosoftUserRepository.CreateTransactionalBatch(partitionKey)
+            .Delete(userToDelete.Id)
+            .Upsert(userToUpsert);
+
+        await batch.ExecuteAsync();
+
+        // Act & Assert: a batch is single-use, replaying it would apply every write a second time
+        await Should.ThrowAsync<UnexpectedErrorException>(() => batch.ExecuteAsync());
+        Should.Throw<UnexpectedErrorException>(() => batch.Create(NewUser(partitionKey)));
+        batch.OperationCount.ShouldBe(2);
+    }
+
+    [Fact]
+    public async Task TransactionalBatch_ShouldThrowWhenAnEmptyBatchIsExecutedTwice()
+    {
+        // Arrange
+        await ResetAsync();
+        var batch = MicrosoftUserRepository.CreateTransactionalBatch(NewPartitionKey());
+        await batch.ExecuteAsync();
+
+        // Act & Assert
+        await Should.ThrowAsync<UnexpectedErrorException>(() => batch.ExecuteAsync());
+    }
+
     private static string NewPartitionKey()
     {
         return Guid.NewGuid().ToString();

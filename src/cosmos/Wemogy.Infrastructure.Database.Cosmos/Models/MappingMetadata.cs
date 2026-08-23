@@ -24,7 +24,7 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Models
             _propertyTypes.Merge(customMappings);
         }
 
-        public object Deserialize(string propertyPath, string jsonValue)
+        public object? Deserialize(string propertyPath, string jsonValue)
         {
             try
             {

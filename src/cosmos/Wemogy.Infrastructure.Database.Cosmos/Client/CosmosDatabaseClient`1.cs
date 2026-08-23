@@ -319,9 +319,9 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Client
 
         public Task DeleteAsync(string id, string partitionKey)
         {
-            return DeleteAsync(
+            return DeleteItemAsync(
                 id,
-                new PartitionKey<string>(partitionKey));
+                partitionKey);
         }
 
         public Task DeleteAsync(Expression<Func<TEntity, bool>> predicate)
@@ -333,20 +333,25 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Client
                 async entity =>
                 {
                     var id = ResolveIdValue(entity);
-                    var partitionKey = ResolvePartitionKey(entity);
-                    await DeleteAsync(
+                    var partitionKeyValue = ResolvePartitionKeyValue(entity);
+                    await DeleteItemAsync(
                         id,
-                        partitionKey);
+                        partitionKeyValue);
                 });
         }
 
-        private async Task DeleteAsync(string id, PartitionKey<string> partitionKey)
+        /// <summary>
+        ///     Takes the partition key as its value rather than as a <see cref="PartitionKey{T}"/>,
+        ///     so a not-found names the partition the caller asked for. The wrapper has no ToString
+        ///     of its own, so the message used to carry the name of its type.
+        /// </summary>
+        private async Task DeleteItemAsync(string id, string partitionKeyValue)
         {
             try
             {
                 await _container.DeleteItemAsync<TEntity>(
                     id,
-                    partitionKey.CosmosPartitionKey);
+                    new PartitionKey<string>(partitionKeyValue).CosmosPartitionKey);
             }
             catch (CosmosException e)
             {
@@ -355,7 +360,7 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Client
                     case HttpStatusCode.NotFound:
                         throw DatabaseError.EntityNotFound(
                             id,
-                            partitionKey.ToString(),
+                            partitionKeyValue,
                             hint: typeof(TEntity).Name,
                             innerException: e);
                     default:

@@ -251,6 +251,51 @@ namespace Wemogy.Infrastructure.Database.InMemory.Client
             }
         }
 
+        public IDatabaseTransactionalBatch<TEntity> CreateTransactionalBatch(string partitionKey)
+        {
+            return new InMemoryTransactionalBatch<TEntity>(
+                this,
+                partitionKey,
+                ResolvePartitionKeyValue);
+        }
+
+        /// <summary>
+        ///     Applies the operations of a transactional batch atomically. Every operation is
+        ///     validated against a working copy of the partition first and the copy only replaces
+        ///     the stored partition once all of them passed, so a failing batch cannot leave a
+        ///     partial write behind and needs no rollback.
+        ///     <para>
+        ///         The operations are validated in order against the state at execute time, so a
+        ///         create followed by a replace of the same id inside one batch is valid.
+        ///     </para>
+        /// </summary>
+        /// <param name="partitionKey">The logical partition every operation of the batch acts on</param>
+        /// <param name="operations">The recorded operations, in the order they were added</param>
+        internal void ExecuteBatch(
+            string partitionKey,
+            IReadOnlyList<InMemoryTransactionalBatchOperation<TEntity>> operations)
+        {
+            lock (Gate)
+            {
+                var workingCopy = Partitions.TryGetValue(
+                    partitionKey,
+                    out var entities)
+                    ? new List<TEntity>(entities)
+                    : new List<TEntity>();
+
+                for (var index = 0; index < operations.Count; index++)
+                {
+                    ApplyBatchOperation(
+                        workingCopy,
+                        operations[index],
+                        index,
+                        partitionKey);
+                }
+
+                Partitions[partitionKey] = workingCopy;
+            }
+        }
+
         /// <summary>
         ///     Materializes the matching entities of all partitions under the lock, so the callbacks
         ///     of the callers run without holding it and can write to the repository while iterating.
@@ -281,6 +326,90 @@ namespace Wemogy.Infrastructure.Database.InMemory.Client
             return entities;
         }
 
+        private void ApplyBatchOperation(
+            List<TEntity> entities,
+            InMemoryTransactionalBatchOperation<TEntity> operation,
+            int operationIndex,
+            string partitionKey)
+        {
+            if (operation.Kind == InMemoryTransactionalBatchOperationKind.Delete)
+            {
+                var idToDelete = operation.Id!;
+                var indexToDelete = FindEntityIndex(
+                    entities,
+                    idToDelete);
+
+                if (indexToDelete < 0)
+                {
+                    throw TransactionalBatchError.EntityNotFound(
+                        operationIndex,
+                        idToDelete,
+                        partitionKey,
+                        typeof(TEntity).Name);
+                }
+
+                entities.RemoveAt(indexToDelete);
+                return;
+            }
+
+            var entity = operation.Entity!;
+            var id = ResolveIdValue(entity);
+            var existingIndex = FindEntityIndex(
+                entities,
+                id);
+
+            switch (operation.Kind)
+            {
+                case InMemoryTransactionalBatchOperationKind.Create:
+                    if (existingIndex >= 0)
+                    {
+                        throw TransactionalBatchError.AlreadyExists(
+                            operationIndex,
+                            id);
+                    }
+
+                    entities.Add(Copy(entity, NextETag()));
+                    break;
+
+                case InMemoryTransactionalBatchOperationKind.Replace:
+                    if (existingIndex < 0)
+                    {
+                        throw TransactionalBatchError.EntityNotFound(
+                            operationIndex,
+                            id,
+                            partitionKey,
+                            typeof(TEntity).Name);
+                    }
+
+                    if (!ETagMatches(
+                            entity,
+                            entities[existingIndex]))
+                    {
+                        throw TransactionalBatchError.ETagMismatch(
+                            operationIndex,
+                            id,
+                            partitionKey);
+                    }
+
+                    // replaced in place, so an iteration of this partition keeps the insertion order
+                    entities[existingIndex] = Copy(entity, NextETag());
+                    break;
+
+                case InMemoryTransactionalBatchOperationKind.Upsert:
+                    var upsertedEntity = Copy(entity, NextETag());
+                    if (existingIndex < 0)
+                    {
+                        entities.Add(upsertedEntity);
+                    }
+                    else
+                    {
+                        entities[existingIndex] = upsertedEntity;
+                    }
+
+                    break;
+            }
+        }
+
         private TEntity? FindEntity(string partitionKey, string id)
         {
             var index = FindEntityIndex(
@@ -298,6 +427,13 @@ namespace Wemogy.Infrastructure.Database.InMemory.Client
                 return -1;
             }
 
+            return FindEntityIndex(
+                entities,
+                id);
+        }
+
+        private int FindEntityIndex(List<TEntity> entities, string id)
+        {
             return entities.FindIndex(x => ResolveIdValue(x) == id);
         }
 
@@ -322,21 +458,31 @@ namespace Wemogy.Infrastructure.Database.InMemory.Client
 
         private void EnsureETagMatches(TEntity entity, TEntity existingEntity, string id, string partitionKey)
         {
-            var eTag = ResolveETagValue(entity);
-
-            // a caller that did not read an eTag does not ask for a precondition, which mirrors
-            // Cosmos' behaviour for a null IfMatchEtag
-            if (string.IsNullOrEmpty(eTag))
-            {
-                return;
-            }
-
-            if (eTag != ResolveETagValue(existingEntity))
+            if (!ETagMatches(
+                    entity,
+                    existingEntity))
             {
                 throw Error.PreconditionFailed(
                     "EtagMismatch",
                     $"The eTag of the entity with id {id} and partition key {partitionKey} does not match the version in the database");
             }
+        }
+
+        /// <summary>
+        ///     Returns whether the eTag the entity carries still matches the stored one. An entity
+        ///     without an eTag does not ask for a precondition, which mirrors Cosmos' behaviour for
+        ///     a null IfMatchEtag.
+        /// </summary>
+        private bool ETagMatches(TEntity entity, TEntity existingEntity)
+        {
+            var eTag = ResolveETagValue(entity);
+
+            if (string.IsNullOrEmpty(eTag))
+            {
+                return true;
+            }
+
+            return eTag == ResolveETagValue(existingEntity);
         }
     }
 }

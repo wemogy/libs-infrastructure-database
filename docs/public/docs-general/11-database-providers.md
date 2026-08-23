@@ -30,6 +30,8 @@ Provider specifics:
 
 - Property names are serialized as **camelCase**, and `null` values are omitted.
 - The `[ETag]` attribute enables [optimistic concurrency](./09-optimistic-concurrency.md).
+- [Transactional batches](./12-transactional-batch.md) are mapped onto the native
+  `TransactionalBatch` of the Cosmos SDK.
 - [Multi-tenancy](./04-multi-tenancy.md) is supported.
 - The third constructor argument enables *insecure development mode* (gateway
   connection mode and relaxed certificate validation) for use with the local
@@ -59,6 +61,9 @@ Provider specifics:
   stale eTag fails the precondition, and an `UpsertAsync` carries no precondition.
 - Sort keys are compared ordinally, matching Cosmos DB, so the order does not depend on the culture
   of the machine running the tests.
+- [Transactional batches](./12-transactional-batch.md) are supported with the same semantics as
+  Cosmos DB: every operation is validated before any of them is applied, so a failing batch leaves
+  the store untouched.
 
 :::tip Testing strategy
 
@@ -77,3 +82,4 @@ logic and tests stay provider-independent.
 | [Read & property filters](./08-filters.md)                   | ✅        | ✅        |
 | [Multi-tenancy](./04-multi-tenancy.md)                       | ✅        | ✅        |
 | [Optimistic concurrency (ETag)](./09-optimistic-concurrency.md) | ✅        | ✅        |
+| [Transactional batch](./12-transactional-batch.md)            | ✅        | ✅        |

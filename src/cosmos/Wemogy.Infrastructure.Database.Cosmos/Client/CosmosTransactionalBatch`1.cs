@@ -132,6 +132,16 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Client
             IReadOnlyList<DatabasePatchOperation> operations,
             Expression<Func<TEntity, bool>>? condition)
         {
+            // translated first: a refused path or a condition the provider cannot express throws
+            // here, and an operation that was never recorded must not leave an id behind - the
+            // indexes of the bookkeeping have to keep matching the operations of the batch
+            var patchOperations = CosmosPatchTranslator.ToPatchOperations(
+                operations,
+                _serializeMemberName);
+            var filterPredicate = CosmosPatchTranslator.ToFilterPredicate(
+                _container,
+                condition);
+
             _patchOperationConditions.Add(
                 _operationIds.Count,
                 condition?.ToString());
@@ -139,15 +149,11 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Client
 
             _batch.PatchItem(
                 id,
-                CosmosPatchTranslator.ToPatchOperations(
-                    operations,
-                    _serializeMemberName),
+                patchOperations,
                 new TransactionalBatchPatchItemRequestOptions
                 {
                     EnableContentResponseOnWrite = false,
-                    FilterPredicate = CosmosPatchTranslator.ToFilterPredicate(
-                        _container,
-                        condition)
+                    FilterPredicate = filterPredicate
                 });
         }
 
@@ -179,15 +185,17 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Client
 
                 return TranslateFailure(
                     index,
-                    result.StatusCode);
+                    result.StatusCode,
+                    response.ErrorMessage);
             }
 
             return TransactionalBatchError.Failed((int)response.StatusCode);
         }
 
-        private Exception TranslateFailure(int operationIndex, HttpStatusCode statusCode)
+        private Exception TranslateFailure(int operationIndex, HttpStatusCode statusCode, string? errorMessage)
         {
             var id = _operationIds[operationIndex];
+            var isPatch = _patchOperationConditions.ContainsKey(operationIndex);
             var patchCondition = ResolvePatchCondition(operationIndex);
 
             switch (statusCode)
@@ -202,6 +210,7 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Client
                         id,
                         PartitionKey,
                         typeof(TEntity).Name);
+
                 // the same status covers two different answers: a patch condition that did not
                 // hold, and a replace whose eTag is stale. Only an operation that carried a
                 // condition can be the former
@@ -216,12 +225,22 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Client
                         id,
                         PartitionKey);
 
-                // a filter predicate the database cannot evaluate, e.g. one doing arithmetic on
-                // document fields
-                case HttpStatusCode.BadRequest when patchCondition != null:
+                // a bad request on a patch covers two rejections, the filter predicate and the
+                // operations themselves, and only the message of the response tells them apart
+                case HttpStatusCode.BadRequest
+                    when patchCondition != null && CosmosPatchTranslator.IsFilterPredicateFailure(errorMessage):
                     return PatchError.ConditionNotSupported(
                         patchCondition,
                         "the database refused the filter predicate it was translated into");
+
+                // reported as a patch failure whether or not the patch carried a condition, so it
+                // stays the same error the in-memory provider raises for the same cause
+                case HttpStatusCode.BadRequest when isPatch:
+                    return PatchError.Failed(
+                        operationIndex,
+                        id,
+                        PartitionKey,
+                        "the database refused the patch");
                 default:
                     return TransactionalBatchError.Failed(
                         operationIndex,
@@ -231,7 +250,8 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Client
 
         /// <summary>
         ///     Returns the condition the patch operation at the given index carried, or null when
-        ///     the operation is not a patch or was unconditional.
+        ///     the operation is not a patch or was unconditional. Whether the operation is a patch
+        ///     at all is a separate question, answered by the presence of the key.
         /// </summary>
         private string? ResolvePatchCondition(int operationIndex)
         {

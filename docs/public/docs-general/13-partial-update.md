@@ -134,6 +134,7 @@ patch therefore asks for the write response and pays its request charge; the bat
 | More than ten operations | `UnexpectedErrorException` | `PatchOperationLimitExceeded` |
 | No operations | `UnexpectedErrorException` | `PatchIsEmpty` |
 | Condition uses an unsupported construct | `UnexpectedErrorException` | `PatchConditionNotSupported` |
+| The Cosmos client cannot report how it names a member | `UnexpectedErrorException` | `PatchMemberNamesNotResolvable` |
 
 The path errors are thrown while the operations are collected, before any I/O.
 
@@ -148,7 +149,13 @@ The path errors are thrown while the operations are collected, before any I/O.
   relocates a document, and the eTag belongs to the provider. Both are rejected before any I/O.
 - **Paths are member accesses.** `x => x.Balance` and `x => x.Inner.Value` are paths;
   a method call, an indexer or a computed member is not. The field name is resolved through the
-  serializer, so a `[JsonProperty]` override is honoured.
+  serializer of the Cosmos client itself, so a `[JsonProperty]` override is honoured - and a client
+  configured with a serializer that cannot report its member names refuses to patch at all rather
+  than guessing at the field a path addresses.
+- **A field whose serialized name carries a `/` or a `~` cannot be patched** against Cosmos DB: a
+  patch path separates its segments with a slash, and the escape a JSON pointer would use for one is
+  taken literally. Such a path is refused with `PatchPathNotSupported` instead of writing to the
+  wrong field. The in-memory provider addresses members directly and is not affected.
 - **Filters do not apply.** Read filters, property filters and soft delete are not applied to a
   patch, consistent with the other write paths.
 
@@ -161,8 +168,10 @@ The path errors are thrown while the operations are collected, before any I/O.
   money, so there is no overload that does it, and a cast that reaches one is refused with
   `PatchPathNotSupported`. Keep such a value in a `long` of minor units, or read-modify-write it
   with `UpdateAsync`.
-- **A fractional increment of an integral field.** `Increment(x => x.LoginCount, 0.5)` on an `int`
-  binds to the `double` overload, and the two providers could only disagree about the result -
-  Cosmos DB would store a non-integral number in a field the entity reads back as an `int`. It is
-  refused with `PatchPathNotSupported`; increment an integral field by a whole number.
+- **An increment whose value does not match the kind of the field.**
+  `Increment(x => x.LoginCount, 0.5)` on an `int` binds to the `double` overload, and
+  `Increment(x => (long)x.Score, 1)` reaches the `long` overload through a cast. Either way the two
+  providers could only disagree about the result, so both are refused with `PatchPathNotSupported`:
+  increment an integral field by a whole number and a floating point field by a floating point
+  value.
 - **Patching across documents or partitions.**

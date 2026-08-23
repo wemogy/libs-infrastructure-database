@@ -2,6 +2,7 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Shouldly;
+using Wemogy.Core.Errors.Exceptions;
 using Wemogy.Infrastructure.Database.InMemory.Client;
 using Wemogy.Infrastructure.Database.InMemory.UnitTests.Fakes;
 using Xunit;
@@ -71,6 +72,61 @@ public class InMemoryDatabaseClientPatchTests
             entity.Tenant,
             CancellationToken.None);
         persistedEntity.Details.Note.ShouldBe("written");
+    }
+
+    [Fact]
+    public async Task PatchAsync_ShouldNotLetTheConditionChangeWhatIsStored()
+    {
+        // Arrange: this provider compiles conditions in process, so a condition can call a method -
+        // and that method must not be able to write to the store while deciding
+        var entity = await _client.CreateAsync(Entity("a"));
+
+        // Act
+        await Should.ThrowAsync<ConflictErrorException>(
+            () => _client.PatchAsync(
+                entity.Key,
+                entity.Tenant,
+                p => p.Set(x => x.Name, "patched"),
+                x => RenameAndDeny(x),
+                CancellationToken.None));
+
+        // Assert: neither the operation nor the condition left anything behind
+        var persistedEntity = await _client.GetAsync(
+            entity.Key,
+            entity.Tenant,
+            CancellationToken.None);
+        persistedEntity.Name.ShouldBe("a");
+    }
+
+    [Fact]
+    public async Task PatchAsync_ShouldNotTouchTheStoreWhenTheTokenIsAlreadyCancelled()
+    {
+        // Arrange
+        var entity = await _client.CreateAsync(Entity("a"));
+        using var cancellationTokenSource = new CancellationTokenSource();
+        await cancellationTokenSource.CancelAsync();
+
+        // Act
+        await Should.ThrowAsync<OperationCanceledException>(
+            () => _client.PatchAsync(
+                entity.Key,
+                entity.Tenant,
+                p => p.Set(x => x.Name, "patched"),
+                null,
+                cancellationTokenSource.Token));
+
+        // Assert
+        var persistedEntity = await _client.GetAsync(
+            entity.Key,
+            entity.Tenant,
+            CancellationToken.None);
+        persistedEntity.Name.ShouldBe("a");
+    }
+
+    private static bool RenameAndDeny(KeyedEntity entity)
+    {
+        entity.Name = "written by the condition";
+        return false;
     }
 
     private static KeyedEntity Entity(string name)

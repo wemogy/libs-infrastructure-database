@@ -148,6 +148,32 @@ public class CosmosDatabaseRepositoryTests : RepositoryTestBase
         exception.Description.ShouldContain("Credits");
     }
 
+    [Fact]
+    public async Task PatchAsync_ShouldRejectASerializedNameCarryingASlash()
+    {
+        // Arrange: DailyLimit is serialized as "limits/daily", which is one field. Cosmos DB reads
+        // the slash of a patch path as a step into a nested object and does not unescape a ~1 -
+        // it stores a field of that literal name instead, verified against the emulator. So the
+        // field cannot be patched, and saying so beats writing to the wrong place
+        var user = NewUserWithETag();
+        await _userWithETagRepository.CreateAsync(user);
+
+        // Act
+        var exception = await Should.ThrowAsync<UnexpectedErrorException>(
+            () => _userWithETagRepository.PatchAsync(
+                user.Id,
+                user.TenantId,
+                p => p.Increment(x => x.DailyLimit, 3)));
+
+        // Assert
+        exception.Code.ShouldBe("PatchPathNotSupported");
+
+        var persistedUser = await _userWithETagRepository.GetAsync(
+            user.Id,
+            user.TenantId);
+        persistedUser.DailyLimit.ShouldBe(0);
+    }
+
     private static UserWithETag NewUserWithETag()
     {
         return new UserWithETag

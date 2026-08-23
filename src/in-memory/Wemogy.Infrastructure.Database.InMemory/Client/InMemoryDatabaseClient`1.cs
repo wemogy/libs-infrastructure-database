@@ -270,6 +270,10 @@ namespace Wemogy.Infrastructure.Database.InMemory.Client
         {
             try
             {
+                // a patch that is applied in process still must not touch the store after the
+                // caller cancelled, the way the Cosmos provider does not once it passes the token on
+                cancellationToken.ThrowIfCancellationRequested();
+
                 // collected and compiled inside the try as well, so a rejected path or an empty
                 // patch faults the returned task like every other failure of this method does
                 var patchOperations = PatchOperationsBuilder<TEntity>.Build(operations);
@@ -518,8 +522,11 @@ namespace Wemogy.Infrastructure.Database.InMemory.Client
             int? batchOperationIndex)
         {
             // the condition is evaluated against the stored state, and nothing is written when it
-            // does not hold - the check and the update are one act, like they are in Cosmos
-            if (condition != null && !condition(storedEntity))
+            // does not hold - the check and the update are one act, like they are in Cosmos.
+            // Against a copy of it: this provider accepts conditions Cosmos could not translate,
+            // including ones calling a method, and evaluating a condition must not be able to
+            // change what is stored
+            if (condition != null && !condition(storedEntity.Clone()))
             {
                 throw batchOperationIndex.HasValue
                     ? PatchError.ConditionNotMet(

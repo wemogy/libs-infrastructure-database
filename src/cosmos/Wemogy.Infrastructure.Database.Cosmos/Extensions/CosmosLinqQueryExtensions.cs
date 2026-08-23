@@ -1,4 +1,4 @@
-using System.Linq;
+using System;
 
 namespace Wemogy.Infrastructure.Database.Cosmos.Extensions
 {
@@ -28,10 +28,26 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Extensions
                 return null;
             }
 
-            var fragment = querySql!.Split("WHERE").LastOrDefault();
+            // the structural WHERE is the first one after the FROM clause. Splitting on every
+            // occurrence would pick one out of a string constant, e.g. a condition comparing a
+            // field to "SOMEWHERE", and return a fragment that is not a condition at all
+            var fromIndex = querySql!.IndexOf(
+                "FROM root",
+                StringComparison.Ordinal);
+            var whereIndex = querySql.IndexOf(
+                " WHERE ",
+                fromIndex < 0 ? 0 : fromIndex,
+                StringComparison.Ordinal);
+
+            if (whereIndex < 0)
+            {
+                return null;
+            }
+
+            var fragment = querySql.Substring(whereIndex + " WHERE ".Length);
 
             // the trailing quote and brace of the JSON document the provider returns
-            if (fragment == null || fragment.Length < 2)
+            if (fragment.Length < 2)
             {
                 return null;
             }

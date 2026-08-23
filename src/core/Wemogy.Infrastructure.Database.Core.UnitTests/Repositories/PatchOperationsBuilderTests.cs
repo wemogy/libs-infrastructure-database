@@ -90,6 +90,38 @@ public class PatchOperationsBuilderTests
         operations.Single().Value.ShouldBe(9.99m);
     }
 
+    [Fact]
+    public void Build_ShouldRejectAWholeNumberIncrementOfAFloatingPointMember()
+    {
+        // Act & Assert: only a cast reaches this, and the providers would disagree about the
+        // result - Cosmos adds the whole number to the fractional value, the in-memory applier
+        // would do integer arithmetic on it
+        var exception = Should.Throw<UnexpectedErrorException>(
+            () => PatchOperationsBuilder<PatchTarget>.Build(p => p.Increment(x => (long)x.Rate, 1)));
+        exception.Code.ShouldBe("PatchPathNotSupported");
+    }
+
+    [Fact]
+    public void Build_ShouldReturnASnapshotOfTheOperations()
+    {
+        // Arrange: the callback receives the builder, so a caller can hold on to it
+        IPatchOperations<PatchTarget>? retainedBuilder = null;
+        var operations = PatchOperationsBuilder<PatchTarget>.Build(
+            p =>
+            {
+                retainedBuilder = p;
+                p.Set(x => x.Name, "first");
+            });
+
+        // Act: adding after the fact must not reach what was already handed to a provider, which
+        // would otherwise apply more operations than were validated
+        retainedBuilder!.Set(x => x.Counter, 1);
+
+        // Assert
+        operations.Count.ShouldBe(1);
+        retainedBuilder.OperationCount.ShouldBe(2);
+    }
+
     [Theory]
     [InlineData(nameof(PatchTarget.Id))]
     [InlineData(nameof(PatchTarget.PartitionKey))]

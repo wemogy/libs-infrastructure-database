@@ -293,25 +293,24 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Client
 
                 if (cosmosException.StatusCode == HttpStatusCode.BadRequest)
                 {
-                    // the filter predicate is parsed by a stricter parser than a query and answers
-                    // a construct it cannot evaluate - arithmetic on document fields, for example -
-                    // with a bad request. That is a condition the database refuses, not a failed
-                    // patch
-                    if (condition != null)
+                    // a bad request covers two different rejections: the filter predicate, which
+                    // is parsed by a stricter parser than a query and refuses e.g. arithmetic on
+                    // document fields, and the operations themselves, e.g. a path through an object
+                    // the document does not carry. Only the message tells them apart
+                    if (condition != null &&
+                        CosmosPatchTranslator.IsFilterPredicateFailure(cosmosException.Message))
                     {
                         throw PatchError.ConditionNotSupported(
                             condition.ToString(),
                             "the database refused the filter predicate it was translated into");
                     }
 
-                    // without a condition the operations themselves are what the database refused,
-                    // e.g. a path through an object the document does not carry. Surfaced through
-                    // the shared error instead of letting the provider exception out, which is what
-                    // the in-memory provider does for the same cause
+                    // surfaced through the shared error instead of letting the provider exception
+                    // out, which is what the in-memory provider does for the same cause
                     throw PatchError.Failed(
                         id,
                         partitionKey,
-                        "the database refused the patch operations");
+                        "the database refused the patch");
                 }
 
                 throw;

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 using Wemogy.Infrastructure.Database.Core.Abstractions;
@@ -99,7 +100,11 @@ public class PatchOperationsBuilder<TEntity> : IPatchOperations<TEntity>
             throw PatchError.IsEmpty();
         }
 
-        return _operations;
+        // a snapshot: the callback of the caller receives this builder and could hold on to it and
+        // keep adding operations. The Cosmos provider translates when an operation is added while
+        // the in-memory provider reads the list when the batch executes, so a shared list would let
+        // the two providers apply different patches
+        return _operations.ToArray();
     }
 
     private static IReadOnlyList<MemberInfo> ResolvePath(LambdaExpression path, Type? incrementValueType)
@@ -247,6 +252,16 @@ public class PatchOperationsBuilder<TEntity> : IPatchOperations<TEntity>
             throw PatchError.PathNotSupported(
                 pathDescription,
                 $"an integral member cannot be incremented by a floating point value; increment {member.Name} by a whole number instead");
+        }
+
+        // and the other way around, which a path can only reach through an explicit cast like
+        // x => (long)x.Score: Cosmos DB would add the whole number to the fractional value it
+        // finds, while the in-memory provider would do integer arithmetic on it
+        if (incrementValueType == typeof(long) && !IntegralTypes.Contains(underlyingMemberType))
+        {
+            throw PatchError.PathNotSupported(
+                pathDescription,
+                $"a floating point member cannot be incremented by a whole number through a cast; increment {member.Name} by a floating point value instead");
         }
     }
 

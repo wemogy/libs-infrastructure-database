@@ -24,6 +24,8 @@ public class PatchTarget
 
     public decimal Money { get; set; }
 
+    public double Rate { get; set; }
+
     public PatchTargetInner Inner { get; set; } = new PatchTargetInner();
 
     public int DoubledCounter => Counter * 2;

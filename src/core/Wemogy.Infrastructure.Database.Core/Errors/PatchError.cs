@@ -111,4 +111,26 @@ public static class PatchError
             "PatchFailed",
             $"The patch of the entity with id {id} and partition key {partitionKey} failed: {reason}");
     }
+
+    /// <summary>
+    ///     A patch inside a transactional batch failed for a reason that does not map to one of the
+    ///     specific errors above.
+    /// </summary>
+    public static FailureErrorException Failed(int operationIndex, string id, string partitionKey, string reason)
+    {
+        return Error.Failure(
+            "PatchFailed",
+            $"Operation {operationIndex} of the transactional batch failed: the patch of the entity with id {id} and partition key {partitionKey} failed: {reason}");
+    }
+
+    /// <summary>
+    ///     The database client cannot tell how it names a member in the document, so a patch path
+    ///     cannot be built without guessing at the field it would address.
+    /// </summary>
+    public static UnexpectedErrorException MemberNamesNotResolvable(string serializerName)
+    {
+        return Error.Unexpected(
+            "PatchMemberNamesNotResolvable",
+            $"A patch path cannot be resolved, because the Cosmos client is configured with {serializerName}, which cannot report how it names a member. Configure a serializer deriving from CosmosLinqSerializer, e.g. the CosmosEntitySerializer this library sets up, so a path addresses the field the document actually carries");
+    }
 }

@@ -9,7 +9,6 @@ using Microsoft.Azure.Cosmos.Linq;
 using Wemogy.Infrastructure.Database.Core.Errors;
 using Wemogy.Infrastructure.Database.Core.Models;
 using Wemogy.Infrastructure.Database.Cosmos.Extensions;
-using Wemogy.Infrastructure.Database.Cosmos.Serialization;
 
 namespace Wemogy.Infrastructure.Database.Cosmos.Client
 {
@@ -20,12 +19,6 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Client
     /// </summary>
     internal static class CosmosPatchTranslator
     {
-        /// <summary>
-        ///     Used when the Cosmos client was configured with a serializer that cannot resolve
-        ///     member names, so the names still follow the rules the rest of this library assumes.
-        /// </summary>
-        private static readonly CosmosEntitySerializer FallbackSerializer = new CosmosEntitySerializer();
-
         /// <summary>
         ///     Matches the <c>c["name"]</c> member access, including a nested <c>c["a"]["b"]</c>,
         ///     the Cosmos LINQ provider emits.
@@ -38,12 +31,38 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Client
         /// <summary>
         ///     Returns how the client of the given container names a member in the document, so a
         ///     patch path cannot disagree with what the serializer wrote.
+        ///     <para>
+        ///         A serializer that cannot report its member names leaves nothing to fall back on
+        ///         but a guess, and a guessed path would create or overwrite the wrong field. The
+        ///         returned delegate therefore throws instead - lazily, so a client configured that
+        ///         way keeps working for everything but a patch.
+        ///     </para>
         /// </summary>
         public static Func<MemberInfo, string> ResolveMemberNameSerializer(CosmosClient cosmosClient)
         {
-            return cosmosClient.ClientOptions.Serializer is CosmosLinqSerializer linqSerializer
-                ? linqSerializer.SerializeMemberName
-                : FallbackSerializer.SerializeMemberName;
+            if (cosmosClient.ClientOptions.Serializer is CosmosLinqSerializer linqSerializer)
+            {
+                return linqSerializer.SerializeMemberName;
+            }
+
+            var serializerName = cosmosClient.ClientOptions.Serializer == null
+                ? "the serializer of the SDK"
+                : $"a {cosmosClient.ClientOptions.Serializer.GetType().Name}";
+
+            return _ => throw PatchError.MemberNamesNotResolvable(serializerName);
+        }
+
+        /// <summary>
+        ///     Whether the message of a bad request points at the filter predicate rather than at
+        ///     the operations of the patch. A heuristic on the message of the provider, because the
+        ///     status code carries the same value for both; when it does not match, the failure is
+        ///     reported as a patch failure, which covers either cause.
+        /// </summary>
+        public static bool IsFilterPredicateFailure(string? message)
+        {
+            return message != null && message.Contains(
+                "filter predicate",
+                StringComparison.OrdinalIgnoreCase);
         }
 
         public static List<PatchOperation> ToPatchOperations(
@@ -165,9 +184,38 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Client
             DatabasePatchOperation operation,
             Func<MemberInfo, string> serializeMemberName)
         {
-            return "/" + string.Join(
-                "/",
-                operation.Path.Select(serializeMemberName));
+            var segments = operation.Path
+                .Select(serializeMemberName)
+                .ToList();
+
+            foreach (var segment in segments)
+            {
+                EnsureSegmentIsAddressable(
+                    segment,
+                    operation);
+            }
+
+            return "/" + string.Join("/", segments);
+        }
+
+        /// <summary>
+        ///     A patch path separates its segments with a <c>/</c>, and Cosmos DB does not unescape
+        ///     one inside a segment: verified against the emulator, a <c>~1</c> escape is taken
+        ///     literally and creates a field of that name, while the unescaped form steps into an
+        ///     object that is not there. A field serialized under such a name is therefore refused
+        ///     instead of written to the wrong place. The in-memory provider addresses members
+        ///     directly and is not affected.
+        /// </summary>
+        private static void EnsureSegmentIsAddressable(string segment, DatabasePatchOperation operation)
+        {
+            if (!segment.Contains('/') && !segment.Contains('~'))
+            {
+                return;
+            }
+
+            throw PatchError.PathNotSupported(
+                operation.PathDescription,
+                $"the field is serialized as \"{segment}\", and Cosmos DB reads a / in a patch path as a step into a nested object and does not unescape a ~ - such a field cannot be patched");
         }
     }
 }

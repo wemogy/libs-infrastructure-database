@@ -188,6 +188,7 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Client
         private Exception TranslateFailure(int operationIndex, HttpStatusCode statusCode)
         {
             var id = _operationIds[operationIndex];
+            var patchCondition = ResolvePatchCondition(operationIndex);
 
             switch (statusCode)
             {
@@ -201,14 +202,10 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Client
                         id,
                         PartitionKey,
                         typeof(TEntity).Name);
-                case HttpStatusCode.PreconditionFailed
-                    when _patchOperationConditions.TryGetValue(
-                             operationIndex,
-                             out var failedCondition) && failedCondition != null:
-
-                    // the same status covers two different answers: a patch condition that did not
-                    // hold, and a replace whose eTag is stale. Only an operation that carried a
-                    // condition can be the former
+                // the same status covers two different answers: a patch condition that did not
+                // hold, and a replace whose eTag is stale. Only an operation that carried a
+                // condition can be the former
+                case HttpStatusCode.PreconditionFailed when patchCondition != null:
                     return PatchError.ConditionNotMet(
                         operationIndex,
                         id,
@@ -218,21 +215,31 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Client
                         operationIndex,
                         id,
                         PartitionKey);
-                case HttpStatusCode.BadRequest
-                    when _patchOperationConditions.TryGetValue(
-                             operationIndex,
-                             out var refusedCondition) && refusedCondition != null:
 
-                    // a filter predicate the database cannot evaluate, e.g. one doing arithmetic
-                    // on document fields
+                // a filter predicate the database cannot evaluate, e.g. one doing arithmetic on
+                // document fields
+                case HttpStatusCode.BadRequest when patchCondition != null:
                     return PatchError.ConditionNotSupported(
-                        refusedCondition,
+                        patchCondition,
                         "the database refused the filter predicate it was translated into");
                 default:
                     return TransactionalBatchError.Failed(
                         operationIndex,
                         (int)statusCode);
             }
+        }
+
+        /// <summary>
+        ///     Returns the condition the patch operation at the given index carried, or null when
+        ///     the operation is not a patch or was unconditional.
+        /// </summary>
+        private string? ResolvePatchCondition(int operationIndex)
+        {
+            return _patchOperationConditions.TryGetValue(
+                operationIndex,
+                out var condition)
+                ? condition
+                : null;
         }
     }
 }

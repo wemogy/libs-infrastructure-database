@@ -283,13 +283,15 @@ public partial class RepositoryTestBase
         var partitionKey = NewPartitionKey();
         var user = await MicrosoftUserRepository.CreateAsync(NewUser(partitionKey));
 
+        var refusedOperations = new Action<IPatchOperations<User>>[]
+        {
+            p => p.Set(x => x.Id, Guid.NewGuid().ToString()),
+            p => p.Set(x => x.TenantId, NewPartitionKey()),
+            p => p.Set(x => x.ETag, "\"stolen\"")
+        };
+
         // Act & Assert
-        foreach (var operations in new Action<IPatchOperations<User>>[]
-                 {
-                     p => p.Set(x => x.Id, Guid.NewGuid().ToString()),
-                     p => p.Set(x => x.TenantId, NewPartitionKey()),
-                     p => p.Set(x => x.ETag, "\"stolen\"")
-                 })
+        foreach (var operations in refusedOperations)
         {
             var exception = await Should.ThrowAsync<UnexpectedErrorException>(
                 () => MicrosoftUserRepository.PatchAsync(

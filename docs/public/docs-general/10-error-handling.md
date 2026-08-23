@@ -3,7 +3,7 @@
 Repository methods translate provider-specific failures into a small set of typed
 exceptions from `Wemogy.Core.Errors.Exceptions`. This keeps error handling
 provider-independent: the same `catch` works whether the repository is backed by
-Cosmos DB, MongoDB or the in-memory implementation.
+Cosmos DB or the in-memory implementation.
 
 | Exception                           | Raised when                                                                                   |
 | ----------------------------------- | --------------------------------------------------------------------------------------------- |

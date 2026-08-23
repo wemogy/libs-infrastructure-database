@@ -14,7 +14,4 @@ public class UserWithETag : EntityBase
     public string Firstname { get; set; } = string.Empty;
 
     public string Lastname { get; set; } = string.Empty;
-
-    [ETag]
-    public string? ETag { get; init; }
 }

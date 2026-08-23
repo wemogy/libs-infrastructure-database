@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Linq.Dynamic.Core;
 using System.Linq.Expressions;
 using System.Threading;
 using System.Threading.Tasks;
@@ -12,83 +11,79 @@ using Wemogy.Infrastructure.Database.Core.Abstractions;
 using Wemogy.Infrastructure.Database.Core.Errors;
 using Wemogy.Infrastructure.Database.Core.ValueObjects;
 using Wemogy.Infrastructure.Database.InMemory.Extensions;
+using Wemogy.Infrastructure.Database.InMemory.Query;
 
 namespace Wemogy.Infrastructure.Database.InMemory.Client
 {
     public class InMemoryDatabaseClient<TEntity> : DatabaseClientBase<TEntity>, IDatabaseClient<TEntity>
         where TEntity : class
     {
-        private static readonly Dictionary<Type, Dictionary<string, List<TEntity>>> Database =
-            new Dictionary<Type, Dictionary<string, List<TEntity>>>();
+        /// <summary>
+        ///     The store is static, so every client, factory and repository for this entity type
+        ///     shares one database - the in-memory provider stands in for a single database, and two
+        ///     repositories over the same entity have to see the same data. Because the type is
+        ///     generic, each closed generic type gets its own store.
+        /// </summary>
+        private static readonly Dictionary<string, List<TEntity>> Partitions =
+            new Dictionary<string, List<TEntity>>();
 
-        public InMemoryDatabaseClient()
-        {
-            if (!Database.TryGetValue(
-                    typeof(TEntity),
-                    out var entityPartitions))
-            {
-                entityPartitions = new Dictionary<string, List<TEntity>>();
-                Database.Add(
-                    typeof(TEntity),
-                    entityPartitions);
-            }
-        }
-
-        private Dictionary<string, List<TEntity>> EntityPartitions => Database[typeof(TEntity)];
+        /// <summary>
+        ///     Guards <see cref="Partitions"/> and every entity list inside it. Clients are
+        ///     typically registered as singletons, so concurrent requests would otherwise corrupt
+        ///     the dictionaries.
+        /// </summary>
+        private static readonly object Gate = new object();
 
         public Task<TEntity> GetAsync(string id, string partitionKey, CancellationToken cancellationToken)
         {
-            if (!EntityPartitions.TryGetValue(
-                    partitionKey,
-                    out var entities))
+            lock (Gate)
             {
-                throw DatabaseError.EntityNotFound(
-                    id,
+                var entity = FindEntity(
                     partitionKey,
-                    hint: typeof(TEntity).Name);
+                    id);
+
+                if (entity == null)
+                {
+                    throw DatabaseError.EntityNotFound(
+                        id,
+                        partitionKey,
+                        hint: typeof(TEntity).Name);
+                }
+
+                return Task.FromResult(entity.Clone());
             }
-
-            TEntity entity = entities.AsQueryable().FirstOrDefault("e => e.Id.Equals(@0)", id);
-
-            if (entity == null)
-            {
-                throw DatabaseError.EntityNotFound(
-                    id,
-                    partitionKey,
-                    hint: typeof(TEntity).Name);
-            }
-
-            return Task.FromResult(entity.Clone());
         }
 
-        public Task IterateAsync(
+        public async Task IterateAsync(
             QueryParameters queryParameters,
             Expression<Func<TEntity, bool>>? generalFilterPredicate,
             Func<TEntity, Task> callback,
             CancellationToken cancellationToken)
         {
-            var predicate = generalFilterPredicate?.CompileFast() ?? (x => true);
-            var queryCondition = queryParameters.GetLambdaExpression<TEntity>();
+            var generalFilter = generalFilterPredicate?.CompileFast();
+            var queryCondition = queryParameters.GetLambdaExpression<TEntity>().CompileFast();
 
-            var compiledQueryCondition = queryCondition.CompileFast();
-            var predicate1 = predicate;
-            predicate = x => predicate1(x) && compiledQueryCondition(x);
+            var entities = Snapshot(x => (generalFilter == null || generalFilter(x)) && queryCondition(x));
 
-            var count = 0;
-            return IterateAsync(
-                x => predicate(x),
-                null,
-                null,
-                entity =>
-                {
-                    if (queryParameters.Take.HasValue && count++ < queryParameters.Take)
-                    {
-                        return Task.CompletedTask;
-                    }
+            entities = InMemoryQueryOrdering.ApplySortings(
+                entities,
+                queryParameters);
+            entities = InMemoryQueryOrdering.ApplySearchAfter(
+                entities,
+                queryParameters);
 
-                    return callback(entity.Clone());
-                },
-                cancellationToken);
+            if (queryParameters.Take.HasValue)
+            {
+                entities = entities
+                    .Take(queryParameters.Take.Value)
+                    .ToList();
+            }
+
+            foreach (var entity in entities)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                await callback(entity.Clone());
+            }
         }
 
         public async Task IterateAsync(
@@ -98,50 +93,36 @@ namespace Wemogy.Infrastructure.Database.InMemory.Client
             Func<TEntity, Task> callback,
             CancellationToken cancellationToken)
         {
-            var compiledPredicate = predicate.CompileFast();
-            var skipped = 0;
-            var taken = 0;
+            var entities = Snapshot(predicate.CompileFast());
 
-            foreach (var entityPartition in EntityPartitions)
+            // the sorting has to be applied to the whole result set. Applying it per partition
+            // would make both the order and every page built from it depend on the partition layout
+            IEnumerable<TEntity> results = sorting != null
+                ? sorting.ApplyTo(entities)
+                : entities;
+
+            if (pagination != null)
             {
-                var queryable = entityPartition.Value.Where(compiledPredicate);
+                results = results
+                    .Skip(pagination.Skip)
+                    .Take(pagination.Take);
+            }
 
-                if (sorting != null)
-                {
-                    queryable = sorting.ApplyTo(queryable);
-                }
-
-                var entities = queryable.ToList();
-                foreach (var entity in entities)
-                {
-                    if (pagination != null && pagination.Skip > skipped++)
-                    {
-                        continue;
-                    }
-
-                    await callback(entity.Clone());
-
-                    if (pagination != null && pagination.Take <= ++taken)
-                    {
-                        return;
-                    }
-                }
+            foreach (var entity in results)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                await callback(entity.Clone());
             }
         }
 
         public Task<long> CountAsync(Expression<Func<TEntity, bool>> predicate, CancellationToken cancellationToken)
         {
-            var totalCount = 0L;
             var compiledPredicate = predicate.CompileFast();
 
-            foreach (var entityPartition in EntityPartitions)
+            lock (Gate)
             {
-                var count = entityPartition.Value.Count(compiledPredicate);
-
-                totalCount += count;
+                return Task.FromResult(Partitions.Values.Sum(entities => entities.LongCount(compiledPredicate)));
             }
-
-            return Task.FromResult(totalCount);
         }
 
         public Task<TEntity> CreateAsync(TEntity entity)
@@ -149,25 +130,22 @@ namespace Wemogy.Infrastructure.Database.InMemory.Client
             var id = ResolveIdValue(entity);
             var partitionKeyValue = ResolvePartitionKeyValue(entity);
 
-            if (!EntityPartitions.TryGetValue(
-                    partitionKeyValue,
-                    out var entities))
+            lock (Gate)
             {
-                entities = new List<TEntity>();
-                EntityPartitions.Add(
-                    partitionKeyValue,
-                    entities);
-            }
+                if (FindEntity(
+                        partitionKeyValue,
+                        id) != null)
+                {
+                    throw Error.Conflict(
+                        "AlreadyExists",
+                        $"Entity with id {id} already exists");
+                }
 
-            if (entities.AsQueryable().Any("x => x.Id.Equals(@0)", id))
-            {
-                throw Error.Conflict(
-                    "AlreadyExists",
-                    $"Entity with id {id} already exists");
-            }
+                var eTag = NextETag();
+                GetOrCreatePartition(partitionKeyValue).Add(Copy(entity, eTag));
 
-            entities.Add(entity.Clone());
-            return Task.FromResult(entity.Clone());
+                return Task.FromResult(Copy(entity, eTag));
+            }
         }
 
         public Task<TEntity> ReplaceAsync(TEntity entity)
@@ -175,122 +153,336 @@ namespace Wemogy.Infrastructure.Database.InMemory.Client
             var id = ResolveIdValue(entity);
             var partitionKeyValue = ResolvePartitionKeyValue(entity);
 
-            if (!EntityPartitions.TryGetValue(
-                    partitionKeyValue,
-                    out var entities))
+            lock (Gate)
             {
-                throw DatabaseError.EntityNotFound(
-                    id,
+                var index = FindEntityIndex(
                     partitionKeyValue,
-                    hint: typeof(TEntity).Name);
-            }
+                    id);
 
-            var existingEntity = entities.AsQueryable().FirstOrDefault("e => e.Id.Equals(@0)", id);
+                if (index < 0)
+                {
+                    throw DatabaseError.EntityNotFound(
+                        id,
+                        partitionKeyValue,
+                        hint: typeof(TEntity).Name);
+                }
 
-            if (existingEntity == null)
-            {
-                throw DatabaseError.EntityNotFound(
+                var entities = Partitions[partitionKeyValue];
+
+                EnsureETagMatches(
+                    entity,
+                    entities[index],
                     id,
-                    partitionKeyValue,
-                    hint: typeof(TEntity).Name);
+                    partitionKeyValue);
+
+                var eTag = NextETag();
+
+                // replaced in place, so an iteration of this partition keeps the insertion order
+                entities[index] = Copy(entity, eTag);
+
+                return Task.FromResult(Copy(entity, eTag));
             }
-
-            entities.Remove(existingEntity);
-            entities.Add(entity.Clone());
-
-            return Task.FromResult(entity.Clone());
         }
 
         public Task<TEntity> UpsertAsync(TEntity entity)
         {
-            var id = ResolveIdValue(entity);
-            var partitionKeyValue = ResolvePartitionKeyValue(entity);
-
-            if (!EntityPartitions.TryGetValue(
-                    partitionKeyValue,
-                    out var entities))
-            {
-                entities = new List<TEntity>();
-                EntityPartitions.Add(
-                    partitionKeyValue,
-                    entities);
-            }
-
-            var existingEntity = entities.AsQueryable().FirstOrDefault("e => e.Id.Equals(@0)", id);
-
-            if (existingEntity != null)
-            {
-                entities.Remove(existingEntity);
-            }
-
-            entities.Add(entity.Clone());
-            return Task.FromResult(entity.Clone());
+            return UpsertAsync(
+                entity,
+                ResolvePartitionKeyValue(entity));
         }
 
         public Task<TEntity> UpsertAsync(TEntity entity, string partitionKey)
         {
-            if (!EntityPartitions.TryGetValue(
-                    partitionKey,
-                    out var entities))
-            {
-                entities = new List<TEntity>();
-                EntityPartitions.Add(
-                    partitionKey,
-                    entities);
-            }
-
             var id = ResolveIdValue(entity);
-            var existingEntity = entities.AsQueryable().FirstOrDefault("e => e.Id.Equals(@0)", id);
 
-            if (existingEntity != null)
+            lock (Gate)
             {
-                entities.Remove(existingEntity);
-            }
+                var entities = GetOrCreatePartition(partitionKey);
+                var index = entities.FindIndex(x => ResolveIdValue(x) == id);
+                var eTag = NextETag();
 
-            entities.Add(entity.Clone());
-            return Task.FromResult(entity.Clone());
+                // an upsert carries no precondition, mirroring a Cosmos upsert without IfMatch
+                if (index < 0)
+                {
+                    entities.Add(Copy(entity, eTag));
+                }
+                else
+                {
+                    entities[index] = Copy(entity, eTag);
+                }
+
+                return Task.FromResult(Copy(entity, eTag));
+            }
         }
 
         public Task DeleteAsync(string id, string partitionKey)
         {
-            if (!EntityPartitions.TryGetValue(
-                    partitionKey,
-                    out var entities))
+            lock (Gate)
             {
-                throw DatabaseError.EntityNotFound(
-                    id,
+                var entity = FindEntity(
                     partitionKey,
-                    hint: typeof(TEntity).Name);
+                    id);
+
+                if (entity == null)
+                {
+                    throw DatabaseError.EntityNotFound(
+                        id,
+                        partitionKey,
+                        hint: typeof(TEntity).Name);
+                }
+
+                Partitions[partitionKey].Remove(entity);
+                return Task.CompletedTask;
             }
-
-            var entity = entities.AsQueryable().FirstOrDefault("e => e.Id.Equals(@0)", id);
-
-            if (entity == null)
-            {
-                throw DatabaseError.EntityNotFound(
-                    id,
-                    partitionKey,
-                    hint: typeof(TEntity).Name);
-            }
-
-            entities.Remove(entity);
-            return Task.CompletedTask;
         }
 
         public Task DeleteAsync(Expression<Func<TEntity, bool>> predicate)
         {
             var compiledPredicate = predicate.CompileFast();
-            foreach (var entityPartition in EntityPartitions)
-            {
-                var entities = entityPartition.Value.Where(compiledPredicate).ToList();
 
-                foreach (var entity in entities)
+            lock (Gate)
+            {
+                foreach (var entities in Partitions.Values)
                 {
-                    entityPartition.Value.Remove(entity);
+                    entities.RemoveAll(x => compiledPredicate(x));
                 }
+
+                return Task.CompletedTask;
+            }
+        }
+
+        public IDatabaseTransactionalBatch<TEntity> CreateTransactionalBatch(string partitionKey)
+        {
+            return new InMemoryTransactionalBatch<TEntity>(
+                this,
+                partitionKey,
+                ResolvePartitionKeyValue);
+        }
+
+        /// <summary>
+        ///     Applies the operations of a transactional batch atomically. Every operation is
+        ///     validated against a working copy of the partition first and the copy only replaces
+        ///     the stored partition once all of them passed, so a failing batch cannot leave a
+        ///     partial write behind and needs no rollback.
+        ///     <para>
+        ///         The operations are validated in order against the state at execute time, so a
+        ///         create followed by a replace of the same id inside one batch is valid.
+        ///     </para>
+        /// </summary>
+        /// <param name="partitionKey">The logical partition every operation of the batch acts on</param>
+        /// <param name="operations">The recorded operations, in the order they were added</param>
+        internal void ExecuteBatch(
+            string partitionKey,
+            IReadOnlyList<InMemoryTransactionalBatchOperation<TEntity>> operations)
+        {
+            lock (Gate)
+            {
+                var workingCopy = Partitions.TryGetValue(
+                    partitionKey,
+                    out var entities)
+                    ? new List<TEntity>(entities)
+                    : new List<TEntity>();
+
+                for (var index = 0; index < operations.Count; index++)
+                {
+                    ApplyBatchOperation(
+                        workingCopy,
+                        operations[index],
+                        index,
+                        partitionKey);
+                }
+
+                Partitions[partitionKey] = workingCopy;
+            }
+        }
+
+        /// <summary>
+        ///     Materializes the matching entities of all partitions under the lock, so the callbacks
+        ///     of the callers run without holding it and can write to the repository while iterating.
+        /// </summary>
+        private static List<TEntity> Snapshot(Func<TEntity, bool> predicate)
+        {
+            lock (Gate)
+            {
+                return Partitions.Values
+                    .SelectMany(entities => entities)
+                    .Where(predicate)
+                    .ToList();
+            }
+        }
+
+        private static List<TEntity> GetOrCreatePartition(string partitionKey)
+        {
+            if (!Partitions.TryGetValue(
+                    partitionKey,
+                    out var entities))
+            {
+                entities = new List<TEntity>();
+                Partitions.Add(
+                    partitionKey,
+                    entities);
             }
 
-            return Task.CompletedTask;
+            return entities;
+        }
+
+        private void ApplyBatchOperation(
+            List<TEntity> entities,
+            InMemoryTransactionalBatchOperation<TEntity> operation,
+            int operationIndex,
+            string partitionKey)
+        {
+            if (operation.Kind == InMemoryTransactionalBatchOperationKind.Delete)
+            {
+                var idToDelete = operation.Id!;
+                var indexToDelete = FindEntityIndex(
+                    entities,
+                    idToDelete);
+
+                if (indexToDelete < 0)
+                {
+                    throw TransactionalBatchError.EntityNotFound(
+                        operationIndex,
+                        idToDelete,
+                        partitionKey,
+                        typeof(TEntity).Name);
+                }
+
+                entities.RemoveAt(indexToDelete);
+                return;
+            }
+
+            var entity = operation.Entity!;
+            var id = ResolveIdValue(entity);
+            var existingIndex = FindEntityIndex(
+                entities,
+                id);
+
+            switch (operation.Kind)
+            {
+                case InMemoryTransactionalBatchOperationKind.Create:
+                    if (existingIndex >= 0)
+                    {
+                        throw TransactionalBatchError.AlreadyExists(
+                            operationIndex,
+                            id);
+                    }
+
+                    entities.Add(Copy(entity, NextETag()));
+                    break;
+
+                case InMemoryTransactionalBatchOperationKind.Replace:
+                    if (existingIndex < 0)
+                    {
+                        throw TransactionalBatchError.EntityNotFound(
+                            operationIndex,
+                            id,
+                            partitionKey,
+                            typeof(TEntity).Name);
+                    }
+
+                    if (!ETagMatches(
+                            entity,
+                            entities[existingIndex]))
+                    {
+                        throw TransactionalBatchError.ETagMismatch(
+                            operationIndex,
+                            id,
+                            partitionKey);
+                    }
+
+                    // replaced in place, so an iteration of this partition keeps the insertion order
+                    entities[existingIndex] = Copy(entity, NextETag());
+                    break;
+
+                case InMemoryTransactionalBatchOperationKind.Upsert:
+                    var upsertedEntity = Copy(entity, NextETag());
+                    if (existingIndex < 0)
+                    {
+                        entities.Add(upsertedEntity);
+                    }
+                    else
+                    {
+                        entities[existingIndex] = upsertedEntity;
+                    }
+
+                    break;
+            }
+        }
+
+        private TEntity? FindEntity(string partitionKey, string id)
+        {
+            var index = FindEntityIndex(
+                partitionKey,
+                id);
+            return index < 0 ? null : Partitions[partitionKey][index];
+        }
+
+        private int FindEntityIndex(string partitionKey, string id)
+        {
+            if (!Partitions.TryGetValue(
+                    partitionKey,
+                    out var entities))
+            {
+                return -1;
+            }
+
+            return FindEntityIndex(
+                entities,
+                id);
+        }
+
+        private int FindEntityIndex(List<TEntity> entities, string id)
+        {
+            return entities.FindIndex(x => ResolveIdValue(x) == id);
+        }
+
+        /// <summary>
+        ///     Returns an independent copy of the entity, stamped with the given eTag. Both the
+        ///     stored and the returned entity are copies, so neither the caller nor a later read can
+        ///     mutate the store by holding on to an instance.
+        /// </summary>
+        private TEntity Copy(TEntity entity, string? eTag)
+        {
+            var copy = entity.Clone();
+            SetETagValue(
+                copy,
+                eTag);
+            return copy;
+        }
+
+        private string? NextETag()
+        {
+            return SupportsETag ? $"\"{Guid.NewGuid()}\"" : null;
+        }
+
+        private void EnsureETagMatches(TEntity entity, TEntity existingEntity, string id, string partitionKey)
+        {
+            if (!ETagMatches(
+                    entity,
+                    existingEntity))
+            {
+                throw Error.PreconditionFailed(
+                    "EtagMismatch",
+                    $"The eTag of the entity with id {id} and partition key {partitionKey} does not match the version in the database");
+            }
+        }
+
+        /// <summary>
+        ///     Returns whether the eTag the entity carries still matches the stored one. An entity
+        ///     without an eTag does not ask for a precondition, which mirrors Cosmos' behaviour for
+        ///     a null IfMatchEtag.
+        /// </summary>
+        private bool ETagMatches(TEntity entity, TEntity existingEntity)
+        {
+            var eTag = ResolveETagValue(entity);
+
+            if (string.IsNullOrEmpty(eTag))
+            {
+                return true;
+            }
+
+            return eTag == ResolveETagValue(existingEntity);
         }
     }
 }

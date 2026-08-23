@@ -17,6 +17,7 @@ public class InMemoryMultiTenantDatabaseRepositoryTests : MultiTenantDatabaseRep
     public InMemoryMultiTenantDatabaseRepositoryTests()
         : base(
             GetFactoryUser(new MicrosoftTenantProvider()),
+            GetFactoryFilteredUser(new MicrosoftTenantProvider()),
             GetFactoryUser(new AppleTenantProvider()),
             GetFactoryDataCenter(new DataCenterTenantProvider()))
     {
@@ -27,6 +28,20 @@ public class InMemoryMultiTenantDatabaseRepositoryTests : MultiTenantDatabaseRep
         return () =>
         {
             var databaseRepository = InMemoryDatabaseRepositoryFactory.CreateInstance<IUserRepository>();
+
+            var multiTenantRepository = new MultiTenantDatabaseRepository<User>(
+                databaseRepository,
+                provider);
+
+            return multiTenantRepository;
+        };
+    }
+
+    private static Func<IDatabaseRepository<User>> GetFactoryFilteredUser(IDatabaseTenantProvider provider)
+    {
+        return () =>
+        {
+            var databaseRepository = InMemoryDatabaseRepositoryFactory.CreateInstance<IFilteredUserRepository>();
 
             var multiTenantRepository = new MultiTenantDatabaseRepository<User>(
                 databaseRepository,

@@ -82,12 +82,19 @@ namespace Wemogy.Infrastructure.Database.InMemory.Extensions
                     new[] { propertyType });
             }
 
+            // the cursor has to move in the direction the column is ordered in. Comparing with
+            // "greater than" for a descending column returns the half of the result set the caller
+            // has already paged through.
             Expression searchExpr;
             if (comparisonMethod == null)
             {
-                searchExpr = Expression.GreaterThan(
-                    propertyExpression,
-                    searchAfterValueExpression);
+                searchExpr = querySorting.IsAscending
+                    ? Expression.GreaterThan(
+                        propertyExpression,
+                        searchAfterValueExpression)
+                    : Expression.LessThan(
+                        propertyExpression,
+                        searchAfterValueExpression);
             }
             else
             {
@@ -95,9 +102,13 @@ namespace Wemogy.Infrastructure.Database.InMemory.Extensions
                     propertyExpression,
                     comparisonMethod,
                     searchAfterValueExpression);
-                searchExpr = Expression.GreaterThan(
-                    callExpr,
-                    Expression.Constant(0));
+                searchExpr = querySorting.IsAscending
+                    ? Expression.GreaterThan(
+                        callExpr,
+                        Expression.Constant(0))
+                    : Expression.LessThan(
+                        callExpr,
+                        Expression.Constant(0));
             }
 
             var myLambda =
@@ -473,8 +484,12 @@ namespace Wemogy.Infrastructure.Database.InMemory.Extensions
                 var complexPropertyExpression = GetPropertyExpression(
                     pathToTheComplexProperty,
                     parameterExpression);
+
+                // ResolvePropertyType understands the dot separated path used here. Wemogy.Core's
+                // ResolvePropertyTypeOfPropertyPath does not: it splits on '/' and drops the first
+                // segment, so every dot path resolved to an empty property name and threw.
                 var complexPropertyType =
-                    typeof(T).ResolvePropertyTypeOfPropertyPath(pathToTheComplexProperty)!; // will be a list for now
+                    ResolvePropertyType<T>(pathToTheComplexProperty); // will be a list for now
                 var innerParameterExpressionType =
                     complexPropertyType.GenericTypeArguments.First(); // List<Version> ==> Version
 
@@ -485,9 +500,13 @@ namespace Wemogy.Infrastructure.Database.InMemory.Extensions
                         innerParameterExpressionType,
                         innerParameterExpressionName);
 
-                // build the query filter for the inner parameter expression
+                // build the query filter for the inner parameter expression. Everything after the
+                // kind and its '>' is the property path inside the collection item, e.g.
+                // versions<ANY>name ==> name. Substring is taken from the original identifier,
+                // because re-joining the split segments dropped the first character of the path.
                 var innerQueryFilter = queryFilter.Clone();
-                innerQueryFilter.Property = complexTypeIdentifierEndSplit.Skip(1).Join(">").Substring(1);
+                innerQueryFilter.Property = complexTypeIdentifierSplit[1]
+                    .Substring(complexPropertyKind.Length + 1);
 
                 var innerExpression = (Expression)typeof(QueryParametersExtensions)
                     .GetMethod(nameof(GetQueryFilterExpression))?.MakeGenericMethod(innerParameterExpressionType)

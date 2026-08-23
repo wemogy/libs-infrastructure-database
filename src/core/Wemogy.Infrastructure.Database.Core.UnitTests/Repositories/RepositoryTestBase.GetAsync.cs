@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using Shouldly;
 using Wemogy.Core.Errors.Exceptions;
 using Wemogy.Infrastructure.Database.Core.Errors;
+using Wemogy.Infrastructure.Database.Core.UnitTests.Extensions;
 using Wemogy.Infrastructure.Database.Core.UnitTests.Fakes.Entities;
 using Xunit;
 
@@ -22,7 +23,7 @@ public partial class RepositoryTestBase
         var userFromDb = await MicrosoftUserRepository.GetAsync(user.Id);
 
         // Assert
-        userFromDb.ShouldBeEquivalentTo(user);
+        userFromDb.ShouldBeEquivalentToIgnoringETag(user);
     }
 
     [Fact]
@@ -37,7 +38,7 @@ public partial class RepositoryTestBase
         var userFromDb = await MicrosoftUserRepository.GetAsync(x => x.Id == user.Id);
 
         // Assert
-        userFromDb.ShouldBeEquivalentTo(user);
+        userFromDb.ShouldBeEquivalentToIgnoringETag(user);
     }
 
     [Fact]
@@ -52,7 +53,7 @@ public partial class RepositoryTestBase
         var userFromDb = await MicrosoftUserRepository.GetAsync(x => x.Id == user.Id && x.TenantId == user.TenantId);
 
         // Assert
-        userFromDb.ShouldBeEquivalentTo(user);
+        userFromDb.ShouldBeEquivalentToIgnoringETag(user);
     }
 
     [Fact]
@@ -80,7 +81,7 @@ public partial class RepositoryTestBase
             user.TenantId);
 
         // Assert
-        userFromDb.ShouldBeEquivalentTo(user);
+        userFromDb.ShouldBeEquivalentToIgnoringETag(user);
     }
 
     [Fact]

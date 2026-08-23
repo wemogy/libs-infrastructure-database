@@ -110,6 +110,15 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Models
                 withBrackets);
         }
 
+        /// <summary>
+        ///     Turns every "greater than" of the accumulated condition into an equality.
+        /// </summary>
+        /// <remarks>
+        ///     Unused inside this package: the search-after chain builds its tie-breaker equalities
+        ///     directly instead of rewriting the operators of a finished condition. Kept because the
+        ///     type is public. Note that the replacement is token-blind, so it also rewrites the
+        ///     ">" of a condition like <c>ARRAY_LENGTH(c.tags) &gt; 0</c> into its exact inverse.
+        /// </remarks>
         public void ReplaceGreaterThanWithEquals()
         {
             QueryText = QueryText.Replace(

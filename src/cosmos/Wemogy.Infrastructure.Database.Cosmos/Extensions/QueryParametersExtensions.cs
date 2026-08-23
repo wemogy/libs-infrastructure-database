@@ -87,12 +87,19 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Extensions
                     new[] { propertyType });
             }
 
+            // the cursor has to move in the direction the column is ordered in. Comparing with
+            // "greater than" for a descending column returns the half of the result set the caller
+            // has already paged through.
             Expression searchExpr;
             if (comparisonMethod == null)
             {
-                searchExpr = Expression.GreaterThan(
-                    propertyExpression,
-                    searchAfterValueExpression);
+                searchExpr = querySorting.IsAscending
+                    ? Expression.GreaterThan(
+                        propertyExpression,
+                        searchAfterValueExpression)
+                    : Expression.LessThan(
+                        propertyExpression,
+                        searchAfterValueExpression);
             }
             else
             {
@@ -100,9 +107,13 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Extensions
                     propertyExpression,
                     comparisonMethod,
                     searchAfterValueExpression);
-                searchExpr = Expression.GreaterThan(
-                    callExpr,
-                    Expression.Constant(0));
+                searchExpr = querySorting.IsAscending
+                    ? Expression.GreaterThan(
+                        callExpr,
+                        Expression.Constant(0))
+                    : Expression.LessThan(
+                        callExpr,
+                        Expression.Constant(0));
             }
 
             var myLambda =
@@ -478,8 +489,11 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Extensions
                 var complexPropertyExpression = GetPropertyExpression(
                     pathToTheComplexProperty,
                     parameterExpression);
+                // ResolvePropertyType understands the dot separated path used here. Wemogy.Core's
+                // ResolvePropertyTypeOfPropertyPath does not: it splits on '/' and drops the first
+                // segment, so every dot path resolved to an empty property name and threw.
                 var complexPropertyType =
-                    typeof(T).ResolvePropertyTypeOfPropertyPath(pathToTheComplexProperty); // will be a list for now
+                    ResolvePropertyType<T>(pathToTheComplexProperty); // will be a list for now
                 var innerParameterExpressionType =
                     complexPropertyType.GenericTypeArguments.First(); // List<Version> ==> Version
 
@@ -490,9 +504,13 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Extensions
                         innerParameterExpressionType,
                         innerParameterExpressionName);
 
-                // build the query filter for the inner parameter expression
+                // build the query filter for the inner parameter expression. Everything after the
+                // kind and its '>' is the property path inside the collection item, e.g.
+                // versions<ANY>name ==> name. Substring is taken from the original identifier,
+                // because re-joining the split segments dropped the first character of the path.
                 var innerQueryFilter = queryFilter.Clone();
-                innerQueryFilter.Property = complexTypeIdentifierEndSplitted.Skip(1).Join(">").Substring(1);
+                innerQueryFilter.Property = complexTypeIdentifierSplitted[1]
+                    .Substring(complexPropertyKind.Length + 1);
 
                 var innerExpression = typeof(QueryParametersExtensions)
                     .GetMethod(nameof(GetQueryFilterExpression))?.MakeGenericMethod(innerParameterExpressionType)
@@ -627,25 +645,31 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Extensions
                     generalFilterSql = string.Empty;
                 }
 
-                // extract JOIN condition
-                var join = generalFilterSql.SplitOnFirstOccurrence("FROM root").Last().SplitOnLastOccurrence("WHERE")
-                    .First().Trim();
-                join = join
-                    .Replace(
-                        "root[",
-                        "c[")
-                    .Replace(
-                        "FROM root",
-                        "FROM c");
-                join = join.Replace(
-                    "\\\"",
-                    "\"");
-                if (!string.IsNullOrWhiteSpace(join))
+                // extract JOIN condition. An unfiltered IQueryable has no SQL to extract it from,
+                // and SplitOnFirstOccurrence returns an empty array for an empty string, so Last()
+                // would throw "Sequence contains no elements".
+                if (!string.IsNullOrWhiteSpace(generalFilterSql))
                 {
-                    logger?.LogDebug("JOIN");
-                    logger?.LogDebug(join);
-                    joinStatement = join;
-                    logger?.LogDebug($"Join statement: {joinStatement}");
+                    var join = generalFilterSql.SplitOnFirstOccurrence("FROM root").Last()
+                        .SplitOnLastOccurrence("WHERE")
+                        .First().Trim();
+                    join = join
+                        .Replace(
+                            "root[",
+                            "c[")
+                        .Replace(
+                            "FROM root",
+                            "FROM c");
+                    join = join.Replace(
+                        "\\\"",
+                        "\"");
+                    if (!string.IsNullOrWhiteSpace(join))
+                    {
+                        logger?.LogDebug("JOIN");
+                        logger?.LogDebug(join);
+                        joinStatement = join;
+                        logger?.LogDebug($"Join statement: {joinStatement}");
+                    }
                 }
 
                 if (!string.IsNullOrWhiteSpace(generalFilterSql))
@@ -844,33 +868,42 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Extensions
             }
 
             var sortingQueryDefinition = new QueryDefinitionFilterCondition();
-            var previousQueryDefinition = new QueryDefinitionFilterCondition();
+
+            // Only the leading sortings that carry a cursor take part in it.
+            var searchAfterSortings = queryParameters.Sortings
+                .TakeWhile(x => x.ContainsSearchAfter)
+                .ToList();
 
             // c.Name > "A"
             // OR (c.Name = "A" AND c.createdAt > DT)
             // OR (c.Name = "A" AND c.createdAt = DT AND c.id > ID)
-            foreach (var sorting in queryParameters.Sortings)
+            for (var i = 0; i < searchAfterSortings.Count; i++)
             {
-                if (!sorting.ContainsSearchAfter)
+                var term = new QueryDefinitionFilterCondition();
+
+                // every preceding column has to be equal for this term to decide
+                for (var j = 0; j < i; j++)
                 {
-                    break;
+                    AppendSearchAfterCondition(
+                        term,
+                        searchAfterSortings[j],
+                        "=",
+                        mappingMetadata);
                 }
 
-                var condition = $"c.{sorting.OrderBy} > @paramHere";
-
-                previousQueryDefinition.ReplaceGreaterThanWithEquals();
-
-                // mappingMetadata.Deserialize(propertyName, value)
-                previousQueryDefinition.And(
-                    condition,
-                    mappingMetadata.Deserialize(
-                        sorting.OrderBy,
-                        sorting.SearchAfter!));
+                // the cursor has to move in the direction the column is ordered in. Comparing with
+                // ">" for a descending column returns the half of the result set the caller has
+                // already paged through.
+                AppendSearchAfterCondition(
+                    term,
+                    searchAfterSortings[i],
+                    searchAfterSortings[i].IsAscending ? ">" : "<",
+                    mappingMetadata);
 
                 sortingQueryDefinition.Or(
-                    previousQueryDefinition.QueryText,
+                    term.QueryText,
                     true);
-                sortingQueryDefinition.MergeParameters(previousQueryDefinition);
+                sortingQueryDefinition.MergeParameters(term);
             }
 
             result.And(
@@ -879,6 +912,19 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Extensions
             result.MergeParameters(sortingQueryDefinition);
 
             return result;
+        }
+
+        private static void AppendSearchAfterCondition(
+            QueryDefinitionFilterCondition term,
+            QuerySorting sorting,
+            string comparisonOperator,
+            MappingMetadata mappingMetadata)
+        {
+            term.And(
+                $"c.{sorting.OrderBy} {comparisonOperator} @paramHere",
+                mappingMetadata.Deserialize(
+                    sorting.OrderBy,
+                    sorting.SearchAfter!));
         }
 
         private static QueryDefinitionFilterCondition GetQueryDefinitionSort(this QueryParameters queryParameters)

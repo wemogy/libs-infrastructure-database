@@ -7,7 +7,6 @@ using Wemogy.Infrastructure.Database.Core.UnitTests.Fakes.Entities;
 namespace Wemogy.Infrastructure.Database.Core.UnitTests.DatabaseRepositories;
 
 [RepositoryOptions(enableSoftDelete: true)]
-[RepositoryReadFilter(typeof(GeneralUserReadFilter))]
 [RepositoryPropertyFilter(typeof(GeneralUserPropertyFilter))]
 public interface IUserRepository : IDatabaseRepository<User>
 {

@@ -51,4 +51,9 @@ public interface IDatabaseClient<TEntity> : IDatabaseClient
     Task<TEntity> UpsertAsync(TEntity entity);
 
     Task<TEntity> UpsertAsync(TEntity entity, string partitionKey);
+
+    /// <summary>
+    ///     Starts a transactional batch against a single logical partition.
+    /// </summary>
+    IDatabaseTransactionalBatch<TEntity> CreateTransactionalBatch(string partitionKey);
 }

@@ -214,6 +214,18 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Client
             return upsertResponse.Resource;
         }
 
+        public IDatabaseTransactionalBatch<TEntity> CreateTransactionalBatch(string partitionKey)
+        {
+            var batch = _container.CreateTransactionalBatch(new PartitionKey<string>(partitionKey).CosmosPartitionKey);
+
+            return new CosmosTransactionalBatch<TEntity>(
+                batch,
+                partitionKey,
+                ResolveIdValue,
+                ResolvePartitionKeyValue,
+                ResolveETagValue);
+        }
+
         public Task DeleteAsync(string id, string partitionKey)
         {
             return DeleteAsync(

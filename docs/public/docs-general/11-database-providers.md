@@ -32,6 +32,8 @@ Provider specifics:
 - The `[ETag]` attribute enables [optimistic concurrency](./09-optimistic-concurrency.md).
 - [Transactional batches](./12-transactional-batch.md) are mapped onto the native
   `TransactionalBatch` of the Cosmos SDK.
+- [Partial updates](./13-partial-update.md) are mapped onto `PatchItem`, and a patch condition
+  onto a filter predicate, which accepts comparisons but no arithmetic on document fields.
 - [Multi-tenancy](./04-multi-tenancy.md) is supported.
 - The third constructor argument enables *insecure development mode* (gateway
   connection mode and relaxed certificate validation) for use with the local
@@ -64,6 +66,10 @@ Provider specifics:
 - [Transactional batches](./12-transactional-batch.md) are supported with the same semantics as
   Cosmos DB: every operation is validated before any of them is applied, so a failing batch leaves
   the store untouched.
+- [Partial updates](./13-partial-update.md) are supported, applied under the store's lock. A patch
+  condition is compiled and evaluated in process, which accepts more than the Cosmos DB filter
+  predicate does - a condition doing arithmetic on document fields passes here and is refused
+  there.
 
 :::tip Testing strategy
 
@@ -83,3 +89,4 @@ logic and tests stay provider-independent.
 | [Multi-tenancy](./04-multi-tenancy.md)                       | ✅        | ✅        |
 | [Optimistic concurrency (ETag)](./09-optimistic-concurrency.md) | ✅        | ✅        |
 | [Transactional batch](./12-transactional-batch.md)            | ✅        | ✅        |
+| [Partial update (Patch)](./13-partial-update.md)              | ✅        | ✅        |

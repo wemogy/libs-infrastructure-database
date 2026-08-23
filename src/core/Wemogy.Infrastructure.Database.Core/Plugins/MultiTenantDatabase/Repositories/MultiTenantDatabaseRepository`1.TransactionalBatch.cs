@@ -9,6 +9,7 @@ public partial class MultiTenantDatabaseRepository<TEntity>
         return new MultiTenantTransactionalBatch<TEntity>(
             _databaseRepository.CreateTransactionalBatch(BuildComposedPartitionKey(partitionKey)),
             AddPartitionKeyPrefix,
+            ComposeConditionPredicate,
             CleanupException);
     }
 }

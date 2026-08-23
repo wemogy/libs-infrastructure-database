@@ -1,4 +1,5 @@
 using System;
+using System.Linq.Expressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Wemogy.Core.Extensions;
@@ -17,15 +18,18 @@ internal class MultiTenantTransactionalBatch<TEntity> : IDatabaseTransactionalBa
 {
     private readonly IDatabaseTransactionalBatch<TEntity> _transactionalBatch;
     private readonly Func<TEntity, Action> _addPartitionKeyPrefix;
+    private readonly Func<Expression<Func<TEntity, bool>>?, Expression<Func<TEntity, bool>>?> _composeConditionPredicate;
     private readonly Action<Exception> _cleanupException;
 
     public MultiTenantTransactionalBatch(
         IDatabaseTransactionalBatch<TEntity> transactionalBatch,
         Func<TEntity, Action> addPartitionKeyPrefix,
+        Func<Expression<Func<TEntity, bool>>?, Expression<Func<TEntity, bool>>?> composeConditionPredicate,
         Action<Exception> cleanupException)
     {
         _transactionalBatch = transactionalBatch;
         _addPartitionKeyPrefix = addPartitionKeyPrefix;
+        _composeConditionPredicate = composeConditionPredicate;
         _cleanupException = cleanupException;
     }
 
@@ -57,6 +61,28 @@ internal class MultiTenantTransactionalBatch<TEntity> : IDatabaseTransactionalBa
         try
         {
             _transactionalBatch.Delete(id);
+            return this;
+        }
+        catch (Exception e)
+        {
+            _cleanupException(e);
+            throw;
+        }
+    }
+
+    public IDatabaseTransactionalBatch<TEntity> Patch(
+        string id,
+        Action<IPatchOperations<TEntity>> operations,
+        Expression<Func<TEntity, bool>>? condition = null)
+    {
+        try
+        {
+            // a patch addresses an id and does not carry an entity, so only the partition key
+            // values its condition compares against need the tenant prefix
+            _transactionalBatch.Patch(
+                id,
+                operations,
+                _composeConditionPredicate(condition));
             return this;
         }
         catch (Exception e)

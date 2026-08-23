@@ -1,10 +1,13 @@
 using System;
 using System.Collections.Generic;
+using System.Linq.Expressions;
 using System.Net;
+using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Azure.Cosmos;
 using Wemogy.Infrastructure.Database.Core.Errors;
+using Wemogy.Infrastructure.Database.Core.Models;
 using Wemogy.Infrastructure.Database.Core.Repositories;
 
 namespace Wemogy.Infrastructure.Database.Cosmos.Client
@@ -29,8 +32,10 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Client
             };
 
         private readonly TransactionalBatch _batch;
+        private readonly Container _container;
         private readonly Func<TEntity, string> _resolveIdValue;
         private readonly Func<TEntity, string?> _resolveETagValue;
+        private readonly Func<MemberInfo, string> _serializeMemberName;
 
         /// <summary>
         ///     The id each operation addresses, by operation index. Cosmos reports a failure by
@@ -39,24 +44,38 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Client
         private readonly List<string> _operationIds = new List<string>();
 
         /// <summary>
+        ///     The condition of each patch operation, by operation index, null when the patch is
+        ///     unconditional. A 412 means "the condition did not hold" for a patch and "the eTag is
+        ///     stale" for a replace, and the caller has to be able to tell those apart even when
+        ///     one batch carries both.
+        /// </summary>
+        private readonly Dictionary<int, string?> _patchOperationConditions = new Dictionary<int, string?>();
+
+        /// <summary>
         ///     Initializes a new instance of the <see cref="CosmosTransactionalBatch{TEntity}"/> class.
         /// </summary>
         /// <param name="batch">The Cosmos batch to record the operations in</param>
+        /// <param name="container">The container the batch runs against, used to translate a patch condition</param>
         /// <param name="partitionKey">The logical partition every operation of the batch acts on</param>
         /// <param name="resolveIdValue">Reads the id value of an entity</param>
         /// <param name="resolvePartitionKeyValue">Reads the partition key value of an entity</param>
         /// <param name="resolveETagValue">Reads the eTag value of an entity, null if it does not opt into optimistic concurrency</param>
+        /// <param name="serializeMemberName">Returns how a member is named in the document</param>
         public CosmosTransactionalBatch(
             TransactionalBatch batch,
+            Container container,
             string partitionKey,
             Func<TEntity, string> resolveIdValue,
             Func<TEntity, string> resolvePartitionKeyValue,
-            Func<TEntity, string?> resolveETagValue)
+            Func<TEntity, string?> resolveETagValue,
+            Func<MemberInfo, string> serializeMemberName)
             : base(partitionKey, resolvePartitionKeyValue)
         {
             _batch = batch;
+            _container = container;
             _resolveIdValue = resolveIdValue;
             _resolveETagValue = resolveETagValue;
+            _serializeMemberName = serializeMemberName;
         }
 
         /// <inheritdoc />
@@ -105,6 +124,31 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Client
             _batch.DeleteItem(
                 id,
                 DefaultItemRequestOptions);
+        }
+
+        /// <inheritdoc />
+        protected override void ApplyPatch(
+            string id,
+            IReadOnlyList<DatabasePatchOperation> operations,
+            Expression<Func<TEntity, bool>>? condition)
+        {
+            _patchOperationConditions.Add(
+                _operationIds.Count,
+                condition?.ToString());
+            _operationIds.Add(id);
+
+            _batch.PatchItem(
+                id,
+                CosmosPatchTranslator.ToPatchOperations(
+                    operations,
+                    _serializeMemberName),
+                new TransactionalBatchPatchItemRequestOptions
+                {
+                    EnableContentResponseOnWrite = false,
+                    FilterPredicate = CosmosPatchTranslator.ToFilterPredicate(
+                        _container,
+                        condition)
+                });
         }
 
         /// <inheritdoc />
@@ -158,10 +202,27 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Client
                         PartitionKey,
                         typeof(TEntity).Name);
                 case HttpStatusCode.PreconditionFailed:
-                    return TransactionalBatchError.ETagMismatch(
-                        operationIndex,
-                        id,
-                        PartitionKey);
+                    // the same status covers two different answers: a patch condition that did not
+                    // hold, and a replace whose eTag is stale
+                    return _patchOperationConditions.ContainsKey(operationIndex)
+                        ? PatchError.ConditionNotMet(
+                            operationIndex,
+                            id,
+                            PartitionKey)
+                        : TransactionalBatchError.ETagMismatch(
+                            operationIndex,
+                            id,
+                            PartitionKey);
+                case HttpStatusCode.BadRequest
+                    when _patchOperationConditions.TryGetValue(
+                             operationIndex,
+                             out var refusedCondition) && refusedCondition != null:
+
+                    // a filter predicate the database cannot evaluate, e.g. one doing arithmetic
+                    // on document fields
+                    return PatchError.ConditionNotSupported(
+                        refusedCondition,
+                        "the database refused the filter predicate it was translated into");
                 default:
                     return TransactionalBatchError.Failed(
                         operationIndex,

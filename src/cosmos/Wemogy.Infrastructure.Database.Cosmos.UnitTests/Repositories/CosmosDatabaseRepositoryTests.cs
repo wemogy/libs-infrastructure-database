@@ -4,6 +4,7 @@ using Shouldly;
 using Wemogy.Core.Errors.Exceptions;
 using Wemogy.Infrastructure.Database.Core.Abstractions;
 using Wemogy.Infrastructure.Database.Core.UnitTests.DatabaseRepositories;
+using Wemogy.Infrastructure.Database.Core.UnitTests.Fakes.Entities;
 using Wemogy.Infrastructure.Database.Core.UnitTests.Repositories;
 using Wemogy.Infrastructure.Database.Cosmos.Factories;
 using Wemogy.Infrastructure.Database.Cosmos.UnitTests.Constants;
@@ -122,6 +123,29 @@ public class CosmosDatabaseRepositoryTests : RepositoryTestBase
             user.Id,
             user.TenantId);
         persistedUser.Firstname.ShouldBe("Fresh");
+    }
+
+    [Fact]
+    public async Task PatchAsync_ShouldSurfaceAConditionTheDatabaseRefuses()
+    {
+        // Arrange: the filter predicate a condition is translated into is parsed by a stricter
+        // parser than a query. Arithmetic on document fields is refused with a bad request -
+        // verified against the emulator - while the in-memory provider evaluates it happily, so
+        // this behaviour can only be pinned here
+        var user = User.Faker.Generate();
+        await MicrosoftUserRepository.CreateAsync(user);
+
+        // Act
+        var exception = await Should.ThrowAsync<UnexpectedErrorException>(
+            () => MicrosoftUserRepository.PatchAsync(
+                user.Id,
+                user.TenantId,
+                p => p.Increment(x => x.Credits, 1),
+                x => x.Credits + 1 <= x.CreditsCap));
+
+        // Assert: named and attributed to the condition, instead of an opaque provider exception
+        exception.Code.ShouldBe("PatchConditionNotSupported");
+        exception.Description.ShouldContain("Credits");
     }
 
     private static UserWithETag NewUserWithETag()

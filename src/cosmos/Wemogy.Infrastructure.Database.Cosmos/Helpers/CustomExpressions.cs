@@ -64,7 +64,6 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Helpers
             throw new Exception($"GetContainsExpression not supported for property {propertyName}");
         }
 
-
         public static Expression ContainsExpressionGuidList(Expression propertyExpression, Expression valueExpression)
         {
             var containsMethodInfo = typeof(List<Guid>).GetMethod(
@@ -141,7 +140,8 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Helpers
                     valueExpression));
         }
 
-        public static Expression StartsWithIgnoreCaseExpression(Expression propertyExpression,
+        public static Expression StartsWithIgnoreCaseExpression(
+            Expression propertyExpression,
             Expression valueExpression)
         {
             var startsWithMethodInfo = typeof(string).GetMethod(
@@ -187,17 +187,6 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Helpers
                 valueExpression,
                 startsWithMethodInfo,
                 propertyExpression);
-            var arrayIndexOfExpression = Expression.ArrayIndex(
-                valueExpression,
-                propertyExpression);
-
-            //     UnaryExpression.ArrayIndex(valueExpression, propertyExpression);
-
-            return FalseIfPropertyIsNull(
-                propertyExpression,
-                Expression.NotEqual(
-                    arrayIndexOfExpression,
-                    Expression.Constant(-1)));
         }
     }
 }

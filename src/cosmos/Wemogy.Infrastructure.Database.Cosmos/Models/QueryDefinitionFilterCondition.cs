@@ -11,7 +11,7 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Models
         public QueryDefinitionFilterCondition()
         {
             QueryText = string.Empty;
-            Parameters = new Dictionary<string, object>();
+            Parameters = new Dictionary<string, object?>();
 
             // short GUID used here
             _parametersNamespace = Convert.ToBase64String(Guid.NewGuid().ToByteArray()).OnlyAlphanumeric();
@@ -19,7 +19,7 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Models
 
         public string QueryText { get; set; }
 
-        public Dictionary<string, object> Parameters { get; set; }
+        public Dictionary<string, object?> Parameters { get; set; }
 
         public bool HasFilter => QueryText.Length > 0;
 
@@ -48,10 +48,12 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Models
         }
 
         /// <summary>
+        ///     Appends a condition to the query text, joined to what is already there with the
+        ///     given operator.
         /// </summary>
         /// <param name="condition">c.Name = "Some name"</param>
         /// <param name="conditionOperator">AND or OR</param>
-        /// <param name="withBrackets"></param>
+        /// <param name="withBrackets">Whether the condition is wrapped in brackets of its own</param>
         private void AppendCondition(string condition, string conditionOperator, bool withBrackets)
         {
             if (string.IsNullOrWhiteSpace(condition))
@@ -92,7 +94,10 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Models
                 withBrackets);
         }
 
-        private void AppendCondition<TParameter>(string condition, TParameter parameter, string conditionOperator,
+        private void AppendCondition<TParameter>(
+            string condition,
+            TParameter parameter,
+            string conditionOperator,
             bool withBrackets)
         {
             var parameterName = $"@param{_parametersNamespace}_{Parameters.Count}";

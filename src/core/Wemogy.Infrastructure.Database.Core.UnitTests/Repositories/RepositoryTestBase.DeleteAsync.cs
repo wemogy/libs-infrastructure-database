@@ -59,10 +59,15 @@ public partial class RepositoryTestBase
         var notExistingUserId = Guid.NewGuid().ToString();
         var notExistingTenantId = Guid.NewGuid().ToString();
 
-        // Act & Assert
-        await Should.ThrowAsync<NotFoundErrorException>(() => MicrosoftUserRepository.DeleteAsync(
-            notExistingUserId,
-            notExistingTenantId));
+        // Act
+        var exception = await Should.ThrowAsync<NotFoundErrorException>(
+            () => MicrosoftUserRepository.DeleteAsync(
+                notExistingUserId,
+                notExistingTenantId));
+
+        // Assert: the partition the caller asked for, so the message says where it looked
+        exception.Description.ShouldContain(notExistingUserId);
+        exception.Description.ShouldContain(notExistingTenantId);
     }
 
     [Fact]

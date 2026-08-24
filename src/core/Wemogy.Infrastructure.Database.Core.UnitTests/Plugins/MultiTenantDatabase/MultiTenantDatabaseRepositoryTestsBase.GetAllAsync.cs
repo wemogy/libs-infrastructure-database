@@ -32,7 +32,11 @@ public partial class MultiTenantDatabaseRepositoryTestsBase
 
         // Assert
         msUserFromDb.ShouldBeEquivalentToIgnoringETag(new List<User> { msUser });
-        appleUserFromDb.ShouldBeEquivalentToIgnoringETag(new List<User> { appleUser1, appleUser2, appleUser3 });
+
+        // GetAllAsync carries no ORDER BY, so the provider owes no particular order for the three
+        // users - compared by id instead of by position
+        appleUserFromDb.ShouldBeEquivalentToIgnoringETagAndOrder(
+            new List<User> { appleUser1, appleUser2, appleUser3 });
     }
 
     [Fact]
@@ -58,6 +62,10 @@ public partial class MultiTenantDatabaseRepositoryTestsBase
 
         // Assert
         msUserFromDb.ShouldBeEquivalentToIgnoringETag(new List<User> { msUser });
-        appleUserFromDb.ShouldBeEquivalentToIgnoringETag(new List<User> { appleUser1, appleUser2, appleUser3 });
+
+        // GetAllAsync carries no ORDER BY, so the provider owes no particular order for the three
+        // users - compared by id instead of by position
+        appleUserFromDb.ShouldBeEquivalentToIgnoringETagAndOrder(
+            new List<User> { appleUser1, appleUser2, appleUser3 });
     }
 }

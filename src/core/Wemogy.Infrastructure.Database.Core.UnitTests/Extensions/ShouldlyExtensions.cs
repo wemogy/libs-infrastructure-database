@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Shouldly;
 using Wemogy.Core.Extensions;
+using Wemogy.Infrastructure.Database.Core.Abstractions;
 using Wemogy.Infrastructure.Database.Core.Attributes;
 
 namespace Wemogy.Infrastructure.Database.Core.UnitTests.Extensions;
@@ -72,6 +74,24 @@ public static class ShouldlyExtensions
         }
 
         actual.ShouldBeEquivalentTo(expected);
+    }
+
+    /// <summary>
+    ///     Asserts that <paramref name="actual"/> holds the same entities as
+    ///     <paramref name="expected"/>, without depending on their order: a query that carries no
+    ///     <c>ORDER BY</c> has no defined result order, so an assertion on one only holds by
+    ///     accident. eTag properties are ignored as above.
+    /// </summary>
+    public static void ShouldBeEquivalentToIgnoringETagAndOrder<T>(this List<T> actual, List<T> expected)
+        where T : class, IEntityBase
+    {
+        actual
+            .OrderBy(x => x.Id, StringComparer.Ordinal)
+            .ToList()
+            .ShouldBeEquivalentToIgnoringETag(
+                expected
+                    .OrderBy(x => x.Id, StringComparer.Ordinal)
+                    .ToList());
     }
 
     private static void NormalizeETagProperties<T>(T entity)

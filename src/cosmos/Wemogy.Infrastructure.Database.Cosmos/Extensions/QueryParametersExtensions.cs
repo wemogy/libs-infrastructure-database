@@ -7,13 +7,12 @@ using Microsoft.Azure.Cosmos;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using Wemogy.Core.Errors;
 using Wemogy.Core.Extensions;
 using Wemogy.Infrastructure.Database.Core.Enums;
 using Wemogy.Infrastructure.Database.Core.ValueObjects;
 using Wemogy.Infrastructure.Database.Cosmos.Helpers;
 using Wemogy.Infrastructure.Database.Cosmos.Models;
-
-#pragma warning disable CS8602
 
 // ReSharper disable All
 
@@ -51,9 +50,11 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Extensions
                 comparisonMethod = typeof(string).GetMethod(
                     nameof(string.CompareTo),
                     new[] { typeof(string) });
+
+                // ToString() without parameters is declared on every type, so the lookup holds
                 var guidToStringMethod = propertyType.GetMethod(
                     nameof(string.ToString),
-                    new Type[0]);
+                    new Type[0])!;
                 propertyExpression = Expression.Call(
                     propertyExpression,
                     guidToStringMethod);
@@ -72,7 +73,7 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Extensions
                     new[] { typeof(string) });
                 var jValueToStringMethod = typeof(JValue).GetMethod(
                     nameof(string.ToString),
-                    new Type[0]);
+                    new Type[0])!;
                 propertyExpression = Expression.Call(
                     propertyExpression,
                     jValueToStringMethod);
@@ -122,27 +123,6 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Extensions
                     param);
 
             return myLambda;
-
-/*
-            var propertyName = querySorting.OrderBy.ToPascalCase();
-
-            // x =>
-            var param = Expression.Parameter(typeof(T), "x");
-
-            // x.PropertyNameA.PropertyNameB
-            var prop = GetPropertyExpression(propertyName, param);
-
-            var propertyType = ResolvePropertyType<T>(propertyName);
-
-            var searchAfterValue = JsonConvert.DeserializeObject(querySorting.SearchAfter, typeof(string));
-
-            Expression searchExpr = Expression.GreaterThanOrEqual(prop, Expression.Constant(searchAfterValue));
-
-
-            Expression<Func<T, bool>> myLambda =
-                Expression.Lambda<Func<T, bool>>(searchExpr, param);
-
-            return myLambda;*/
         }
 
         public static Expression<Func<T, object>> GetOrderByExpression<T>(this QuerySorting querySorting)
@@ -357,7 +337,7 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Extensions
         }
 
         /// <summary>
-        ///     e.g. $x.Folder != null && ($x.Folder).Parent != null && target
+        ///     e.g. <c>$x.Folder != null &amp;&amp; ($x.Folder).Parent != null &amp;&amp; target</c>
         /// </summary>
         public static Expression AddPropertyNullCheckExpression(
             string propertyName,
@@ -472,7 +452,7 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Extensions
         ///     Simple:
         ///     e.g. $x.Name == (System.String)"A"
         ///     Complex:
-        ///     e.g. x.Versions != null && x.Versions.Any(x => x.Name != null && x.Name.StartsWith('xx'))
+        ///     e.g. <c>x.Versions != null &amp;&amp; x.Versions.Any(x =&gt; x.Name != null &amp;&amp; x.Name.StartsWith('xx'))</c>
         /// </summary>
         public static Expression GetQueryFilterExpression<T>(
             QueryFilter queryFilter,
@@ -489,6 +469,7 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Extensions
                 var complexPropertyExpression = GetPropertyExpression(
                     pathToTheComplexProperty,
                     parameterExpression);
+
                 // ResolvePropertyType understands the dot separated path used here. Wemogy.Core's
                 // ResolvePropertyTypeOfPropertyPath does not: it splits on '/' and drops the first
                 // segment, so every dot path resolved to an empty property name and threw.
@@ -517,6 +498,13 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Extensions
                     .Invoke(
                         null,
                         new object[] { innerQueryFilter, innerParameterExpression }) as Expression;
+
+                if (innerExpression == null)
+                {
+                    throw Error.Failure(
+                        "QueryFilterExpressionNotBuilt",
+                        $"The filter of the complex property {pathToTheComplexProperty} could not be translated into an expression");
+                }
 
                 Expression predicateExpression = Expression.Lambda(
                     innerExpression,
@@ -674,22 +662,9 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Extensions
 
                 if (!string.IsNullOrWhiteSpace(generalFilterSql))
                 {
-                    // extract the WHERE condition from the SQL query
-                    generalFilterSql = generalFilterSql.Split("WHERE").LastOrDefault();
-                    generalFilterSql = generalFilterSql?.Remove(generalFilterSql.Length - 2);
-
-                    // remove whitespace at begin and end
-                    generalFilterSql = generalFilterSql?.Trim();
-
-                    // replace the root alias, which is used by converting with the c alias which we are using for the container
-                    generalFilterSql = generalFilterSql?.Replace(
-                        "root[",
-                        "c[");
-
-                    // remove escape character before quotes
-                    generalFilterSql = generalFilterSql?.Replace(
-                        "\\\"",
-                        "\"");
+                    // extract the WHERE condition from the SQL query. The same extraction turns a
+                    // patch condition into a filter predicate, so it lives in one place
+                    generalFilterSql = CosmosLinqQueryExtensions.ExtractWhereFragment(generalFilterSql);
                 }
 
                 if (!string.IsNullOrWhiteSpace(generalFilterSql))

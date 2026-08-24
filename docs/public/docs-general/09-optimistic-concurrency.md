@@ -76,6 +76,20 @@ var updated = await userRepository.UpdateAsync(
 If the conflict persists beyond the retry limit, the
 `PreconditionFailedErrorException` is surfaced to the caller.
 
+## eTag or a conditional patch?
+
+Both protect a write against a concurrent one, and they answer different questions:
+
+- An **eTag** says *"read, decide, write - and tell me if it moved in the meantime"*. The decision
+  happens in your code, so the write needs a read, and a conflict is resolved by reading again.
+  That is what `UpdateAsync` does for you.
+- A **[conditional patch](./13-partial-update.md)** says *"apply this only if the state still
+  permits it"*. The decision happens in the database, so the write needs neither a read nor a
+  retry, and a condition that does not hold is an answer rather than a conflict.
+
+For a counter, a quota or a flag, prefer the conditional patch. For a change that only your code
+can compute from the current state, use `UpdateAsync` and let the eTag guard it.
+
 :::caution Direct ReplaceAsync
 
 A bare `ReplaceAsync` of a stale entity is *not* recoverable by retrying, because it

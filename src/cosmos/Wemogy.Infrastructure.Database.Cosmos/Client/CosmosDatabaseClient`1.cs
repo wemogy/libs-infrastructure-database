@@ -2,6 +2,7 @@ using System;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Net;
+using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Azure.Cosmos;
@@ -10,6 +11,7 @@ using Microsoft.Extensions.Logging;
 using Wemogy.Core.Errors;
 using Wemogy.Infrastructure.Database.Core.Abstractions;
 using Wemogy.Infrastructure.Database.Core.Errors;
+using Wemogy.Infrastructure.Database.Core.Repositories;
 using Wemogy.Infrastructure.Database.Core.ValueObjects;
 using Wemogy.Infrastructure.Database.Cosmos.Extensions;
 using Wemogy.Infrastructure.Database.Cosmos.Models;
@@ -21,6 +23,14 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Client
     {
         private readonly ILogger? _logger;
         private readonly Container _container;
+
+        /// <summary>
+        ///     How the client of this container names a member in the document. Resolved once, so a
+        ///     patch path is built with the very same rules the serializer applied when it wrote
+        ///     the document.
+        /// </summary>
+        private readonly Func<MemberInfo, string> _serializeMemberName;
+
         private MappingMetadata? _cachedMappingMetadata;
 
         public CosmosDatabaseClient(CosmosClient cosmosClient, CosmosDatabaseClientOptions options, ILogger? logger)
@@ -28,6 +38,7 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Client
             var database = cosmosClient.GetDatabase(options.DatabaseName);
             var containerName = options.ContainerName;
             _container = database.GetContainer(containerName);
+            _serializeMemberName = CosmosPatchTranslator.ResolveMemberNameSerializer(cosmosClient);
             _logger = logger;
         }
 
@@ -220,17 +231,97 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Client
 
             return new CosmosTransactionalBatch<TEntity>(
                 batch,
+                _container,
                 partitionKey,
                 ResolveIdValue,
                 ResolvePartitionKeyValue,
-                ResolveETagValue);
+                ResolveETagValue,
+                _serializeMemberName);
+        }
+
+        public async Task<TEntity> PatchAsync(
+            string id,
+            string partitionKey,
+            Action<IPatchOperations<TEntity>> operations,
+            Expression<Func<TEntity, bool>>? condition,
+            CancellationToken cancellationToken)
+        {
+            var patchOperations = CosmosPatchTranslator.ToPatchOperations(
+                PatchOperationsBuilder<TEntity>.Build(operations),
+                _serializeMemberName);
+            var filterPredicate = CosmosPatchTranslator.ToFilterPredicate(
+                _container,
+                condition);
+
+            try
+            {
+                var patchResponse = await _container.PatchItemAsync<TEntity>(
+                    id,
+                    new PartitionKey<string>(partitionKey).CosmosPartitionKey,
+                    patchOperations,
+                    new PatchItemRequestOptions
+                    {
+                        // the patched document is the return value of this path, e.g. the balance
+                        // after an increment, so the write response is worth its request charge
+                        EnableContentResponseOnWrite = true,
+                        FilterPredicate = filterPredicate
+                    },
+                    cancellationToken);
+
+                return patchResponse.Resource;
+            }
+            catch (CosmosException cosmosException)
+            {
+                // a filter predicate that does not hold is answered with a 412, the same status a
+                // stale eTag produces - but a failed condition is deterministic, so it must not be
+                // mapped to the exception type the retry proxy retries
+                if (cosmosException.StatusCode == HttpStatusCode.PreconditionFailed && condition != null)
+                {
+                    throw PatchError.ConditionNotMet(
+                        id,
+                        partitionKey);
+                }
+
+                if (cosmosException.StatusCode == HttpStatusCode.NotFound)
+                {
+                    throw DatabaseError.EntityNotFound(
+                        id,
+                        partitionKey,
+                        hint: typeof(TEntity).Name,
+                        innerException: cosmosException);
+                }
+
+                if (cosmosException.StatusCode == HttpStatusCode.BadRequest)
+                {
+                    // a bad request covers two different rejections: the filter predicate, which
+                    // is parsed by a stricter parser than a query and refuses e.g. arithmetic on
+                    // document fields, and the operations themselves, e.g. a path through an object
+                    // the document does not carry. Only the message tells them apart
+                    if (condition != null &&
+                        CosmosPatchTranslator.IsFilterPredicateFailure(cosmosException.Message))
+                    {
+                        throw PatchError.ConditionNotSupported(
+                            condition.ToString(),
+                            "the database refused the filter predicate it was translated into");
+                    }
+
+                    // surfaced through the shared error instead of letting the provider exception
+                    // out, which is what the in-memory provider does for the same cause
+                    throw PatchError.Failed(
+                        id,
+                        partitionKey,
+                        "the database refused the patch");
+                }
+
+                throw;
+            }
         }
 
         public Task DeleteAsync(string id, string partitionKey)
         {
-            return DeleteAsync(
+            return DeleteItemAsync(
                 id,
-                new PartitionKey<string>(partitionKey));
+                partitionKey);
         }
 
         public Task DeleteAsync(Expression<Func<TEntity, bool>> predicate)
@@ -242,20 +333,25 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Client
                 async entity =>
                 {
                     var id = ResolveIdValue(entity);
-                    var partitionKey = ResolvePartitionKey(entity);
-                    await DeleteAsync(
+                    var partitionKeyValue = ResolvePartitionKeyValue(entity);
+                    await DeleteItemAsync(
                         id,
-                        partitionKey);
+                        partitionKeyValue);
                 });
         }
 
-        private async Task DeleteAsync(string id, PartitionKey<string> partitionKey)
+        /// <summary>
+        ///     Takes the partition key as its value rather than as a <see cref="PartitionKey{T}"/>,
+        ///     so a not-found names the partition the caller asked for. The wrapper has no ToString
+        ///     of its own, so the message used to carry the name of its type.
+        /// </summary>
+        private async Task DeleteItemAsync(string id, string partitionKeyValue)
         {
             try
             {
                 await _container.DeleteItemAsync<TEntity>(
                     id,
-                    partitionKey.CosmosPartitionKey);
+                    new PartitionKey<string>(partitionKeyValue).CosmosPartitionKey);
             }
             catch (CosmosException e)
             {
@@ -264,7 +360,7 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Client
                     case HttpStatusCode.NotFound:
                         throw DatabaseError.EntityNotFound(
                             id,
-                            partitionKey.ToString(),
+                            partitionKeyValue,
                             hint: typeof(TEntity).Name,
                             innerException: e);
                     default:

@@ -1,7 +1,10 @@
 using System;
 using System.Collections.Generic;
+using System.Linq.Expressions;
 using System.Threading;
 using System.Threading.Tasks;
+using FastExpressionCompiler;
+using Wemogy.Infrastructure.Database.Core.Models;
 using Wemogy.Infrastructure.Database.Core.Repositories;
 
 namespace Wemogy.Infrastructure.Database.InMemory.Client
@@ -57,6 +60,20 @@ namespace Wemogy.Infrastructure.Database.InMemory.Client
         protected override void ApplyDelete(string id)
         {
             _operations.Add(InMemoryTransactionalBatchOperation<TEntity>.Delete(id));
+        }
+
+        /// <inheritdoc />
+        protected override void ApplyPatch(
+            string id,
+            IReadOnlyList<DatabasePatchOperation> operations,
+            Expression<Func<TEntity, bool>>? condition)
+        {
+            // compiled when the operation is added, so the execution does not compile under the lock
+            _operations.Add(
+                InMemoryTransactionalBatchOperation<TEntity>.Patch(
+                    id,
+                    operations,
+                    condition?.CompileFast()));
         }
 
         /// <inheritdoc />

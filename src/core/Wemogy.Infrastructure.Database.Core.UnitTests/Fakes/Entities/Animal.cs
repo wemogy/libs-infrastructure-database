@@ -1,8 +1,8 @@
 using System;
 using Bogus;
-using Wemogy.Core.Extensions;
 using Wemogy.Infrastructure.Database.Core.Abstractions;
 using Wemogy.Infrastructure.Database.Core.Attributes;
+using Wemogy.Infrastructure.Database.Core.UnitTests.Extensions;
 
 namespace Wemogy.Infrastructure.Database.Core.UnitTests.Fakes.Entities;
 
@@ -32,10 +32,10 @@ public class Animal : EntityBase
         new Faker<Animal>()
             .RuleFor(
                 x => x.CreatedAt,
-                f => f.Date.Past().Clone())
+                f => f.Date.PastDate())
             .RuleFor(
                 x => x.UpdatedAt,
-                f => f.Date.Past().Clone())
+                f => f.Date.PastDate())
             .RuleFor(
                 x => x.TenantId,
                 f => f.Random.Guid().ToString())

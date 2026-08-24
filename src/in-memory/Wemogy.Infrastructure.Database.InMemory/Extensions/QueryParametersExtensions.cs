@@ -3,10 +3,11 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
+using System.Text.Json;
+using System.Text.Json.Nodes;
 using Wemogy.Core.Extensions;
 using Wemogy.Infrastructure.Database.Core.Enums;
+using Wemogy.Infrastructure.Database.Core.Serialization;
 using Wemogy.Infrastructure.Database.Core.ValueObjects;
 using Wemogy.Infrastructure.Database.InMemory.Helpers;
 
@@ -33,9 +34,10 @@ namespace Wemogy.Infrastructure.Database.InMemory.Extensions
             var propertyType = ResolvePropertyType<T>(propertyName);
             var searchAfterValue = querySorting.SearchAfter == null
                 ? null
-                : JsonConvert.DeserializeObject(
+                : JsonSerializer.Deserialize(
                     querySorting.SearchAfter,
-                    propertyType);
+                    propertyType,
+                    DatabaseJson.QueryValueOptions);
 
             MethodInfo? comparisonMethod = null;
             Expression searchAfterValueExpression = Expression.Constant(searchAfterValue);
@@ -56,16 +58,16 @@ namespace Wemogy.Infrastructure.Database.InMemory.Extensions
                     searchAfterValueExpression,
                     guidToStringMethod);
             }
-            else if (propertyType == typeof(DateTime))
+            else if (propertyType == typeof(DateTime) || propertyType == typeof(DateTimeOffset))
             {
-                // DateTime is supported by Expression.GreaterThan
+                // both are supported by Expression.GreaterThan
             }
-            else if (propertyType == typeof(JValue))
+            else if (typeof(JsonNode).IsAssignableFrom(propertyType))
             {
                 comparisonMethod = typeof(string).GetMethod(
                     nameof(string.CompareTo),
                     new[] { typeof(string) });
-                var jValueToStringMethod = typeof(JValue).GetMethod(
+                var jValueToStringMethod = typeof(JsonNode).GetMethod(
                     nameof(string.ToString),
                     Type.EmptyTypes)!;
                 propertyExpression = Expression.Call(
@@ -129,7 +131,7 @@ namespace Wemogy.Infrastructure.Database.InMemory.Extensions
 
                         var propertyType = ResolvePropertyType<T>(propertyName);
 
-                        var searchAfterValue = JsonConvert.DeserializeObject(querySorting.SearchAfter, typeof(string));
+                        var searchAfterValue = JsonSerializer.Deserialize(querySorting.SearchAfter, typeof(string));
 
                         Expression searchExpr = Expression.GreaterThanOrEqual(prop, Expression.Constant(searchAfterValue));
 
@@ -303,10 +305,10 @@ namespace Wemogy.Infrastructure.Database.InMemory.Extensions
                 valueType = valueType.GenericTypeArguments.FirstOrDefault() ?? valueType;
             }
 
-            // JsonConvert.Deserialize
-            var valueObj = JsonConvert.DeserializeObject(
+            var valueObj = JsonSerializer.Deserialize(
                 value,
-                valueType);
+                valueType,
+                DatabaseJson.QueryValueOptions);
 
             var constant = Expression.Constant(valueObj);
             return Expression.Convert(

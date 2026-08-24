@@ -2,9 +2,10 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
+using System.Text.Json;
 using FastExpressionCompiler;
-using Newtonsoft.Json;
 using Wemogy.Core.Extensions;
+using Wemogy.Infrastructure.Database.Core.Serialization;
 using Wemogy.Infrastructure.Database.Core.ValueObjects;
 using Wemogy.Infrastructure.Database.InMemory.Extensions;
 
@@ -184,9 +185,10 @@ namespace Wemogy.Infrastructure.Database.InMemory.Query
         private static object? DeserializeSearchAfter<T>(QuerySorting sorting)
         {
             var propertyType = QueryParametersExtensions.ResolvePropertyType<T>(sorting.OrderBy.ToPascalCase());
-            return JsonConvert.DeserializeObject(
+            return JsonSerializer.Deserialize(
                 sorting.SearchAfter!,
-                propertyType);
+                propertyType,
+                DatabaseJson.QueryValueOptions);
         }
 
         /// <summary>

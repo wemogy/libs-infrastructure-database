@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using Newtonsoft.Json.Linq;
 using Shouldly;
 using Wemogy.Infrastructure.Database.Cosmos.Models;
 using Xunit;
@@ -40,9 +39,9 @@ public class MappingMetadataTests
     }
 
     [Fact]
-    public void Deserialize_ShouldReturnAJArrayForJsonArrays()
+    public void Deserialize_ShouldReturnAListForJsonArrays()
     {
-        // Arrange: this is the shape the IsOneOf comparator relies on
+        // Arrange
         var mappingMetadata = new MappingMetadata();
 
         // Act
@@ -50,9 +49,63 @@ public class MappingMetadataTests
             "firstname",
             "[\"John\",\"Jane\"]");
 
+        // Assert: a plain CLR list, because the client of the container serializes the query
+        // parameter and cannot be handed a node of the document it was parsed from
+        var array = value.ShouldBeOfType<List<object?>>();
+        array.ShouldBe(new object?[] { "John", "Jane" });
+    }
+
+    [Fact]
+    public void DeserializeArray_ShouldReturnOneValuePerElement()
+    {
+        // Arrange: this is the shape the IsOneOf comparator relies on, which needs a parameter
+        // per element rather than one parameter holding the whole array
+        var mappingMetadata = new MappingMetadata();
+
+        // Act
+        var value = mappingMetadata.DeserializeArray(
+            "firstname",
+            "[\"John\",\"Jane\"]");
+
         // Assert
-        var array = value.ShouldBeOfType<JArray>();
-        array.Count.ShouldBe(2);
+        value.ShouldBe(new object?[] { "John", "Jane" });
+    }
+
+    [Fact]
+    public void DeserializeArray_ShouldApplyTheMappingToEveryElement()
+    {
+        // Arrange
+        var mappingMetadata = new MappingMetadata();
+        mappingMetadata.AddCustomMappings(
+            new Dictionary<string, Type> { { "createdAt", typeof(DateTime) } });
+
+        // Act
+        var value = mappingMetadata.DeserializeArray(
+            "createdAt",
+            "[0,1000000]");
+
+        // Assert
+        value.ShouldBe(
+            new object?[]
+            {
+                new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc),
+                new DateTime(1970, 1, 1, 0, 16, 40, DateTimeKind.Utc)
+            });
+    }
+
+    [Fact]
+    public void DeserializeArray_ShouldReturnNullForJsonThatIsNotAnArray()
+    {
+        // Arrange
+        var mappingMetadata = new MappingMetadata();
+
+        // Act
+        var value = mappingMetadata.DeserializeArray(
+            "firstname",
+            "\"John\"");
+
+        // Assert: the caller reports the filter as unusable rather than building a condition
+        value.ShouldBeNull();
     }
 
     [Fact]
@@ -133,14 +186,16 @@ public class MappingMetadataTests
         mappingMetadata.AddCustomMappings(
             new Dictionary<string, Type> { { "createdAt", typeof(DateTime) } });
 
-        // Act: only long values are treated as unix timestamps, an ISO string is parsed by
-        // Newtonsoft itself and must keep its instant
+        // Act: only long values are treated as unix timestamps
         var value = mappingMetadata.Deserialize(
             "createdAt",
             "\"2023-01-01T00:00:00Z\"");
 
-        // Assert
-        value.ShouldBe(new DateTime(2023, 1, 1, 0, 0, 0, DateTimeKind.Utc));
+        // Assert: the string reaches the query the way the caller wrote it. Cosmos DB compares a
+        // timestamp as the string it is stored as, so passing it through unchanged is what makes
+        // the parameter match the document - parsing it into a DateTime and writing it back would
+        // only introduce a chance to re-spell it.
+        value.ShouldBe("2023-01-01T00:00:00Z");
     }
 
     [Fact]

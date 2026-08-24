@@ -1,7 +1,6 @@
 using System;
+using System.Text.Json.Serialization;
 using Bogus;
-using Newtonsoft.Json;
-using Wemogy.Core.Extensions;
 using Wemogy.Infrastructure.Database.Core.Abstractions;
 using Wemogy.Infrastructure.Database.Core.Attributes;
 using Wemogy.Infrastructure.Database.Core.UnitTests.Extensions;
@@ -40,7 +39,7 @@ public class User : EntityBase
     ///     Serialized under a name of its own, so the patch tests can prove that a path is
     ///     resolved through the serializer instead of a hand-rolled camelCase.
     /// </summary>
-    [JsonProperty("customLabel")]
+    [JsonPropertyName("customLabel")]
     public string Label { get; set; }
 
     public User()
@@ -60,10 +59,10 @@ public class User : EntityBase
             return new Faker<User>()
                 .RuleFor(
                     x => x.CreatedAt,
-                    f => f.Date.PastDate().Clone())
+                    f => f.Date.PastDate())
                 .RuleFor(
                     x => x.UpdatedAt,
-                    f => f.Date.PastDate().Clone())
+                    f => f.Date.PastDate())
                 .RuleFor(
                     x => x.TenantId,
                     f => f.Random.Guid().ToString())

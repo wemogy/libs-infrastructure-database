@@ -37,19 +37,18 @@ public partial class RepositoryTestBase
     {
         // Arrange
         await PrepareChangeFeedAsync();
-        await ResetAsync();
         var partitionKey = NewPartitionKey();
         var observedUsers = new ChangeFeedRecorder();
-        await using var processor = MicrosoftUserRepository.CreateChangeFeedProcessor(
+        await using var processor = ChangeFeedUserRepository.CreateChangeFeedProcessor(
             NewProcessorName(),
             observedUsers.Handle,
             NewProcessorOptions());
         await processor.StartAsync();
 
         // Act
-        var user = await MicrosoftUserRepository.CreateAsync(NewUser(partitionKey));
+        var user = await ChangeFeedUserRepository.CreateAsync(NewUser(partitionKey));
         user.Firstname = "Renamed";
-        await MicrosoftUserRepository.ReplaceAsync(user);
+        await ChangeFeedUserRepository.ReplaceAsync(user);
 
         // Assert: the change carries the document as it is now, not as the first write left it
         await WaitUntilAsync(() => observedUsers.For(partitionKey).Any(x => x.Firstname == "Renamed"));
@@ -64,21 +63,20 @@ public partial class RepositoryTestBase
     {
         // Arrange
         await PrepareChangeFeedAsync();
-        await ResetAsync();
         var partitionKey = NewPartitionKey();
         var user = NewUser(partitionKey);
         user.Credits = 10;
-        await MicrosoftUserRepository.CreateAsync(user);
+        await ChangeFeedUserRepository.CreateAsync(user);
 
         var observedUsers = new ChangeFeedRecorder();
-        await using var processor = MicrosoftUserRepository.CreateChangeFeedProcessor(
+        await using var processor = ChangeFeedUserRepository.CreateChangeFeedProcessor(
             NewProcessorName(),
             observedUsers.Handle,
             NewProcessorOptions());
         await processor.StartAsync();
 
         // Act: a patch writes one field, so a feed carrying only what was written would carry only that
-        await MicrosoftUserRepository.PatchAsync(
+        await ChangeFeedUserRepository.PatchAsync(
             user.Id,
             partitionKey,
             p => p.Increment(x => x.Credits, 5));
@@ -105,16 +103,15 @@ public partial class RepositoryTestBase
     {
         // Arrange
         await PrepareChangeFeedAsync();
-        await ResetAsync();
         var partitionKey = NewPartitionKey();
-        var user = await MicrosoftUserRepository.CreateAsync(NewUser(partitionKey));
+        var user = await ChangeFeedUserRepository.CreateAsync(NewUser(partitionKey));
 
         var options = NewProcessorOptions();
         options.StartFromBeginning = true;
         var observedUsers = new ChangeFeedRecorder();
 
         // Act: the document existed before the processor did
-        await using var processor = MicrosoftUserRepository.CreateChangeFeedProcessor(
+        await using var processor = ChangeFeedUserRepository.CreateChangeFeedProcessor(
             NewProcessorName(),
             observedUsers.Handle,
             options);
@@ -129,21 +126,20 @@ public partial class RepositoryTestBase
     {
         // Arrange
         await PrepareChangeFeedAsync();
-        await ResetAsync();
         var partitionKey = NewPartitionKey();
         var observedUsers = new ChangeFeedRecorder();
-        var processor = MicrosoftUserRepository.CreateChangeFeedProcessor(
+        var processor = ChangeFeedUserRepository.CreateChangeFeedProcessor(
             NewProcessorName(),
             observedUsers.Handle,
             NewProcessorOptions());
         await processor.StartAsync();
 
-        var userWrittenWhileRunning = await MicrosoftUserRepository.CreateAsync(NewUser(partitionKey));
+        var userWrittenWhileRunning = await ChangeFeedUserRepository.CreateAsync(NewUser(partitionKey));
         await WaitUntilAsync(() => observedUsers.For(partitionKey).Any(x => x.Id == userWrittenWhileRunning.Id));
 
         // Act
         await processor.StopAsync();
-        var userWrittenAfterStopping = await MicrosoftUserRepository.CreateAsync(NewUser(partitionKey));
+        var userWrittenAfterStopping = await ChangeFeedUserRepository.CreateAsync(NewUser(partitionKey));
 
         // Assert: a stopped processor reads nothing, and stopping it twice is not an error
         await Task.Delay(TimeSpan.FromSeconds(2));
@@ -161,7 +157,7 @@ public partial class RepositoryTestBase
         Should.Throw<UnexpectedErrorException>(
                 () =>
                 {
-                    MicrosoftUserRepository.CreateChangeFeedProcessor(
+                    ChangeFeedUserRepository.CreateChangeFeedProcessor(
                         " ",
                         observedUsers.Handle);
                 })
@@ -180,7 +176,7 @@ public partial class RepositoryTestBase
         Should.Throw<UnexpectedErrorException>(
                 () =>
                 {
-                    MicrosoftUserRepository.CreateAllVersionsAndDeletesChangeFeedProcessor(
+                    ChangeFeedUserRepository.CreateAllVersionsAndDeletesChangeFeedProcessor(
                         NewProcessorName(),
                         observedChanges.Handle,
                         options);

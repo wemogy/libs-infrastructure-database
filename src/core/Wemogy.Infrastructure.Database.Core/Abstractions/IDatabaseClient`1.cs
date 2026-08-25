@@ -11,7 +11,7 @@ namespace Wemogy.Infrastructure.Database.Core.Abstractions;
 public interface IDatabaseClient<TEntity> : IDatabaseClient
     where TEntity : class
 {
-    Task<TEntity> GetAsync(string id, string partitionKey, CancellationToken cancellationToken);
+    Task<TEntity> GetAsync(string id, PartitionKeyValue partitionKey, CancellationToken cancellationToken);
 
     Task IterateAsync(
         QueryParameters queryParameters,
@@ -46,18 +46,18 @@ public interface IDatabaseClient<TEntity> : IDatabaseClient
     /// </summary>
     Task<TEntity> ReplaceAsync(TEntity entity);
 
-    Task DeleteAsync(string id, string partitionKey);
+    Task DeleteAsync(string id, PartitionKeyValue partitionKey);
 
     Task DeleteAsync(Expression<Func<TEntity, bool>> predicate);
 
     Task<TEntity> UpsertAsync(TEntity entity);
 
-    Task<TEntity> UpsertAsync(TEntity entity, string partitionKey);
+    Task<TEntity> UpsertAsync(TEntity entity, PartitionKeyValue partitionKey);
 
     /// <summary>
     ///     Starts a transactional batch against a single logical partition.
     /// </summary>
-    IDatabaseTransactionalBatch<TEntity> CreateTransactionalBatch(string partitionKey);
+    IDatabaseTransactionalBatch<TEntity> CreateTransactionalBatch(PartitionKeyValue partitionKey);
 
     /// <summary>
     ///     Applies a partial update to a single document, optionally only if the given condition
@@ -65,7 +65,7 @@ public interface IDatabaseClient<TEntity> : IDatabaseClient
     /// </summary>
     Task<TEntity> PatchAsync(
         string id,
-        string partitionKey,
+        PartitionKeyValue partitionKey,
         Action<IPatchOperations<TEntity>> operations,
         Expression<Func<TEntity, bool>>? condition,
         CancellationToken cancellationToken);

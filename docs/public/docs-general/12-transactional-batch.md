@@ -41,6 +41,9 @@ and `Upsert` throw immediately — when the operation is *added*, not when the b
 executed — if the `[PartitionKey]` value of the entity differs, so the stack trace
 points at the offending call.
 
+For an entity with a [hierarchical partition key](./14-hierarchical-partition-keys.md), the
+partition is the **whole** hierarchy: every component has to match, not just the broadest one.
+
 The Cosmos DB provider maps the batch onto the native `TransactionalBatch` of the
 Cosmos SDK, which the service applies as one atomic unit. When one operation fails,
 Cosmos rejects the whole batch and reports every other operation as

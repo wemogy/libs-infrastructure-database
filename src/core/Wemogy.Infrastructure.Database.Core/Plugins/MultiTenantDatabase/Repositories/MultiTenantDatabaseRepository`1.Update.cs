@@ -1,11 +1,12 @@
 using System;
 using System.Threading.Tasks;
+using Wemogy.Infrastructure.Database.Core.ValueObjects;
 
 namespace Wemogy.Infrastructure.Database.Core.Plugins.MultiTenantDatabase.Repositories;
 
 public partial class MultiTenantDatabaseRepository<TEntity>
 {
-    public Task<TEntity> UpdateAsync(string id, string partitionKey, Action<TEntity> updateAction)
+    public Task<TEntity> UpdateAsync(string id, PartitionKeyValue partitionKey, Action<TEntity> updateAction)
     {
         return UpdateAsync(
             id,
@@ -28,15 +29,19 @@ public partial class MultiTenantDatabaseRepository<TEntity>
             });
     }
 
-    public async Task<TEntity> UpdateAsync(string id, string partitionKey, Func<TEntity, Task> updateAction)
+    public async Task<TEntity> UpdateAsync(string id, PartitionKeyValue partitionKey, Func<TEntity, Task> updateAction)
     {
+        // the update action is awaited, and the lambda is async so that it binds to the
+        // Func<TEntity, Task> overload: an action that actually awaits used to have its
+        // continuation run after the entity had already been written, which dropped the mutation
+        // and raced the write
         var updated = await _databaseRepository.UpdateAsync(
             id,
             BuildComposedPartitionKey(partitionKey),
-            entity =>
+            async entity =>
             {
                 RemovePartitionKeyPrefix(entity);
-                updateAction(entity);
+                await updateAction(entity);
                 AddPartitionKeyPrefix(entity);
             });
 

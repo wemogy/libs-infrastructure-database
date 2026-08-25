@@ -223,9 +223,10 @@ feed and keeps only its own share of it.
 The in-memory provider replays its writes in order with the same semantics, so a projection can be
 tested without a database. Two differences are worth knowing:
 
-- **One logical partition is one range.** `RangeId` is the partition key value. That is narrower
-  than a physical range of a real container, and never promises an order Cosmos DB would not keep —
-  a test that passes here does not pass because of a guarantee production does not have.
+- **One logical partition is one range.** `RangeId` is the partition key value, with the components
+  of a [hierarchical key](./14-hierarchical-partition-keys.md) joined by `/`. That is narrower than a
+  physical range of a real container, and never promises an order Cosmos DB would not keep — a test
+  that passes here does not pass because of a guarantee production does not have.
 - **Lease contention is not modelled.** Two processors running under the same name each see every
   change instead of splitting the ranges between them. Checkpointing *is* modelled, so a test can
   stop a processor, write, start it again under the same name and assert it caught up.

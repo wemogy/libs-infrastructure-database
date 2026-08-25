@@ -4,6 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Wemogy.Core.Errors.Exceptions;
 
+using Wemogy.Infrastructure.Database.Core.ValueObjects;
 namespace Wemogy.Infrastructure.Database.Core.Abstractions;
 
 public partial interface IDatabaseRepository<TEntity>
@@ -19,7 +20,7 @@ public partial interface IDatabaseRepository<TEntity>
     ///     Thrown when the entity is not found (either because it does not exist or
     ///     because it has been soft-deleted when this is supported)
     /// </exception>
-    Task<TEntity> GetAsync(string id, string partitionKey, CancellationToken cancellationToken = default);
+    Task<TEntity> GetAsync(string id, PartitionKeyValue partitionKey, CancellationToken cancellationToken = default);
 
     /// <summary>
     ///     Retrieve an entity from the repository by its unique identifier.

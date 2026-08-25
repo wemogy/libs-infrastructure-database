@@ -31,6 +31,11 @@ Use the `GlobalEntityBase` class as base class to get the default **partition ke
 
 :::
 
+If a single key value grows without bound - a customer whose traffic keeps rising, say - one
+logical partition runs into the size and throughput ceilings of the store. A
+[hierarchical partition key](./14-hierarchical-partition-keys.md) partitions by up to three values
+instead, so the store can split the tail while a batch still stays inside one partition.
+
 ### Sample entity implementation
 
 ```csharp title="User.cs"

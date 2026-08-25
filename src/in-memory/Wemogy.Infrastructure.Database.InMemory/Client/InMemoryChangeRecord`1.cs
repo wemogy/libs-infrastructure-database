@@ -1,4 +1,5 @@
 using Wemogy.Infrastructure.Database.Core.Enums;
+using Wemogy.Infrastructure.Database.Core.ValueObjects;
 
 namespace Wemogy.Infrastructure.Database.InMemory.Client
 {
@@ -11,7 +12,7 @@ namespace Wemogy.Infrastructure.Database.InMemory.Client
     {
         public InMemoryChangeRecord(
             long sequence,
-            string partitionKey,
+            PartitionKeyValue partitionKey,
             string id,
             DatabaseChangeOperation operation,
             TEntity? current,
@@ -31,7 +32,7 @@ namespace Wemogy.Infrastructure.Database.InMemory.Client
         /// </summary>
         public long Sequence { get; }
 
-        public string PartitionKey { get; }
+        public PartitionKeyValue PartitionKey { get; }
 
         public string Id { get; }
 

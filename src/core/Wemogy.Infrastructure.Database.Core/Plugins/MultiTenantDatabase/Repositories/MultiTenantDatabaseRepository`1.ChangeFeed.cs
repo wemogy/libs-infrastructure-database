@@ -62,7 +62,7 @@ public partial class MultiTenantDatabaseRepository<TEntity>
     /// <param name="changes">The batch as the underlying repository read it, across all tenants</param>
     private List<TEntity> FilterToTenant(IReadOnlyCollection<TEntity> changes)
     {
-        var prefix = BuildComposedPartitionKey(null);
+        var prefix = BuildComposedPartitionKeyComponent(null);
         var tenantChanges = new List<TEntity>(changes.Count);
 
         foreach (var entity in changes)
@@ -86,7 +86,7 @@ public partial class MultiTenantDatabaseRepository<TEntity>
     /// <param name="changes">The batch as the underlying repository read it, across all tenants</param>
     private List<DatabaseChange<TEntity>> FilterToTenant(IReadOnlyCollection<DatabaseChange<TEntity>> changes)
     {
-        var prefix = BuildComposedPartitionKey(null);
+        var prefix = BuildComposedPartitionKeyComponent(null);
         var tenantChanges = new List<DatabaseChange<TEntity>>(changes.Count);
 
         foreach (var change in changes)
@@ -148,6 +148,6 @@ public partial class MultiTenantDatabaseRepository<TEntity>
             throw ChangeFeedError.ProcessorNameIsEmpty();
         }
 
-        return BuildComposedPartitionKey(processorName);
+        return BuildComposedPartitionKeyComponent(processorName);
     }
 }

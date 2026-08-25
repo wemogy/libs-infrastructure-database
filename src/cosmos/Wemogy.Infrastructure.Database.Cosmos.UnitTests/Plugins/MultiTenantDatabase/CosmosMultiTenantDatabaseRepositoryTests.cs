@@ -16,6 +16,9 @@ namespace Wemogy.Infrastructure.Database.Cosmos.UnitTests.Plugins.MultiTenantDat
 [Collection("Sequential")]
 public class CosmosMultiTenantDatabaseRepositoryTests : MultiTenantDatabaseRepositoryTestsBase
 {
+    private readonly IDatabaseRepository<User> _changeFeedUserRepository =
+        GetFactoryChangeFeedUser(new MicrosoftTenantProvider())();
+
     public CosmosMultiTenantDatabaseRepositoryTests()
         : base(
             GetFactoryUser(new MicrosoftTenantProvider()),
@@ -32,6 +35,27 @@ public class CosmosMultiTenantDatabaseRepositoryTests : MultiTenantDatabaseRepos
     protected override Task PrepareChangeFeedAsync()
     {
         return TestingContainers.EnsureLeaseContainerAsync();
+    }
+
+    /// <summary>
+    ///     A collection of its own, so a processor does not have to read its way through the write
+    ///     history the rest of the Cosmos suite leaves in the shared one.
+    /// </summary>
+    protected override IDatabaseRepository<User> ChangeFeedUserRepository => _changeFeedUserRepository;
+
+    private static Func<IDatabaseRepository<User>> GetFactoryChangeFeedUser(IDatabaseTenantProvider provider)
+    {
+        return () =>
+        {
+            var cosmosDatabaseClientFactory = new CosmosDatabaseClientFactory(
+                TestingConstants.ConnectionString,
+                TestingConstants.DatabaseName,
+                true);
+
+            return new MultiTenantDatabaseRepositoryFactory(
+                cosmosDatabaseClientFactory,
+                provider).CreateInstance<IChangeFeedUserRepository>();
+        };
     }
 
     private static Func<IDatabaseRepository<User>> GetFactoryUser(IDatabaseTenantProvider provider)

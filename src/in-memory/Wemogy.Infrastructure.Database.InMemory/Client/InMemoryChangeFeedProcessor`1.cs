@@ -62,7 +62,7 @@ namespace Wemogy.Infrastructure.Database.InMemory.Client
         ///     Cleared once they were handed over, and kept until then so a handler that threw during
         ///     the replay gets them again.
         /// </summary>
-        private List<KeyValuePair<string, List<TEntity>>>? _replay;
+        private List<KeyValuePair<PartitionKeyValue, List<TEntity>>>? _replay;
 
         public InMemoryChangeFeedProcessor(
             InMemoryDatabaseClient<TEntity> client,
@@ -155,11 +155,11 @@ namespace Wemogy.Infrastructure.Database.InMemory.Client
         ///     keeping both the order of the writes inside a range and the order the ranges were
         ///     first written to.
         /// </summary>
-        private static List<KeyValuePair<string, List<InMemoryChangeRecord<TEntity>>>> GroupByPartition(
+        private static List<KeyValuePair<PartitionKeyValue, List<InMemoryChangeRecord<TEntity>>>> GroupByPartition(
             List<InMemoryChangeRecord<TEntity>> records)
         {
-            var partitions = new List<KeyValuePair<string, List<InMemoryChangeRecord<TEntity>>>>();
-            var recordsByPartition = new Dictionary<string, List<InMemoryChangeRecord<TEntity>>>();
+            var partitions = new List<KeyValuePair<PartitionKeyValue, List<InMemoryChangeRecord<TEntity>>>>();
+            var recordsByPartition = new Dictionary<PartitionKeyValue, List<InMemoryChangeRecord<TEntity>>>();
 
             foreach (var record in records)
             {
@@ -172,7 +172,7 @@ namespace Wemogy.Infrastructure.Database.InMemory.Client
                         record.PartitionKey,
                         partitionRecords);
                     partitions.Add(
-                        new KeyValuePair<string, List<InMemoryChangeRecord<TEntity>>>(
+                        new KeyValuePair<PartitionKeyValue, List<InMemoryChangeRecord<TEntity>>>(
                             record.PartitionKey,
                             partitionRecords));
                 }
@@ -296,7 +296,7 @@ namespace Wemogy.Infrastructure.Database.InMemory.Client
         ///     the writes with them.
         /// </summary>
         private List<TEntity> ResolveLatestVersions(
-            string partitionKey,
+            PartitionKeyValue partitionKey,
             List<InMemoryChangeRecord<TEntity>> records)
         {
             var lastWriteIndexById = new Dictionary<string, int>();
@@ -320,11 +320,11 @@ namespace Wemogy.Infrastructure.Database.InMemory.Client
         /// </summary>
         /// <returns>Whether every batch was handled</returns>
         private async Task<bool> InvokeLatestVersionHandlerAsync(
-            string partitionKey,
+            PartitionKeyValue partitionKey,
             List<TEntity> changes,
             CancellationToken cancellationToken)
         {
-            var context = new ChangeFeedContext(partitionKey);
+            var context = new ChangeFeedContext(partitionKey.ToString());
 
             foreach (var batch in Batch(changes))
             {
@@ -349,11 +349,11 @@ namespace Wemogy.Infrastructure.Database.InMemory.Client
         }
 
         private async Task<bool> InvokeAllVersionsAndDeletesHandlerAsync(
-            string partitionKey,
+            PartitionKeyValue partitionKey,
             List<InMemoryChangeRecord<TEntity>> records,
             CancellationToken cancellationToken)
         {
-            var context = new ChangeFeedContext(partitionKey);
+            var context = new ChangeFeedContext(partitionKey.ToString());
             var changes = records.Select(ToDatabaseChange).ToList();
 
             foreach (var batch in Batch(changes))

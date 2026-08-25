@@ -44,5 +44,11 @@ public static class TestingContainers
         await database.Database.CreateContainerIfNotExistsAsync(
             CosmosDatabaseClientOptions.DefaultLeaseContainerName,
             "/id");
+
+        // the collection the change feed tests own, kept apart from the one the rest of the suite
+        // writes to so a processor reaches the end of the feed quickly
+        await database.Database.CreateContainerIfNotExistsAsync(
+            "changefeedusers",
+            "/tenantId");
     }
 }

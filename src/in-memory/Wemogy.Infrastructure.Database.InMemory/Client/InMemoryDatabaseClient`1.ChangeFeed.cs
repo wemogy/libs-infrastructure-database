@@ -7,6 +7,7 @@ using Wemogy.Infrastructure.Database.Core.Delegates;
 using Wemogy.Infrastructure.Database.Core.Enums;
 using Wemogy.Infrastructure.Database.Core.Errors;
 using Wemogy.Infrastructure.Database.Core.Models;
+using Wemogy.Infrastructure.Database.Core.ValueObjects;
 
 namespace Wemogy.Infrastructure.Database.InMemory.Client
 {
@@ -94,7 +95,7 @@ namespace Wemogy.Infrastructure.Database.InMemory.Client
             InMemoryChangeFeedProcessor<TEntity> processor,
             string processorName,
             bool startFromBeginning,
-            out List<KeyValuePair<string, List<TEntity>>>? replay)
+            out List<KeyValuePair<PartitionKeyValue, List<TEntity>>>? replay)
         {
             lock (Gate)
             {
@@ -200,7 +201,7 @@ namespace Wemogy.Infrastructure.Database.InMemory.Client
         ///         arrive at all.
         ///     </para>
         /// </summary>
-        internal List<TEntity> ResolveCurrent(string partitionKey, IEnumerable<string> ids)
+        internal List<TEntity> ResolveCurrent(PartitionKeyValue partitionKey, IEnumerable<string> ids)
         {
             lock (Gate)
             {
@@ -308,11 +309,11 @@ namespace Wemogy.Infrastructure.Database.InMemory.Client
             }
         }
 
-        private static List<KeyValuePair<string, List<TEntity>>> SnapshotPartitions()
+        private static List<KeyValuePair<PartitionKeyValue, List<TEntity>>> SnapshotPartitions()
         {
             return Partitions
                 .Where(partition => partition.Value.Count > 0)
-                .Select(partition => new KeyValuePair<string, List<TEntity>>(
+                .Select(partition => new KeyValuePair<PartitionKeyValue, List<TEntity>>(
                     partition.Key,
                     partition.Value.Select(entity => entity.Clone()).ToList()))
                 .ToList();
@@ -337,7 +338,7 @@ namespace Wemogy.Infrastructure.Database.InMemory.Client
         /// </summary>
         private void RecordChange(
             DatabaseChangeOperation operation,
-            string partitionKey,
+            PartitionKeyValue partitionKey,
             string id,
             TEntity? current,
             TEntity? previous)

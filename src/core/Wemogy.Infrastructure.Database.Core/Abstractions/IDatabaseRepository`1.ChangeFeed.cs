@@ -13,7 +13,7 @@ public partial interface IDatabaseRepository<TEntity>
     ///         This is the *latest version* feed: it carries the document as it is now, so two writes
     ///         to the same document between two reads arrive as one change carrying the second one.
     ///         Whatever the write was, the change carries the *whole* document - a
-    ///         <see cref="PatchAsync(string,string,System.Action{IPatchOperations{TEntity}},System.Linq.Expressions.Expression{System.Func{TEntity,bool}},System.Threading.CancellationToken)"/>
+    ///         <see cref="PatchAsync(string,ValueObjects.PartitionKeyValue,System.Action{IPatchOperations{TEntity}},System.Linq.Expressions.Expression{System.Func{TEntity,bool}},System.Threading.CancellationToken)"/>
     ///         that touched one field arrives no differently from a replace, which is what lets a
     ///         projection rebuild itself from a change without knowing how the document got there.
     ///         Hard deletes are *not* on this feed; a soft delete is, since it is a write like any

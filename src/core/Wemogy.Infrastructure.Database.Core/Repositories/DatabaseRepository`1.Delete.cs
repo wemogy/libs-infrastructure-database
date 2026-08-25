@@ -2,6 +2,7 @@ using System;
 using System.Linq.Expressions;
 using System.Threading.Tasks;
 using Wemogy.Infrastructure.Database.Core.Abstractions;
+using Wemogy.Infrastructure.Database.Core.ValueObjects;
 
 namespace Wemogy.Infrastructure.Database.Core.Repositories;
 
@@ -13,7 +14,7 @@ public partial class DatabaseRepository<TEntity>
         return _database.DeleteAsync(x => id == x.Id);
     }
 
-    public Task DeleteAsync(string id, string partitionKey)
+    public Task DeleteAsync(string id, PartitionKeyValue partitionKey)
     {
         return _database.DeleteAsync(
             id,

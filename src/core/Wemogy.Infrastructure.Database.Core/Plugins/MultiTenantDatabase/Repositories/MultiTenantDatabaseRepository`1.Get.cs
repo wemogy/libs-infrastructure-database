@@ -4,6 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Wemogy.Core.Errors.Exceptions;
 using Wemogy.Infrastructure.Database.Core.Errors;
+using Wemogy.Infrastructure.Database.Core.ValueObjects;
 
 namespace Wemogy.Infrastructure.Database.Core.Plugins.MultiTenantDatabase.Repositories;
 
@@ -11,7 +12,7 @@ public partial class MultiTenantDatabaseRepository<TEntity>
 {
     public async Task<TEntity> GetAsync(
         string id,
-        string partitionKey,
+        PartitionKeyValue partitionKey,
         CancellationToken cancellationToken = default)
     {
         try

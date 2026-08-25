@@ -13,11 +13,17 @@ public abstract partial class RepositoryTestBase
         Func<IDatabaseRepository<User>> filteredUserRepositoryFactory,
         Func<IDatabaseRepository<DataCenter>> dataCenterRepositoryFactory)
     {
+        // cleared before the repositories are built, not after: the retry tests install a flaky
+        // proxy and leave it installed, and the factories below bake whatever proxy is set into
+        // the repositories they return. Clearing it afterwards left the next test running against
+        // the previous test's fault injection, which only stayed hidden while no test that
+        // replaces an entity happened to run right after one of them
+        DatabaseRepositoryFactoryFactory.DatabaseClientProxy = null;
+
         MicrosoftUserRepository = userRepositoryFactory();
         FilteredUserRepository = filteredUserRepositoryFactory();
         UserRepositoryFactory = userRepositoryFactory;
         DataCenterRepository = dataCenterRepositoryFactory();
-        DatabaseRepositoryFactoryFactory.DatabaseClientProxy = null;
     }
 
     protected IDatabaseRepository<User> MicrosoftUserRepository { get; set; }

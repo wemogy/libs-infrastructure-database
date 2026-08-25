@@ -11,6 +11,7 @@ using Wemogy.Core.ValueObjects.Abstractions;
 using Wemogy.Infrastructure.Database.Core.Abstractions;
 using Wemogy.Infrastructure.Database.Core.Attributes;
 using Wemogy.Infrastructure.Database.Core.Enums;
+using Wemogy.Infrastructure.Database.Core.Models;
 using Wemogy.Infrastructure.Database.Core.Plugins.MultiTenantDatabase.Abstractions;
 using Wemogy.Infrastructure.Database.Core.Repositories;
 using Wemogy.Infrastructure.Database.Core.ValueObjects;
@@ -23,6 +24,13 @@ public partial class MultiTenantDatabaseRepository<TEntity> : IDatabaseRepositor
     private const string PrefixSeparator = "__";
     private readonly IDatabaseRepository<TEntity> _databaseRepository;
     private readonly IDatabaseTenantProvider _databaseTenantProvider;
+    private readonly PartitionKeyDefinition _partitionKeyDefinition;
+
+    /// <summary>
+    ///     The property holding the broadest component of the partition key. The tenant prefix is
+    ///     composed into that component alone, so the hierarchy below it keeps the meaning the
+    ///     entity gave it, and the prefix guard every read path adds stays a single StartsWith.
+    /// </summary>
     private readonly PropertyInfo _partitionKeyProperty;
 
     private Expression<Func<TEntity, bool>> PartitionKeyPredicate { get; }
@@ -36,13 +44,8 @@ public partial class MultiTenantDatabaseRepository<TEntity> : IDatabaseRepositor
         _databaseRepository = databaseRepository;
         _databaseTenantProvider = databaseTenantProvider;
         SoftDelete = databaseRepository.SoftDelete;
-        _partitionKeyProperty = typeof(TEntity).GetPropertyByCustomAttribute<PartitionKeyAttribute>()!;
-        if (_partitionKeyProperty == null)
-        {
-            throw Error.Unexpected(
-                "PartitionKeyPropertyNotFound",
-                $"There is not partition key specified for the model {typeof(TEntity).FullName}");
-        }
+        _partitionKeyDefinition = PartitionKeyDefinition.Resolve(typeof(TEntity));
+        _partitionKeyProperty = _partitionKeyDefinition.FirstProperty;
 
         PartitionKeyPredicate = GetPartitionKeyPrefixCondition();
     }
@@ -60,9 +63,30 @@ public partial class MultiTenantDatabaseRepository<TEntity> : IDatabaseRepositor
         fieldInfo?.SetValue(exception, message);
     }
 
-    private string BuildComposedPartitionKey(string? partitionKey)
+    private string BuildComposedPartitionKeyComponent(string? partitionKey)
     {
         return $"{GetPartitionKeyPrefix()}{PrefixSeparator}{partitionKey}";
+    }
+
+    /// <summary>
+    ///     Composes the tenant prefix into the broadest component of the key and leaves the
+    ///     narrower ones as they are.
+    /// </summary>
+    private PartitionKeyValue BuildComposedPartitionKey(PartitionKeyValue partitionKey)
+    {
+        return partitionKey.WithComponent(
+            0,
+            BuildComposedPartitionKeyComponent(partitionKey[0]));
+    }
+
+    /// <summary>
+    ///     Strips the tenant prefix off the broadest component of the key.
+    /// </summary>
+    private PartitionKeyValue StripComposedPartitionKey(PartitionKeyValue partitionKey)
+    {
+        return partitionKey.WithComponent(
+            0,
+            RemovePartitionKeyPrefix(partitionKey[0]));
     }
 
     private string GetPartitionKeyPrefix()
@@ -76,11 +100,11 @@ public partial class MultiTenantDatabaseRepository<TEntity> : IDatabaseRepositor
 
         _partitionKeyProperty.SetValue(
             entity,
-            BuildComposedPartitionKey(partitionKeyValue));
+            BuildComposedPartitionKeyComponent(partitionKeyValue));
 
         return () =>
         {
-            ReplacePartitionKey(
+            ReplaceFirstPartitionKeyComponent(
                 entity,
                 partitionKeyValue);
         };
@@ -89,13 +113,13 @@ public partial class MultiTenantDatabaseRepository<TEntity> : IDatabaseRepositor
     private void RemovePartitionKeyPrefix(TEntity entity)
     {
         var prefixedPartitionKeyValue = (string)_partitionKeyProperty.GetValue(entity)!;
-        var valueToTrimOut = BuildComposedPartitionKey(null);
+        var valueToTrimOut = BuildComposedPartitionKeyComponent(null);
 
         var partitionKeyValue = prefixedPartitionKeyValue.Replace(
             valueToTrimOut,
             null);
 
-        ReplacePartitionKey(
+        ReplaceFirstPartitionKeyComponent(
             entity,
             partitionKeyValue);
     }
@@ -156,12 +180,12 @@ public partial class MultiTenantDatabaseRepository<TEntity> : IDatabaseRepositor
                 case Comparator.StartsWith:
                 case Comparator.StartsWithIgnoreCase:
                     var stringPartitionKeyValue = partitionKeyFilter.Value.FromJson<string>();
-                    partitionKeyFilter.Value = BuildComposedPartitionKey(stringPartitionKeyValue).ToJson();
+                    partitionKeyFilter.Value = BuildComposedPartitionKeyComponent(stringPartitionKeyValue).ToJson();
                     break;
                 case Comparator.IsOneOf:
                     var stringListPartitionKeyValue = partitionKeyFilter.Value.FromJson<List<string>>() ?? new List<string>();
                     partitionKeyFilter.Value = stringListPartitionKeyValue
-                        .Select(BuildComposedPartitionKey)
+                        .Select(BuildComposedPartitionKeyComponent)
                         .ToList()
                         .ToJson();
                     break;
@@ -187,11 +211,22 @@ public partial class MultiTenantDatabaseRepository<TEntity> : IDatabaseRepositor
         };
     }
 
-    private void ReplacePartitionKey(TEntity entity, string partitionKeyValue)
+    private void ReplaceFirstPartitionKeyComponent(TEntity entity, string partitionKeyValue)
     {
         _partitionKeyProperty.SetValue(
             entity,
             partitionKeyValue);
+    }
+
+    /// <summary>
+    ///     Writes the unprefixed key the caller passed in back onto the entity the provider
+    ///     returned, so the entity a caller gets never carries the tenant prefix.
+    /// </summary>
+    private void ReplacePartitionKey(TEntity entity, PartitionKeyValue partitionKey)
+    {
+        _partitionKeyDefinition.SetValue(
+            entity,
+            partitionKey);
     }
 
     private Expression<Func<TEntity, bool>> BuildComposedPartitionKeyPredicate(
@@ -200,7 +235,7 @@ public partial class MultiTenantDatabaseRepository<TEntity> : IDatabaseRepositor
         return PartitionKeyPredicate.And(
             predicate.ModifyPropertyValue(
                 _partitionKeyProperty.Name,
-                BuildComposedPartitionKey));
+                BuildComposedPartitionKeyComponent));
     }
 
     private void CleanupException(Exception exception)
@@ -218,7 +253,7 @@ public partial class MultiTenantDatabaseRepository<TEntity> : IDatabaseRepositor
 
     private string RemovePartitionKeyPrefix(string partitionKey)
     {
-        var prefixToTrimOut = BuildComposedPartitionKey(null);
+        var prefixToTrimOut = BuildComposedPartitionKeyComponent(null);
         return partitionKey.Replace(
             prefixToTrimOut,
             null);

@@ -20,8 +20,29 @@ public class CosmosMultiTenantDatabaseRepositoryTests : MultiTenantDatabaseRepos
             GetFactoryUser(new MicrosoftTenantProvider()),
             GetFactoryFilteredUser(new MicrosoftTenantProvider()),
             GetFactoryUser(new AppleTenantProvider()),
-            GetFactoryDataCenter(new DataCenterTenantProvider()))
+            GetFactoryDataCenter(new DataCenterTenantProvider()),
+            GetFactoryUsageEvent(new DataCenterTenantProvider()))
     {
+        // the emulator's init script cannot declare a hierarchical key, so this container is
+        // created through the SDK before the first operation runs against it
+        TestingContainers.EnsureHierarchicalContainerExists();
+    }
+
+    private static Func<IDatabaseRepository<UsageEvent>> GetFactoryUsageEvent(IDatabaseTenantProvider provider)
+    {
+        return () =>
+        {
+            var cosmosDatabaseClientFactory = new CosmosDatabaseClientFactory(
+                TestingConstants.ConnectionString,
+                TestingConstants.DatabaseName,
+                true);
+
+            var multiTenantRepository = new MultiTenantDatabaseRepositoryFactory(
+                cosmosDatabaseClientFactory,
+                provider).CreateInstance<IUsageEventRepository>();
+
+            return multiTenantRepository;
+        };
     }
 
     private static Func<IDatabaseRepository<User>> GetFactoryUser(IDatabaseTenantProvider provider)

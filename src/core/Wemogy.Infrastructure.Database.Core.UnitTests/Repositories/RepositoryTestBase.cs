@@ -11,7 +11,8 @@ public abstract partial class RepositoryTestBase
     protected RepositoryTestBase(
         Func<IDatabaseRepository<User>> userRepositoryFactory,
         Func<IDatabaseRepository<User>> filteredUserRepositoryFactory,
-        Func<IDatabaseRepository<DataCenter>> dataCenterRepositoryFactory)
+        Func<IDatabaseRepository<DataCenter>> dataCenterRepositoryFactory,
+        Func<IDatabaseRepository<UsageEvent>> usageEventRepositoryFactory)
     {
         // cleared before the repositories are built, not after: the retry tests install a flaky
         // proxy and leave it installed, and the factories below bake whatever proxy is set into
@@ -24,16 +25,24 @@ public abstract partial class RepositoryTestBase
         FilteredUserRepository = filteredUserRepositoryFactory();
         UserRepositoryFactory = userRepositoryFactory;
         DataCenterRepository = dataCenterRepositoryFactory();
+        UsageEventRepository = usageEventRepositoryFactory();
     }
 
     protected IDatabaseRepository<User> MicrosoftUserRepository { get; set; }
     protected IDatabaseRepository<User> FilteredUserRepository { get; set; }
     protected IDatabaseRepository<DataCenter> DataCenterRepository { get; set; }
+
+    /// <summary>
+    ///     A repository over an entity partitioned by a hierarchy of three values, so every
+    ///     provider is held to the same behaviour for hierarchical partition keys.
+    /// </summary>
+    protected IDatabaseRepository<UsageEvent> UsageEventRepository { get; set; }
     private Func<IDatabaseRepository<User>> UserRepositoryFactory { get; }
 
     protected virtual async Task ResetAsync()
     {
         await MicrosoftUserRepository.DeleteAsync(x => true);
         await DataCenterRepository.DeleteAsync(x => true);
+        await UsageEventRepository.DeleteAsync(x => true);
     }
 }

@@ -12,7 +12,8 @@ public class InMemoryDatabaseRepositoryTests : RepositoryTestBase
         : base(
             InMemoryDatabaseRepositoryFactory.CreateInstance<IUserRepository>,
             InMemoryDatabaseRepositoryFactory.CreateInstance<IFilteredUserRepository>,
-            InMemoryDatabaseRepositoryFactory.CreateInstance<IDataCenterRepository>)
+            InMemoryDatabaseRepositoryFactory.CreateInstance<IDataCenterRepository>,
+            InMemoryDatabaseRepositoryFactory.CreateInstance<IUsageEventRepository>)
     {
     }
 }

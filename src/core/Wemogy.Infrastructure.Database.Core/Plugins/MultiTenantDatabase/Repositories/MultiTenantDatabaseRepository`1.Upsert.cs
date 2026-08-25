@@ -1,5 +1,6 @@
 using System;
 using System.Threading.Tasks;
+using Wemogy.Infrastructure.Database.Core.ValueObjects;
 
 namespace Wemogy.Infrastructure.Database.Core.Plugins.MultiTenantDatabase.Repositories;
 
@@ -47,7 +48,7 @@ public partial class MultiTenantDatabaseRepository<TEntity>
     /// <param name="entity">The entity to upsert.</param>
     /// <param name="partitionKey">The partition key to use for the operation.</param>
     /// <returns>The upserted entity.</returns>
-    public async Task<TEntity> UpsertAsync(TEntity entity, string partitionKey)
+    public async Task<TEntity> UpsertAsync(TEntity entity, PartitionKeyValue partitionKey)
     {
         // the entity's own partition key has to be prefixed as well, otherwise the stored
         // document would disagree with the partition it was written to

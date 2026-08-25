@@ -34,8 +34,17 @@ public class CosmosDatabaseRepositoryTests : RepositoryTestBase
             TestingConstants.ConnectionString,
             TestingConstants.DatabaseName,
             true,
+            true),
+            () => CosmosDatabaseRepositoryFactory.CreateInstance<IUsageEventRepository>(
+            TestingConstants.ConnectionString,
+            TestingConstants.DatabaseName,
+            true,
             true))
     {
+        // the emulator's init script cannot declare a hierarchical key, so this container is
+        // created through the SDK before the first operation runs against it
+        TestingContainers.EnsureHierarchicalContainerExists();
+
         _userWithETagRepository = CosmosDatabaseRepositoryFactory.CreateInstance<IUserWithETagRepository>(
             TestingConstants.ConnectionString,
             TestingConstants.DatabaseName,

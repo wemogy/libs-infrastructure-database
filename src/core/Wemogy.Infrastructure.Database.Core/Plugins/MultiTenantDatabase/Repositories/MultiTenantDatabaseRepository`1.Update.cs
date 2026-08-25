@@ -1,11 +1,12 @@
 using System;
 using System.Threading.Tasks;
+using Wemogy.Infrastructure.Database.Core.ValueObjects;
 
 namespace Wemogy.Infrastructure.Database.Core.Plugins.MultiTenantDatabase.Repositories;
 
 public partial class MultiTenantDatabaseRepository<TEntity>
 {
-    public Task<TEntity> UpdateAsync(string id, string partitionKey, Action<TEntity> updateAction)
+    public Task<TEntity> UpdateAsync(string id, PartitionKeyValue partitionKey, Action<TEntity> updateAction)
     {
         return UpdateAsync(
             id,
@@ -28,7 +29,7 @@ public partial class MultiTenantDatabaseRepository<TEntity>
             });
     }
 
-    public async Task<TEntity> UpdateAsync(string id, string partitionKey, Func<TEntity, Task> updateAction)
+    public async Task<TEntity> UpdateAsync(string id, PartitionKeyValue partitionKey, Func<TEntity, Task> updateAction)
     {
         var updated = await _databaseRepository.UpdateAsync(
             id,

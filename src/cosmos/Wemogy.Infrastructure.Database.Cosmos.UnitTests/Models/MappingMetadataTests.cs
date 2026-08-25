@@ -2,6 +2,8 @@ using System;
 using System.Collections.Generic;
 using Newtonsoft.Json.Linq;
 using Shouldly;
+using Wemogy.Core.Errors.Exceptions;
+using Wemogy.Infrastructure.Database.Core.UnitTests.Fakes.Entities;
 using Wemogy.Infrastructure.Database.Cosmos.Models;
 using Xunit;
 
@@ -156,6 +158,89 @@ public class MappingMetadataTests
 
         // Assert
         value.ShouldBe(1000000L);
+    }
+
+    [Fact]
+    public void Deserialize_ShouldScaleAFilterValueOfAFixedPointMember()
+    {
+        // Arrange
+        var mappingMetadata = new MappingMetadata();
+        mappingMetadata.InitializeUsingReflection(typeof(PatchTarget));
+
+        // Act: the property arrives camelCased, and the document carries value * 10^Scale
+        var balance = mappingMetadata.Deserialize(
+            "balance",
+            "12.5");
+        var amount = mappingMetadata.Deserialize(
+            "inner.amount",
+            "1.2345");
+
+        // Assert
+        balance.ShouldBe(12500000L);
+        amount.ShouldBe(12345L);
+    }
+
+    [Fact]
+    public void Deserialize_ShouldLeaveADecimalWithoutTheAttributeAlone()
+    {
+        // Arrange
+        var mappingMetadata = new MappingMetadata();
+        mappingMetadata.InitializeUsingReflection(typeof(PatchTarget));
+
+        // Act
+        var value = mappingMetadata.Deserialize(
+            "money",
+            "9.99");
+
+        // Assert
+        value.ShouldBe(9.99d);
+    }
+
+    [Fact]
+    public void Deserialize_ShouldHandTheArrayOfAnIsOneOfFilterThroughUnscaled()
+    {
+        // Arrange: the query builder re-enters this method once per item, which is where the
+        // scaling happens
+        var mappingMetadata = new MappingMetadata();
+        mappingMetadata.InitializeUsingReflection(typeof(PatchTarget));
+
+        // Act
+        var value = mappingMetadata.Deserialize(
+            "balance",
+            "[0.5,1]");
+
+        // Assert
+        value.ShouldBeOfType<JArray>().Count.ShouldBe(2);
+    }
+
+    [Fact]
+    public void Deserialize_ShouldRefuseAFilterValueItCannotScale()
+    {
+        // Arrange
+        var mappingMetadata = new MappingMetadata();
+        mappingMetadata.InitializeUsingReflection(typeof(PatchTarget));
+
+        // Act & Assert: reported rather than compared unscaled against the stored integer
+        var exception = Should.Throw<UnexpectedErrorException>(
+            () => mappingMetadata.Deserialize(
+                "balance",
+                "\"not a number\""));
+        exception.Code.ShouldBe("FixedPointFilterValueNotSupported");
+    }
+
+    [Fact]
+    public void Deserialize_ShouldRefuseAFilterValueFinerThanTheDeclaredScale()
+    {
+        // Arrange
+        var mappingMetadata = new MappingMetadata();
+        mappingMetadata.InitializeUsingReflection(typeof(PatchTarget));
+
+        // Act & Assert
+        var exception = Should.Throw<UnexpectedErrorException>(
+            () => mappingMetadata.Deserialize(
+                "balance",
+                "0.5000001"));
+        exception.Code.ShouldBe("FixedPointPrecisionExceeded");
     }
 
     [Fact]

@@ -57,6 +57,7 @@ public abstract class DatabaseTransactionalBatchBase<TEntity> : IDatabaseTransac
         EnsureNotExecuted();
         EnsureCapacity();
         EnsureSamePartition(entity);
+        FixedPointMetadata.EnsureValuesAreValid(entity);
         ApplyCreate(entity);
         OperationCount++;
         return this;
@@ -68,6 +69,7 @@ public abstract class DatabaseTransactionalBatchBase<TEntity> : IDatabaseTransac
         EnsureNotExecuted();
         EnsureCapacity();
         EnsureSamePartition(entity);
+        FixedPointMetadata.EnsureValuesAreValid(entity);
         ApplyReplace(entity);
         OperationCount++;
         return this;
@@ -79,6 +81,7 @@ public abstract class DatabaseTransactionalBatchBase<TEntity> : IDatabaseTransac
         EnsureNotExecuted();
         EnsureCapacity();
         EnsureSamePartition(entity);
+        FixedPointMetadata.EnsureValuesAreValid(entity);
         ApplyUpsert(entity);
         OperationCount++;
         return this;

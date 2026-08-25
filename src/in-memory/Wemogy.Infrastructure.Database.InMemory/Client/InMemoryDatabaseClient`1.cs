@@ -131,6 +131,7 @@ namespace Wemogy.Infrastructure.Database.InMemory.Client
 
         public Task<TEntity> CreateAsync(TEntity entity)
         {
+            EnsureFixedPointValuesAreValid(entity);
             var id = ResolveIdValue(entity);
             var partitionKeyValue = ResolvePartitionKey(entity);
 
@@ -154,6 +155,7 @@ namespace Wemogy.Infrastructure.Database.InMemory.Client
 
         public Task<TEntity> ReplaceAsync(TEntity entity)
         {
+            EnsureFixedPointValuesAreValid(entity);
             var id = ResolveIdValue(entity);
             var partitionKeyValue = ResolvePartitionKey(entity);
 
@@ -197,6 +199,7 @@ namespace Wemogy.Infrastructure.Database.InMemory.Client
 
         public Task<TEntity> UpsertAsync(TEntity entity, PartitionKeyValue partitionKey)
         {
+            EnsureFixedPointValuesAreValid(entity);
             EnsurePartitionKeyDepth(partitionKey);
 
             var id = ResolveIdValue(entity);

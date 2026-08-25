@@ -5,6 +5,7 @@ using System.Text.Json.Serialization;
 using Shouldly;
 using Wemogy.Infrastructure.Database.Core.Attributes;
 using Wemogy.Infrastructure.Database.Cosmos.Serialization;
+using Wemogy.Infrastructure.Database.Cosmos.UnitTests.Fakes;
 using Xunit;
 
 namespace Wemogy.Infrastructure.Database.Cosmos.UnitTests.Serialization;
@@ -288,6 +289,45 @@ public class CosmosEntitySerializerTests
             .ShouldBe("_etag");
         serializer.SerializeMemberName(typeof(EntityWithETag).GetProperty(nameof(EntityWithETag.TenantId))!)
             .ShouldBe("tenantId");
+    }
+
+    [Fact]
+    public void FromStream_ShouldReadAV4DocumentWhoseTimestampCarriesNoOffset()
+    {
+        // Arrange: a DateTime of Kind.Unspecified was written without any offset at all, which
+        // System.Text.Json would otherwise read in the zone of the reading machine
+        var json = "{\"id\":\"1\",\"tenantId\":\"tenant\",\"createdAt\":\"2026-08-25T10:00:00\","
+            + "\"updatedAt\":\"2026-08-25T10:00:00\"}";
+
+        // Act
+        var entity = FromJson<UserWithETag>(json);
+
+        // Assert
+        entity.CreatedAt.ShouldBe(new DateTimeOffset(2026, 8, 25, 10, 0, 0, TimeSpan.Zero));
+        entity.CreatedAt.Offset.ShouldBe(TimeSpan.Zero);
+        entity.UpdatedAt.ShouldBe(entity.CreatedAt);
+    }
+
+    [Fact]
+    public void ToStream_ShouldStillSpellAnEntityTimestampWithTheZSuffix()
+    {
+        // Arrange: the [UtcDateTimeOffset] attribute takes precedence over the converter on the
+        // options, so it has to carry the write side as well - otherwise adding it would have
+        // quietly reintroduced the "+00:00" spelling on the two fields that matter most
+        var entity = new UserWithETag
+        {
+            TenantId = "tenant",
+            CreatedAt = new DateTimeOffset(2026, 8, 25, 10, 0, 0, TimeSpan.Zero),
+            UpdatedAt = new DateTimeOffset(2026, 8, 25, 11, 0, 0, TimeSpan.Zero)
+        };
+
+        // Act
+        var json = ToJson(entity);
+
+        // Assert
+        json.ShouldContain("\"createdAt\":\"2026-08-25T10:00:00Z\"");
+        json.ShouldContain("\"updatedAt\":\"2026-08-25T11:00:00Z\"");
+        json.ShouldNotContain("+00:00");
     }
 
     private string ToJson<T>(T input)

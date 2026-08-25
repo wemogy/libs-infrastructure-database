@@ -7,6 +7,7 @@ using System.Text.Json.Serialization;
 using System.Text.Json.Serialization.Metadata;
 using Microsoft.Azure.Cosmos;
 using Wemogy.Infrastructure.Database.Core.Attributes;
+using Wemogy.Infrastructure.Database.Core.Serialization;
 
 namespace Wemogy.Infrastructure.Database.Cosmos.Serialization
 {

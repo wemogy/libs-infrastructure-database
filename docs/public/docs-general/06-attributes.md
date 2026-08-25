@@ -14,9 +14,11 @@ These attributes are applied to properties of an entity class.
 | `[PartitionKey]`   | Property | Yes      | Marks the property used as the partition key (see [Getting Started](./02-getting-started.md#partition-key)). |
 | `[SoftDeleteFlag]` | Property | No       | Marks the `bool` property that flags an entity as soft-deleted (see [Soft Delete](./07-soft-delete.md)). |
 | `[ETag]`           | Property | No       | Opts the entity into optimistic concurrency (see [Optimistic Concurrency](./09-optimistic-concurrency.md)). |
+| `[UtcDateTimeOffset]` | Property | No    | Reads a `DateTimeOffset` whose document was written from a `DateTime` as UTC rather than in the zone of the reading machine, and writes a zero offset as `...Z` (see [Migrating to v5](./14-migrating-to-v5.md#reading-documents-written-before-the-upgrade)). |
 
 When you derive from `EntityBase`, `[Id]` and `[SoftDeleteFlag]` are already
-provided. `GlobalEntityBase` additionally provides a global `[PartitionKey]`.
+provided, and both timestamps already carry `[UtcDateTimeOffset]`.
+`GlobalEntityBase` additionally provides a global `[PartitionKey]`.
 
 ```csharp title="Entity using property attributes"
 using Wemogy.Infrastructure.Database.Core.Abstractions;

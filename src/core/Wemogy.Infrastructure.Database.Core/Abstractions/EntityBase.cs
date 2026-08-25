@@ -26,7 +26,9 @@ public abstract class EntityBase : IEntityBase
     [ETag]
     public string? ETag { get; init; }
 
+    [UtcDateTimeOffset]
     public DateTimeOffset CreatedAt { get; set; }
 
+    [UtcDateTimeOffset]
     public DateTimeOffset UpdatedAt { get; set; }
 }

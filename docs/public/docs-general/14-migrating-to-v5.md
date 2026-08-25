@@ -102,7 +102,10 @@ an ascending page hand back the last row of the previous one.
 ## `CreatedAt` and `UpdatedAt` become `DateTimeOffset`
 
 ```csharp
+[UtcDateTimeOffset]
 public DateTimeOffset CreatedAt { get; set; }
+
+[UtcDateTimeOffset]
 public DateTimeOffset UpdatedAt { get; set; }
 ```
 
@@ -127,6 +130,44 @@ DateTime lastWrite = user.UpdatedAt;
 // after
 DateTime lastWrite = user.UpdatedAt.UtcDateTime;
 ```
+
+### Reading documents written before the upgrade
+
+`EntityBase` marks both timestamps with `[UtcDateTimeOffset]`, so **no existing document needs
+migrating**. The attribute handles the shapes a `DateTime` was stored in:
+
+| Stored value | Read as |
+| --- | --- |
+| `"2026-08-25T10:00:00Z"` (`Kind.Utc`) | `2026-08-25T10:00:00 +00:00` |
+| `"2026-08-25T12:00:00+02:00"` (`Kind.Local`) | `2026-08-25T12:00:00 +02:00`, offset kept |
+| `"2026-08-25T10:00:00"` (`Kind.Unspecified`) | `2026-08-25T10:00:00 +00:00` |
+| `1787652000000` (epoch ms, the shape `Wemogy.Core` writes a `DateTime` in) | `2026-08-25T10:00:00 +00:00` |
+
+The third row is the one that matters most, and it is **not** an exception you would have noticed.
+A `DateTime` whose `Kind` was `Unspecified` was stored without any offset at all, and
+`System.Text.Json` reads such a value into the offset of the *reading machine* — so the same
+document would mean 10:00 UTC in a container and 08:00 UTC on a developer's machine in Berlin.
+The attribute takes it as UTC, which is what the library always meant it to be.
+
+Because it is a property attribute rather than a converter on the options, it holds wherever the
+entity is deserialized — including through your own `JsonSerializerOptions` and through
+`Wemogy.Core`'s `Clone()`, neither of which knows about this library's serializer.
+
+**If you implement `IEntityBase` directly** rather than deriving from `EntityBase`, put it on both
+properties yourself:
+
+```csharp
+using Wemogy.Infrastructure.Database.Core.Attributes;
+
+[UtcDateTimeOffset]
+public DateTimeOffset CreatedAt { get; set; }
+
+[UtcDateTimeOffset]
+public DateTimeOffset UpdatedAt { get; set; }
+```
+
+It is also worth putting on any `DateTimeOffset` of your own whose documents were written from a
+`DateTime`, for exactly the same reason.
 
 ### Why your existing documents are safe
 

@@ -242,10 +242,13 @@ namespace Wemogy.Infrastructure.Database.InMemory.Client
                             partition.Value,
                             cancellationToken))
                     {
+                        // the replay stays owed, both here and on the lease, so a failure or a
+                        // shutdown half way through does not lose the rest of the snapshot
                         return;
                     }
                 }
 
+                _client.ReplayHandled(_processorName);
                 _replay = null;
             }
 
@@ -377,9 +380,11 @@ namespace Wemogy.Infrastructure.Database.InMemory.Client
 
         private IEnumerable<IReadOnlyCollection<TChange>> Batch<TChange>(List<TChange> changes)
         {
+            // a non-positive value is rejected when the processor is created, so it cannot mean
+            // "unlimited" here the way it would if it were only defaulted away
             var maxItems = _options?.MaxItemsPerBatch;
 
-            if (maxItems == null || maxItems.Value <= 0 || changes.Count <= maxItems.Value)
+            if (maxItems == null || changes.Count <= maxItems.Value)
             {
                 if (changes.Count > 0)
                 {

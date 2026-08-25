@@ -36,6 +36,18 @@ public static class ChangeFeedError
     }
 
     /// <summary>
+    ///     <see cref="Models.ChangeFeedProcessorOptions.MaxItemsPerBatch"/> was zero or negative.
+    ///     Rejected rather than read as "unlimited", so the same configuration does not mean two
+    ///     different things depending on the provider.
+    /// </summary>
+    public static UnexpectedErrorException MaxItemsPerBatchIsNotPositive(int maxItemsPerBatch)
+    {
+        return Error.Unexpected(
+            "ChangeFeedMaxItemsPerBatchIsNotPositive",
+            $"The change feed option MaxItemsPerBatch has to be greater than zero, but was {maxItemsPerBatch}. Leave it unset to let the provider choose the batch size");
+    }
+
+    /// <summary>
     ///     The processor is already running. Starting it twice would take a second set of leases
     ///     under the same instance name.
     /// </summary>

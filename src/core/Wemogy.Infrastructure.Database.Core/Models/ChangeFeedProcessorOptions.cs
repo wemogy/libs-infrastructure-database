@@ -34,9 +34,19 @@ public class ChangeFeedProcessorOptions
     public string? InstanceName { get; set; }
 
     /// <summary>
-    ///     The largest number of changes handed to the handler in one batch. Left to the provider by
+    ///     The largest number of changes the handler is invoked with at once. Left to the provider by
     ///     default. Lowering it bounds how much work a failing batch repeats, raising it lets a
     ///     projection amortize its own writes over more changes.
+    ///     <para>
+    ///         This is a bound on what the *handler* sees, not on what the provider reads: Cosmos DB
+    ///         treats its own batch size as a hint and may read more at once, notably to keep the
+    ///         writes of one transactional batch together, so the provider splits what it read before
+    ///         handing it over. Both providers therefore honour the same bound.
+    ///     </para>
+    ///     <para>
+    ///         Has to be greater than zero. Zero or negative is rejected rather than read as
+    ///         "unlimited", so the same configuration cannot mean two things on two providers.
+    ///     </para>
     /// </summary>
     public int? MaxItemsPerBatch { get; set; }
 

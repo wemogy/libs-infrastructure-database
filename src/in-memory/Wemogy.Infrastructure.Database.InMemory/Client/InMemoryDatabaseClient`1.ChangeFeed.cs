@@ -26,11 +26,12 @@ namespace Wemogy.Infrastructure.Database.InMemory.Client
             new List<InMemoryChangeRecord<TEntity>>();
 
         /// <summary>
-        ///     The position each processor name has read up to. Survives a processor being stopped,
-        ///     so a processor restarted under the same name continues where it left off rather than
-        ///     replaying or skipping - which is what the leases of Cosmos DB do.
+        ///     What each processor name has read up to, and whether it still owes a replay. Survives
+        ///     a processor being stopped, so one restarted under the same name continues where it left
+        ///     off rather than replaying or skipping - which is what the leases of Cosmos DB do.
         /// </summary>
-        private static readonly Dictionary<string, long> Checkpoints = new Dictionary<string, long>();
+        private static readonly Dictionary<string, InMemoryChangeFeedLease> Leases =
+            new Dictionary<string, InMemoryChangeFeedLease>();
 
         private static readonly List<InMemoryChangeFeedProcessor<TEntity>> RunningProcessors =
             new List<InMemoryChangeFeedProcessor<TEntity>>();
@@ -46,7 +47,7 @@ namespace Wemogy.Infrastructure.Database.InMemory.Client
             ChangeFeedHandler<TEntity> onChanges,
             ChangeFeedProcessorOptions? options)
         {
-            EnsureProcessorNameIsNotEmpty(processorName);
+            EnsureOptionsAreValid(processorName, options);
 
             return new InMemoryChangeFeedProcessor<TEntity>(
                 this,
@@ -61,7 +62,7 @@ namespace Wemogy.Infrastructure.Database.InMemory.Client
             AllVersionsAndDeletesChangeFeedHandler<TEntity> onChanges,
             ChangeFeedProcessorOptions? options)
         {
-            EnsureProcessorNameIsNotEmpty(processorName);
+            EnsureOptionsAreValid(processorName, options);
 
             if (options?.StartFromBeginning == true)
             {
@@ -97,36 +98,49 @@ namespace Wemogy.Infrastructure.Database.InMemory.Client
         {
             lock (Gate)
             {
-                if (Checkpoints.TryGetValue(
+                if (Leases.TryGetValue(
                         processorName,
-                        out var checkpoint))
+                        out var lease))
                 {
-                    // a checkpoint outranks the start position the options ask for, the same way an
-                    // existing lease does: restarting a processor must not replay what it handled
-                    processor.Cursor = checkpoint;
-                    replay = null;
+                    // the lease outranks the start position the options ask for, the same way an
+                    // existing Cosmos lease does: restarting a processor must not replay what it
+                    // handled. A replay it never finished is still owed, though
+                    processor.Cursor = lease.Checkpoint;
+                    replay = lease.ReplayPending ? SnapshotPartitions() : null;
                 }
                 else
                 {
                     processor.Cursor = _changeSequence;
-                    replay = startFromBeginning
-                        ? Partitions
-                            .Where(partition => partition.Value.Count > 0)
-                            .Select(partition => new KeyValuePair<string, List<TEntity>>(
-                                partition.Key,
-                                partition.Value.Select(entity => entity.Clone()).ToList()))
-                            .ToList()
-                        : null;
+                    replay = startFromBeginning ? SnapshotPartitions() : null;
 
-                    // the checkpoint is written when the processor first starts, not when it first
-                    // handles something - the way Cosmos creates the lease at start. Without it a
-                    // processor that was stopped before anything happened would start at the end of
-                    // the feed again and skip everything written while it was down, and the change
-                    // log would drop those writes for lack of anyone to keep them for
-                    Checkpoints[processorName] = processor.Cursor;
+                    // the lease is written when the processor first starts, not when it first handles
+                    // something - the way Cosmos creates its lease at start. Without it a processor
+                    // that was stopped before anything happened would start at the end of the feed
+                    // again and skip everything written while it was down, and the change log would
+                    // drop those writes for lack of anyone to keep them for
+                    Leases.Add(
+                        processorName,
+                        new InMemoryChangeFeedLease(processor.Cursor, startFromBeginning));
                 }
 
                 RunningProcessors.Add(processor);
+            }
+        }
+
+        /// <summary>
+        ///     Records that the replay a processor owed was handled, so a later start of the same name
+        ///     carries on with the log instead of replaying the store again.
+        /// </summary>
+        internal void ReplayHandled(string processorName)
+        {
+            lock (Gate)
+            {
+                if (Leases.TryGetValue(
+                        processorName,
+                        out var lease))
+                {
+                    lease.ReplayPending = false;
+                }
             }
         }
 
@@ -165,7 +179,14 @@ namespace Wemogy.Infrastructure.Database.InMemory.Client
             lock (Gate)
             {
                 processor.Cursor = sequence;
-                Checkpoints[processorName] = sequence;
+
+                if (Leases.TryGetValue(
+                        processorName,
+                        out var lease))
+                {
+                    lease.Checkpoint = sequence;
+                }
+
                 TrimChangeLog();
             }
         }
@@ -237,7 +258,7 @@ namespace Wemogy.Infrastructure.Database.InMemory.Client
         /// </summary>
         private static bool TryGetLowestReadPosition(out long lowestReadPosition)
         {
-            if (RunningProcessors.Count == 0 && Checkpoints.Count == 0)
+            if (RunningProcessors.Count == 0 && Leases.Count == 0)
             {
                 lowestReadPosition = 0;
                 return false;
@@ -252,21 +273,61 @@ namespace Wemogy.Infrastructure.Database.InMemory.Client
                     processor.Cursor);
             }
 
-            foreach (var checkpoint in Checkpoints.Values)
+            foreach (var lease in Leases.Values)
             {
                 lowestReadPosition = Math.Min(
                     lowestReadPosition,
-                    checkpoint);
+                    lease.Checkpoint);
             }
 
             return true;
         }
 
-        private static void EnsureProcessorNameIsNotEmpty(string processorName)
+        /// <summary>
+        ///     Forgets every change and every lease of this entity type, and moves the processors that
+        ///     are running to the end of the feed.
+        ///     <para>
+        ///         The change log has to keep every write after the lowest lease, because a stopped
+        ///         processor is entitled to resume from it - so a process that keeps creating
+        ///         processors under new names keeps growing it. A suite that creates many can call
+        ///         this in between; <c>DeleteAsync(x =&gt; true)</c> resets the documents, this resets
+        ///         what the feed remembers about them.
+        ///     </para>
+        /// </summary>
+        public static void ResetChangeFeed()
+        {
+            lock (Gate)
+            {
+                ChangeLog.Clear();
+                Leases.Clear();
+
+                foreach (var processor in RunningProcessors)
+                {
+                    processor.Cursor = _changeSequence;
+                }
+            }
+        }
+
+        private static List<KeyValuePair<string, List<TEntity>>> SnapshotPartitions()
+        {
+            return Partitions
+                .Where(partition => partition.Value.Count > 0)
+                .Select(partition => new KeyValuePair<string, List<TEntity>>(
+                    partition.Key,
+                    partition.Value.Select(entity => entity.Clone()).ToList()))
+                .ToList();
+        }
+
+        private static void EnsureOptionsAreValid(string processorName, ChangeFeedProcessorOptions? options)
         {
             if (string.IsNullOrWhiteSpace(processorName))
             {
                 throw ChangeFeedError.ProcessorNameIsEmpty();
+            }
+
+            if (options?.MaxItemsPerBatch <= 0)
+            {
+                throw ChangeFeedError.MaxItemsPerBatchIsNotPositive(options.MaxItemsPerBatch!.Value);
             }
         }
 
@@ -283,7 +344,7 @@ namespace Wemogy.Infrastructure.Database.InMemory.Client
         {
             var sequence = ++_changeSequence;
 
-            if (RunningProcessors.Count == 0 && Checkpoints.Count == 0)
+            if (RunningProcessors.Count == 0 && Leases.Count == 0)
             {
                 // nothing reads this store and nothing ever did, so there is nobody to keep the write
                 // for. The sequence still advances, so a processor starting afterwards starts behind

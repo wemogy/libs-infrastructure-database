@@ -294,6 +294,137 @@ public class InMemoryChangeFeedTests
     }
 
     [Fact]
+    public async Task ChangeFeed_ShouldStillOweAReplayThatWasNeverHandled()
+    {
+        // Arrange: the replay handler fails, so the snapshot it owed is never handled
+        var client = new InMemoryDatabaseClient<KeyedEntity>();
+        var partitionKey = NewPartitionKey();
+        var processorName = NewProcessorName();
+        await client.CreateAsync(NewEntity(partitionKey, "existing"));
+
+        var attempts = 0;
+        var firstRun = new Recorder(() =>
+        {
+            Interlocked.Increment(ref attempts);
+            throw new InvalidOperationException("the projection is not ready");
+        });
+
+        var options = new ChangeFeedProcessorOptions
+        {
+            StartFromBeginning = true,
+            PollInterval = TimeSpan.FromMilliseconds(10)
+        };
+        var processor = client.CreateChangeFeedProcessor(
+            processorName,
+            firstRun.Handle,
+            options);
+        await processor.StartAsync();
+        await WaitUntilAsync(() => Volatile.Read(ref attempts) > 0);
+        await processor.StopAsync();
+
+        // Act: restarted under the same name, this time without StartFromBeginning
+        var secondRun = new Recorder();
+        await using var resumedProcessor = client.CreateChangeFeedProcessor(
+            processorName,
+            secondRun.Handle,
+            null);
+        await resumedProcessor.StartAsync();
+
+        // Assert: the lease still owed the replay, so the document is not lost to a checkpoint that
+        // was written before the snapshot was ever handed over
+        await WaitUntilAsync(() => secondRun.For(partitionKey).Any(x => x.Key == "existing"));
+    }
+
+    [Fact]
+    public async Task ChangeFeed_ShouldNotReplayAgainOnceTheReplayWasHandled()
+    {
+        // Arrange
+        var client = new InMemoryDatabaseClient<KeyedEntity>();
+        var partitionKey = NewPartitionKey();
+        var processorName = NewProcessorName();
+        await client.CreateAsync(NewEntity(partitionKey, "existing"));
+
+        var firstRun = new Recorder();
+        var options = new ChangeFeedProcessorOptions { StartFromBeginning = true };
+        var processor = client.CreateChangeFeedProcessor(
+            processorName,
+            firstRun.Handle,
+            options);
+        await processor.StartAsync();
+        await WaitUntilAsync(() => firstRun.For(partitionKey).Any(x => x.Key == "existing"));
+        await processor.StopAsync();
+
+        // Act
+        var secondRun = new Recorder();
+        await using var resumedProcessor = client.CreateChangeFeedProcessor(
+            processorName,
+            secondRun.Handle,
+            options);
+        await resumedProcessor.StartAsync();
+        await client.CreateAsync(NewEntity(partitionKey, "after"));
+
+        // Assert: the replay was handled, so only the new write arrives
+        await WaitUntilAsync(() => secondRun.For(partitionKey).Any(x => x.Key == "after"));
+        secondRun.For(partitionKey).ShouldNotContain(x => x.Key == "existing");
+    }
+
+    [Fact]
+    public void CreateChangeFeedProcessor_ShouldRejectANonPositiveBatchSize()
+    {
+        // Arrange
+        var client = new InMemoryDatabaseClient<KeyedEntity>();
+        var recorder = new Recorder();
+        var options = new ChangeFeedProcessorOptions { MaxItemsPerBatch = 0 };
+
+        // Act & Assert: read as "unlimited" this used to mean something different here than the
+        // Cosmos SDK makes of it
+        Should.Throw<Wemogy.Core.Errors.Exceptions.UnexpectedErrorException>(
+                () =>
+                {
+                    client.CreateChangeFeedProcessor(
+                        NewProcessorName(),
+                        recorder.Handle,
+                        options);
+                })
+            .Code.ShouldBe("ChangeFeedMaxItemsPerBatchIsNotPositive");
+    }
+
+    [Fact]
+    public async Task ResetChangeFeed_ShouldForgetTheLeasesAndTheLog()
+    {
+        // Arrange: a processor that ran once leaves a lease behind, which keeps the log alive
+        var client = new InMemoryDatabaseClient<KeyedEntity>();
+        var partitionKey = NewPartitionKey();
+        var processorName = NewProcessorName();
+        var firstRun = new Recorder();
+        var processor = client.CreateChangeFeedProcessor(
+            processorName,
+            firstRun.Handle,
+            null);
+        await processor.StartAsync();
+        await client.CreateAsync(NewEntity(partitionKey, "before-reset"));
+        await WaitUntilAsync(() => firstRun.For(partitionKey).Count == 1);
+        await processor.StopAsync();
+
+        // Act
+        InMemoryDatabaseClient<KeyedEntity>.ResetChangeFeed();
+        await client.CreateAsync(NewEntity(partitionKey, "while-forgotten"));
+
+        var secondRun = new Recorder();
+        await using var resumedProcessor = client.CreateChangeFeedProcessor(
+            processorName,
+            secondRun.Handle,
+            null);
+        await resumedProcessor.StartAsync();
+        await client.CreateAsync(NewEntity(partitionKey, "after"));
+
+        // Assert: the lease is gone, so the same name starts at the end of the feed again and the
+        // write made while nothing was reading was not kept
+        await WaitUntilAsync(() => secondRun.For(partitionKey).Any(x => x.Key == "after"));
+        secondRun.For(partitionKey).ShouldNotContain(x => x.Key == "while-forgotten");
+    }
+
+    [Fact]
     public async Task ChangeFeed_ShouldSplitABatchAtTheConfiguredMaximum()
     {
         // Arrange
@@ -467,7 +598,15 @@ public class InMemoryChangeFeedTests
         public async Task HoldTheReaderAsync(Func<Task> write)
         {
             await write();
-            await _entered.Task;
+            await WaitUntilEnteredAsync();
+        }
+
+        /// <summary>
+        ///     Returns once the handler is inside the gate, for a read something else triggered.
+        /// </summary>
+        public Task WaitUntilEnteredAsync()
+        {
+            return _entered.Task;
         }
 
         public void Release()

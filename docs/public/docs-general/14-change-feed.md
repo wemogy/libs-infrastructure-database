@@ -144,7 +144,7 @@ await using var processor = userRepository.CreateAllVersionsAndDeletesChangeFeed
 | `Previous` | The document before the write; `null` for a create |
 | `IsTimeToLiveExpired` | Whether a delete was the time to live expiring rather than an explicit delete |
 
-Two constraints come with it:
+Three constraints come with it:
 
 - **`StartFromBeginning` is refused.** The previous versions and the deletes only exist inside the
   retention window of the container, so there is no beginning to read from. Asking for it throws
@@ -153,6 +153,13 @@ Two constraints come with it:
   retention window (`ChangeFeedPolicy.FullFidelityRetention`). A container without one delivers
   **no changes at all** rather than failing, which is a quiet way to lose an audit log — check the
   container before you rely on it.
+- **`Previous` is only meaningful on a container that retains previous versions.** Cosmos DB sends
+  an empty object rather than nothing for a version it does not carry, and an entity that fills in
+  its own id — as `EntityBase` does — is indistinguishable from a real document once deserialized.
+  The provider normalizes the version the operation rules out, so a create never carries a previous
+  version and a delete never a current one; what it cannot do is tell an unretained previous version
+  of a *replace* from a real one. Since the feed only delivers anything at all on a container with a
+  retention window, a replace that reaches your handler has one.
 
 ## The lease container (Cosmos DB)
 

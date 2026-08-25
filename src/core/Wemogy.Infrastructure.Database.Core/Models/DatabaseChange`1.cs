@@ -37,9 +37,18 @@ public class DatabaseChange<TEntity>
     ///     <see cref="DatabaseChangeOperation.Create"/>.
     ///     <para>
     ///         For a delete this is the document that was removed, which is the only place its
-    ///         contents are still available. Cosmos DB only retains previous versions for a
-    ///         container configured with a full fidelity retention window; without one, a replace
-    ///         arrives with no previous version attached.
+    ///         contents are still available.
+    ///     </para>
+    ///     <para>
+    ///         Only meaningful for a container that retains previous versions. Cosmos DB sends an
+    ///         empty object rather than nothing for a version it does not carry, and an entity that
+    ///         fills in its own id - as <see cref="Abstractions.EntityBase"/> does - is
+    ///         indistinguishable from a real document once deserialized. The provider normalizes the
+    ///         version the operation rules out, so a create never carries a previous one and a delete
+    ///         never a current one; what it cannot do is tell an unretained previous version of a
+    ///         *replace* from a real one. In practice Cosmos DB serves this feed only for a container
+    ///         with a full fidelity retention window, so a replace on a container that reaches this
+    ///         code has one.
     ///     </para>
     /// </summary>
     public TEntity? Previous { get; }

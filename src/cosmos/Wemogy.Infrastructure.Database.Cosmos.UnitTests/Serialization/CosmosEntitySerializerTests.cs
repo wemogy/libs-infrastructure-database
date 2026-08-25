@@ -259,6 +259,37 @@ public class CosmosEntitySerializerTests
         json.ShouldContain("\"firstname\":\"John\"");
     }
 
+    [Fact]
+    public void CreateDefaultOptions_ShouldCarryTheRulesIntoASerializerBuiltFromCustomOptions()
+    {
+        // Arrange: the way the migration guide tells a consumer to register a converter of their
+        // own. Starting from the default options is what keeps the naming and the [ETag] rules,
+        // and a converter added on top has to actually reach the document.
+        var options = CosmosEntitySerializer.CreateDefaultOptions();
+        options.Converters.Add(new UpperCaseStringJsonConverter());
+        var serializer = new CosmosEntitySerializer(options);
+        var entity = new EntityWithETag
+        {
+            Id = "1",
+            TenantId = "tenant",
+            Firstname = "John",
+            ETag = "\"some-etag\""
+        };
+
+        // Act
+        using var stream = serializer.ToStream(entity);
+        using var reader = new StreamReader(stream);
+        var json = reader.ReadToEnd();
+
+        // Assert
+        json.ShouldContain("\"firstname\":\"JOHN\"");
+        json.ShouldNotContain("_etag");
+        serializer.SerializeMemberName(typeof(EntityWithETag).GetProperty(nameof(EntityWithETag.ETag))!)
+            .ShouldBe("_etag");
+        serializer.SerializeMemberName(typeof(EntityWithETag).GetProperty(nameof(EntityWithETag.TenantId))!)
+            .ShouldBe("tenantId");
+    }
+
     private string ToJson<T>(T input)
     {
         using var stream = _serializer.ToStream(input);
@@ -284,6 +315,25 @@ public class CosmosEntitySerializerTests
 
         [ETag]
         public string? ETag { get; init; }
+    }
+
+    private class UpperCaseStringJsonConverter : System.Text.Json.Serialization.JsonConverter<string>
+    {
+        public override string? Read(
+            ref System.Text.Json.Utf8JsonReader reader,
+            Type typeToConvert,
+            System.Text.Json.JsonSerializerOptions options)
+        {
+            return reader.GetString();
+        }
+
+        public override void Write(
+            System.Text.Json.Utf8JsonWriter writer,
+            string value,
+            System.Text.Json.JsonSerializerOptions options)
+        {
+            writer.WriteStringValue(value.ToUpperInvariant());
+        }
     }
 
     private class EntityWithTimestamps

@@ -34,6 +34,19 @@ public abstract class DatabaseClientBase<TEntity>
         _eTagPropertyInfo = typeof(TEntity).GetPropertyByCustomAttribute<ETagAttribute>();
     }
 
+    /// <summary>
+    ///     Throws when the entity carries a decimal that the scale declared by its
+    ///     <see cref="FixedPointAttribute"/> cannot store exactly. Called by every provider before
+    ///     it writes, so the in-memory provider refuses the values Cosmos DB would refuse - and it
+    ///     is the reason a stored value is always exactly the scaled integer divided by its factor,
+    ///     which is what lets the two providers agree on what is stored.
+    /// </summary>
+    /// <param name="entity">The entity that is about to be written</param>
+    protected static void EnsureFixedPointValuesAreValid(TEntity entity)
+    {
+        FixedPointMetadata.EnsureValuesAreValid(entity);
+    }
+
     protected string ResolveIdValue(TEntity entity)
     {
         var idValue = (string)_idPropertyInfo.GetValue(entity)!;

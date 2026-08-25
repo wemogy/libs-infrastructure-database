@@ -3,12 +3,16 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using System.Text.RegularExpressions;
 using Microsoft.Azure.Cosmos;
 using Microsoft.Azure.Cosmos.Linq;
 using Wemogy.Infrastructure.Database.Core.Errors;
 using Wemogy.Infrastructure.Database.Core.Models;
 using Wemogy.Infrastructure.Database.Cosmos.Extensions;
+using Wemogy.Infrastructure.Database.Cosmos.Query;
+
+[assembly: InternalsVisibleTo("Wemogy.Infrastructure.Database.Cosmos.UnitTests")]
 
 namespace Wemogy.Infrastructure.Database.Cosmos.Client
 {
@@ -90,12 +94,17 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Client
                 return null;
             }
 
+            // a fixed-point member is stored as a scaled integer, so a cap of 100 has to become a
+            // comparison against 100 * 10^Scale - otherwise the condition holds for values it must
+            // reject, which is the whole reason a patch carries one
+            var scaledCondition = FixedPointPredicateRewriter.Rewrite(condition)!;
+
             string? querySql;
             try
             {
                 querySql = container
                     .GetItemLinqQueryable<TEntity>()
-                    .Where(condition)
+                    .Where(scaledCondition)
                     .ToString();
             }
             catch (Exception e)

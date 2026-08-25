@@ -31,6 +31,18 @@ public abstract partial class RepositoryTestBase
     protected IDatabaseRepository<DataCenter> DataCenterRepository { get; set; }
     private Func<IDatabaseRepository<User>> UserRepositoryFactory { get; }
 
+    /// <summary>
+    ///     The repository the change feed tests write to and read the feed of. Defaults to the one
+    ///     the rest of the suite uses, which is all the in-memory provider needs: its change log
+    ///     starts at the end of the feed and is trimmed to what a processor still has to read, so a
+    ///     long write history costs a processor nothing.
+    ///     <para>
+    ///         A provider whose processor has to read its way through that history - Cosmos DB does -
+    ///         overrides this with a repository over a collection of its own.
+    ///     </para>
+    /// </summary>
+    protected virtual IDatabaseRepository<User> ChangeFeedUserRepository => MicrosoftUserRepository;
+
     protected virtual async Task ResetAsync()
     {
         await MicrosoftUserRepository.DeleteAsync(x => true);

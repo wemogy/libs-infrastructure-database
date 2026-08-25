@@ -24,6 +24,19 @@ public class PatchTarget
 
     public decimal Money { get; set; }
 
+    /// <summary>
+    ///     A decimal that opts into the fixed-point encoding, which is what makes an exact
+    ///     increment of it possible. <see cref="Money"/> is deliberately left without it.
+    /// </summary>
+    [FixedPoint(Scale = 6)]
+    public decimal Balance { get; set; }
+
+    /// <summary>
+    ///     A nullable fixed-point member at a second scale.
+    /// </summary>
+    [FixedPoint(Scale = 2)]
+    public decimal? Discount { get; set; }
+
     public double Rate { get; set; }
 
     public PatchTargetInner Inner { get; set; } = new PatchTargetInner();

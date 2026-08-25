@@ -27,11 +27,19 @@ namespace Wemogy.Infrastructure.Database.InMemory.Client
             var owner = owners[owners.Count - 1];
             var member = operation.Path[operation.Path.Count - 1];
 
+            // a fixed-point member is carried as the scaled integer the Cosmos document holds, so
+            // it is brought back to the decimal the entity reads before it is written or added
+            var operationValue = operation.Scale.HasValue && operation.Value is long scaledValue
+                ? FixedPointScale.FromScaled(
+                    scaledValue,
+                    operation.Scale.Value)
+                : operation.Value;
+
             var value = operation.Kind == DatabasePatchOperationKind.Set
-                ? operation.Value
+                ? operationValue
                 : Increment(
                     GetValue(owner, member),
-                    operation.Value);
+                    operationValue);
 
             SetValue(
                 owner,
@@ -99,6 +107,13 @@ namespace Wemogy.Infrastructure.Database.InMemory.Client
                 return ToDouble(currentValue) + doubleIncrement;
             }
 
+            // a fixed-point member is added in decimal, so the result is exactly what Cosmos DB
+            // computes on the scaled integers and divides by the same factor on read
+            if (incrementValue is decimal decimalIncrement)
+            {
+                return ToDecimal(currentValue) + decimalIncrement;
+            }
+
             return ToLong(currentValue) + Convert.ToInt64(incrementValue);
         }
 
@@ -110,6 +125,11 @@ namespace Wemogy.Infrastructure.Database.InMemory.Client
         private static double ToDouble(object? value)
         {
             return value == null ? 0d : Convert.ToDouble(value);
+        }
+
+        private static decimal ToDecimal(object? value)
+        {
+            return value == null ? 0m : Convert.ToDecimal(value);
         }
 
         private static object? GetValue(object owner, MemberInfo member)

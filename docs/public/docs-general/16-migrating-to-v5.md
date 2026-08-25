@@ -74,8 +74,10 @@ Starting from `CreateDefaultOptions()` matters: it carries the camelCase naming 
 - `MappingMetadata.Deserialize` returns plain CLR values rather than `JToken`s, and a JSON array
   now comes back as a `List<object?>`. `MappingMetadata.DeserializeArray` is new, and returns one
   value per element.
-- `ETagContractResolver` is gone. The `[ETag]` rules are applied by a `JsonTypeInfo` modifier
-  instead; nothing about how an entity declares its eTag changes.
+- `ETagContractResolver` is gone. The `[ETag]` rules — and the scaling a
+  [`[FixedPoint]`](./06-attributes.md#fixedpoint) member asks for — are applied by a `JsonTypeInfo`
+  modifier instead. Nothing about how an entity declares either changes, and a fixed-point member
+  is still stored as exactly the same scaled integer.
 
 ### What stays as forgiving as it was
 

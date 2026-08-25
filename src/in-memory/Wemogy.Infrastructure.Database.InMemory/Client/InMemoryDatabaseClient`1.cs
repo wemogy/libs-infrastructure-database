@@ -8,6 +8,7 @@ using FastExpressionCompiler;
 using Wemogy.Core.Errors;
 using Wemogy.Core.Extensions;
 using Wemogy.Infrastructure.Database.Core.Abstractions;
+using Wemogy.Infrastructure.Database.Core.Enums;
 using Wemogy.Infrastructure.Database.Core.Errors;
 using Wemogy.Infrastructure.Database.Core.Models;
 using Wemogy.Infrastructure.Database.Core.Repositories;
@@ -17,7 +18,7 @@ using Wemogy.Infrastructure.Database.InMemory.Query;
 
 namespace Wemogy.Infrastructure.Database.InMemory.Client
 {
-    public class InMemoryDatabaseClient<TEntity> : DatabaseClientBase<TEntity>, IDatabaseClient<TEntity>
+    public partial class InMemoryDatabaseClient<TEntity> : DatabaseClientBase<TEntity>, IDatabaseClient<TEntity>
         where TEntity : class
     {
         /// <summary>
@@ -131,6 +132,7 @@ namespace Wemogy.Infrastructure.Database.InMemory.Client
 
         public Task<TEntity> CreateAsync(TEntity entity)
         {
+            EnsureFixedPointValuesAreValid(entity);
             var id = ResolveIdValue(entity);
             var partitionKeyValue = ResolvePartitionKey(entity);
 
@@ -146,7 +148,14 @@ namespace Wemogy.Infrastructure.Database.InMemory.Client
                 }
 
                 var eTag = NextETag();
-                GetOrCreatePartition(partitionKeyValue).Add(Copy(entity, eTag));
+                var createdEntity = Copy(entity, eTag);
+                GetOrCreatePartition(partitionKeyValue).Add(createdEntity);
+                RecordChange(
+                    DatabaseChangeOperation.Create,
+                    partitionKeyValue,
+                    id,
+                    createdEntity,
+                    null);
 
                 return Task.FromResult(Copy(entity, eTag));
             }
@@ -154,6 +163,7 @@ namespace Wemogy.Infrastructure.Database.InMemory.Client
 
         public Task<TEntity> ReplaceAsync(TEntity entity)
         {
+            EnsureFixedPointValuesAreValid(entity);
             var id = ResolveIdValue(entity);
             var partitionKeyValue = ResolvePartitionKey(entity);
 
@@ -180,9 +190,17 @@ namespace Wemogy.Infrastructure.Database.InMemory.Client
                     partitionKeyValue);
 
                 var eTag = NextETag();
+                var previousEntity = entities[index];
+                var replacedEntity = Copy(entity, eTag);
 
                 // replaced in place, so an iteration of this partition keeps the insertion order
-                entities[index] = Copy(entity, eTag);
+                entities[index] = replacedEntity;
+                RecordChange(
+                    DatabaseChangeOperation.Replace,
+                    partitionKeyValue,
+                    id,
+                    replacedEntity,
+                    previousEntity);
 
                 return Task.FromResult(Copy(entity, eTag));
             }
@@ -197,6 +215,7 @@ namespace Wemogy.Infrastructure.Database.InMemory.Client
 
         public Task<TEntity> UpsertAsync(TEntity entity, PartitionKeyValue partitionKey)
         {
+            EnsureFixedPointValuesAreValid(entity);
             EnsurePartitionKeyDepth(partitionKey);
 
             var id = ResolveIdValue(entity);
@@ -207,14 +226,29 @@ namespace Wemogy.Infrastructure.Database.InMemory.Client
                 var index = entities.FindIndex(x => ResolveIdValue(x) == id);
                 var eTag = NextETag();
 
+                var upsertedEntity = Copy(entity, eTag);
+
                 // an upsert carries no precondition, mirroring a Cosmos upsert without IfMatch
                 if (index < 0)
                 {
-                    entities.Add(Copy(entity, eTag));
+                    entities.Add(upsertedEntity);
+                    RecordChange(
+                        DatabaseChangeOperation.Create,
+                        partitionKey,
+                        id,
+                        upsertedEntity,
+                        null);
                 }
                 else
                 {
-                    entities[index] = Copy(entity, eTag);
+                    var previousEntity = entities[index];
+                    entities[index] = upsertedEntity;
+                    RecordChange(
+                        DatabaseChangeOperation.Replace,
+                        partitionKey,
+                        id,
+                        upsertedEntity,
+                        previousEntity);
                 }
 
                 return Task.FromResult(Copy(entity, eTag));
@@ -240,6 +274,12 @@ namespace Wemogy.Infrastructure.Database.InMemory.Client
                 }
 
                 Partitions[partitionKey].Remove(entity);
+                RecordChange(
+                    DatabaseChangeOperation.Delete,
+                    partitionKey,
+                    id,
+                    null,
+                    entity);
                 return Task.CompletedTask;
             }
         }
@@ -250,9 +290,19 @@ namespace Wemogy.Infrastructure.Database.InMemory.Client
 
             lock (Gate)
             {
-                foreach (var entities in Partitions.Values)
+                foreach (var partition in Partitions)
                 {
-                    entities.RemoveAll(x => compiledPredicate(x));
+                    var deletedEntities = partition.Value.Where(compiledPredicate).ToList();
+                    foreach (var deletedEntity in deletedEntities)
+                    {
+                        partition.Value.Remove(deletedEntity);
+                        RecordChange(
+                            DatabaseChangeOperation.Delete,
+                            partition.Key,
+                            ResolveIdValue(deletedEntity),
+                            null,
+                            deletedEntity);
+                    }
                 }
 
                 return Task.CompletedTask;
@@ -309,8 +359,9 @@ namespace Wemogy.Infrastructure.Database.InMemory.Client
                     }
 
                     var entities = Partitions[partitionKey];
+                    var previousEntity = entities[index];
                     var patchedEntity = BuildPatchedEntity(
-                        entities[index],
+                        previousEntity,
                         id,
                         partitionKey,
                         patchOperations,
@@ -319,6 +370,16 @@ namespace Wemogy.Infrastructure.Database.InMemory.Client
 
                     // replaced in place, so an iteration of this partition keeps the insertion order
                     entities[index] = patchedEntity;
+
+                    // a patch is a write like any other on the feed, and it carries the whole
+                    // document rather than the fields it touched - which is what lets a projection
+                    // treat a patched and a replaced document the same way
+                    RecordChange(
+                        DatabaseChangeOperation.Replace,
+                        partitionKey,
+                        id,
+                        patchedEntity,
+                        previousEntity);
 
                     return Task.FromResult(patchedEntity.Clone());
                 }
@@ -356,16 +417,32 @@ namespace Wemogy.Infrastructure.Database.InMemory.Client
                     ? new List<TEntity>(entities)
                     : new List<TEntity>();
 
+                // collected rather than recorded straight away, so a batch that fails half way
+                // through leaves nothing on the change feed either - the same reason the entities
+                // are applied to a working copy
+                var changes = new List<PendingChange>();
+
                 for (var index = 0; index < operations.Count; index++)
                 {
                     ApplyBatchOperation(
                         workingCopy,
                         operations[index],
                         index,
-                        partitionKey);
+                        partitionKey,
+                        changes);
                 }
 
                 Partitions[partitionKey] = workingCopy;
+
+                foreach (var change in changes)
+                {
+                    RecordChange(
+                        change.Operation,
+                        partitionKey,
+                        change.Id,
+                        change.Current,
+                        change.Previous);
+                }
             }
         }
 
@@ -403,7 +480,8 @@ namespace Wemogy.Infrastructure.Database.InMemory.Client
             List<TEntity> entities,
             InMemoryTransactionalBatchOperation<TEntity> operation,
             int operationIndex,
-            PartitionKeyValue partitionKey)
+            PartitionKeyValue partitionKey,
+            List<PendingChange> changes)
         {
             if (operation.Kind == InMemoryTransactionalBatchOperationKind.Delete)
             {
@@ -421,7 +499,14 @@ namespace Wemogy.Infrastructure.Database.InMemory.Client
                         typeof(TEntity).Name);
                 }
 
+                var deletedEntity = entities[indexToDelete];
                 entities.RemoveAt(indexToDelete);
+                changes.Add(
+                    new PendingChange(
+                        DatabaseChangeOperation.Delete,
+                        idToDelete,
+                        null,
+                        deletedEntity));
                 return;
             }
 
@@ -441,13 +526,21 @@ namespace Wemogy.Infrastructure.Database.InMemory.Client
                         typeof(TEntity).Name);
                 }
 
-                entities[indexToPatch] = BuildPatchedEntity(
-                    entities[indexToPatch],
+                var entityBeforePatch = entities[indexToPatch];
+                var patchedEntity = BuildPatchedEntity(
+                    entityBeforePatch,
                     idToPatch,
                     partitionKey,
                     operation.PatchOperations!,
                     operation.PatchCondition,
                     operationIndex);
+                entities[indexToPatch] = patchedEntity;
+                changes.Add(
+                    new PendingChange(
+                        DatabaseChangeOperation.Replace,
+                        idToPatch,
+                        patchedEntity,
+                        entityBeforePatch));
                 return;
             }
 
@@ -467,7 +560,14 @@ namespace Wemogy.Infrastructure.Database.InMemory.Client
                             id);
                     }
 
-                    entities.Add(Copy(entity, NextETag()));
+                    var createdEntity = Copy(entity, NextETag());
+                    entities.Add(createdEntity);
+                    changes.Add(
+                        new PendingChange(
+                            DatabaseChangeOperation.Create,
+                            id,
+                            createdEntity,
+                            null));
                     break;
 
                 case InMemoryTransactionalBatchOperationKind.Replace:
@@ -490,8 +590,17 @@ namespace Wemogy.Infrastructure.Database.InMemory.Client
                             partitionKey.ToString());
                     }
 
+                    var entityBeforeReplace = entities[existingIndex];
+                    var replacedEntity = Copy(entity, NextETag());
+
                     // replaced in place, so an iteration of this partition keeps the insertion order
-                    entities[existingIndex] = Copy(entity, NextETag());
+                    entities[existingIndex] = replacedEntity;
+                    changes.Add(
+                        new PendingChange(
+                            DatabaseChangeOperation.Replace,
+                            id,
+                            replacedEntity,
+                            entityBeforeReplace));
                     break;
 
                 case InMemoryTransactionalBatchOperationKind.Upsert:
@@ -499,10 +608,23 @@ namespace Wemogy.Infrastructure.Database.InMemory.Client
                     if (existingIndex < 0)
                     {
                         entities.Add(upsertedEntity);
+                        changes.Add(
+                            new PendingChange(
+                                DatabaseChangeOperation.Create,
+                                id,
+                                upsertedEntity,
+                                null));
                     }
                     else
                     {
+                        var entityBeforeUpsert = entities[existingIndex];
                         entities[existingIndex] = upsertedEntity;
+                        changes.Add(
+                            new PendingChange(
+                                DatabaseChangeOperation.Replace,
+                                id,
+                                upsertedEntity,
+                                entityBeforeUpsert));
                     }
 
                     break;

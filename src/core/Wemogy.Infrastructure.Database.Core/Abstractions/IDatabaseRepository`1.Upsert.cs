@@ -1,5 +1,6 @@
 using System.Threading.Tasks;
 
+using Wemogy.Infrastructure.Database.Core.ValueObjects;
 namespace Wemogy.Infrastructure.Database.Core.Abstractions;
 
 /// <summary>
@@ -20,5 +21,5 @@ public partial interface IDatabaseRepository<TEntity>
     /// <param name="entity">The entity to upsert.</param>
     /// <param name="partitionKey">The partition key to use for the upsert operation.</param>
     /// <returns>The upserted entity as persisted</returns>
-    Task<TEntity> UpsertAsync(TEntity entity, string partitionKey);
+    Task<TEntity> UpsertAsync(TEntity entity, PartitionKeyValue partitionKey);
 }

@@ -147,4 +147,26 @@ public class PatchOperationsBuilderTests
             () => PatchOperationsBuilder<PatchTarget>.Build(operation));
         exception.Code.ShouldBe("PatchPathNotAllowed");
     }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(1)]
+    [InlineData(2)]
+    public void Build_ShouldRejectEveryComponentOfAHierarchicalPartitionKey(int component)
+    {
+        // Arrange: a component of a hierarchical key is no more patchable than a single-value
+        // one - moving a document to another partition is a delete and a create
+        var operations = new Action<IPatchOperations<HierarchicallyPartitionedPatchTarget>>[]
+        {
+            p => p.Set(x => x.CustomerId, "patched"),
+            p => p.Set(x => x.MeterSlug, "patched"),
+            p => p.Set(x => x.TimeBucket, "patched")
+        };
+
+        // Act & Assert
+        var exception = Should.Throw<UnexpectedErrorException>(
+            () => PatchOperationsBuilder<HierarchicallyPartitionedPatchTarget>.Build(operations[component]));
+        exception.Code.ShouldBe("PatchPathNotAllowed");
+        exception.Description.ShouldContain("partition key");
+    }
 }

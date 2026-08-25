@@ -4,6 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Wemogy.Core.Errors.Exceptions;
 using Wemogy.Infrastructure.Database.Core.Abstractions;
+using Wemogy.Infrastructure.Database.Core.ValueObjects;
 
 namespace Wemogy.Infrastructure.Database.Core.Repositories;
 
@@ -12,7 +13,7 @@ public partial class DatabaseRepository<TEntity>
 {
     public async Task<bool> ExistsAsync(
         string id,
-        string partitionKey,
+        PartitionKeyValue partitionKey,
         CancellationToken cancellationToken = default)
     {
         try

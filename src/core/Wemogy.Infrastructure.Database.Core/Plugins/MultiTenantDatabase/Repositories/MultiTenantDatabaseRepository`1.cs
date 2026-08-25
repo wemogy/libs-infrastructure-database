@@ -79,16 +79,6 @@ public partial class MultiTenantDatabaseRepository<TEntity> : IDatabaseRepositor
             BuildComposedPartitionKeyComponent(partitionKey[0]));
     }
 
-    /// <summary>
-    ///     Strips the tenant prefix off the broadest component of the key.
-    /// </summary>
-    private PartitionKeyValue StripComposedPartitionKey(PartitionKeyValue partitionKey)
-    {
-        return partitionKey.WithComponent(
-            0,
-            RemovePartitionKeyPrefix(partitionKey[0]));
-    }
-
     private string GetPartitionKeyPrefix()
     {
         return _databaseTenantProvider.GetTenantId();

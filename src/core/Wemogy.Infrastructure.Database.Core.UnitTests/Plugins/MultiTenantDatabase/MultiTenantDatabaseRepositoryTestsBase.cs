@@ -16,13 +16,8 @@ public abstract partial class MultiTenantDatabaseRepositoryTestsBase : Repositor
         Func<IDatabaseRepository<User>> multiTenantUserRepositoryFactory1,
         Func<IDatabaseRepository<User>> filteredMultiTenantUserRepositoryFactory1,
         Func<IDatabaseRepository<User>> multiTenantUserRepositoryFactory2,
-        Func<IDatabaseRepository<DataCenter>> dataCenterRepositoryFactory,
-        Func<IDatabaseRepository<UsageEvent>> usageEventRepositoryFactory)
-        : base(
-            multiTenantUserRepositoryFactory1,
-            filteredMultiTenantUserRepositoryFactory1,
-            dataCenterRepositoryFactory,
-            usageEventRepositoryFactory)
+        Func<IDatabaseRepository<DataCenter>> dataCenterRepositoryFactory)
+        : base(multiTenantUserRepositoryFactory1, filteredMultiTenantUserRepositoryFactory1, dataCenterRepositoryFactory)
     {
         AppleUserRepository = multiTenantUserRepositoryFactory2();
     }

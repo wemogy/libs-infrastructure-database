@@ -113,6 +113,32 @@ internal sealed class PartitionKeyDefinition
     }
 
     /// <summary>
+    ///     Rejects a key that is not as deep as the entity type is partitioned by. A string
+    ///     converts to a one-component key implicitly, so passing the broadest component alone to
+    ///     a repository over a hierarchically partitioned entity compiles cleanly - and would
+    ///     otherwise address a partition that no write ever lands in, reported as a plain
+    ///     not-found on a read and as a document nobody can read back on a write.
+    /// </summary>
+    /// <param name="partitionKey">The key a caller passed in</param>
+    /// <param name="entityType">The entity type, for the message</param>
+    public void EnsureDepth(PartitionKeyValue partitionKey, Type entityType)
+    {
+        if (partitionKey == null)
+        {
+            throw Error.Unexpected(
+                "PartitionKeyValueNull",
+                "The partition key can not be null");
+        }
+
+        if (partitionKey.Count != _properties.Length)
+        {
+            throw Error.Unexpected(
+                "PartitionKeyDepthMismatch",
+                $"The partition key {partitionKey} carries {partitionKey.Count} component(s), but the model {entityType.FullName} is partitioned by {_properties.Length} ({string.Join(", ", _properties.Select(x => x.Name))})");
+        }
+    }
+
+    /// <summary>
     ///     Writes a partition key back onto an entity, one component per declared property.
     /// </summary>
     /// <param name="entity">The entity to write to</param>

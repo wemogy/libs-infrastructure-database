@@ -38,6 +38,8 @@ namespace Wemogy.Infrastructure.Database.InMemory.Client
 
         public Task<TEntity> GetAsync(string id, PartitionKeyValue partitionKey, CancellationToken cancellationToken)
         {
+            EnsurePartitionKeyDepth(partitionKey);
+
             lock (Gate)
             {
                 var entity = FindEntity(
@@ -195,6 +197,8 @@ namespace Wemogy.Infrastructure.Database.InMemory.Client
 
         public Task<TEntity> UpsertAsync(TEntity entity, PartitionKeyValue partitionKey)
         {
+            EnsurePartitionKeyDepth(partitionKey);
+
             var id = ResolveIdValue(entity);
 
             lock (Gate)
@@ -219,6 +223,8 @@ namespace Wemogy.Infrastructure.Database.InMemory.Client
 
         public Task DeleteAsync(string id, PartitionKeyValue partitionKey)
         {
+            EnsurePartitionKeyDepth(partitionKey);
+
             lock (Gate)
             {
                 var entity = FindEntity(
@@ -255,6 +261,8 @@ namespace Wemogy.Infrastructure.Database.InMemory.Client
 
         public IDatabaseTransactionalBatch<TEntity> CreateTransactionalBatch(PartitionKeyValue partitionKey)
         {
+            EnsurePartitionKeyDepth(partitionKey);
+
             return new InMemoryTransactionalBatch<TEntity>(
                 this,
                 partitionKey,
@@ -270,6 +278,8 @@ namespace Wemogy.Infrastructure.Database.InMemory.Client
         {
             try
             {
+                EnsurePartitionKeyDepth(partitionKey);
+
                 // a patch that is applied in process still must not touch the store after the
                 // caller cancelled, the way the Cosmos provider does not once it passes the token on
                 cancellationToken.ThrowIfCancellationRequested();

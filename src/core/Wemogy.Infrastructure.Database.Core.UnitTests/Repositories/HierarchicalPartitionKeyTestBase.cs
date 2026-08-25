@@ -1,17 +1,41 @@
+using System;
 using System.Linq;
 using System.Threading.Tasks;
 using Shouldly;
 using Wemogy.Core.Errors.Exceptions;
+using Wemogy.Infrastructure.Database.Core.Abstractions;
+using Wemogy.Infrastructure.Database.Core.Factories;
 using Wemogy.Infrastructure.Database.Core.UnitTests.Fakes.Entities;
 using Wemogy.Infrastructure.Database.Core.ValueObjects;
 using Xunit;
 
 namespace Wemogy.Infrastructure.Database.Core.UnitTests.Repositories;
 
-public abstract partial class RepositoryTestBase
+/// <summary>
+///     The behaviour every provider owes a hierarchical partition key. Kept apart from
+///     <see cref="RepositoryTestBase"/> on purpose: these tests need a single repository, and
+///     adding one to the shared base would build another database client for every test in it -
+///     which the Cosmos emulator does not survive at that volume.
+/// </summary>
+public abstract class HierarchicalPartitionKeyTestBase
 {
+    protected HierarchicalPartitionKeyTestBase(Func<IDatabaseRepository<UsageEvent>> usageEventRepositoryFactory)
+    {
+        // cleared before the repository is built, for the reason RepositoryTestBase clears it
+        DatabaseRepositoryFactoryFactory.DatabaseClientProxy = null;
+
+        UsageEventRepository = usageEventRepositoryFactory();
+    }
+
+    protected IDatabaseRepository<UsageEvent> UsageEventRepository { get; }
+
+    protected virtual Task ResetAsync()
+    {
+        return UsageEventRepository.DeleteAsync(x => true);
+    }
+
     [Fact]
-    public async Task HierarchicalPartitionKey_CreateAndGetAsync_ShouldRoundTripEveryComponent()
+    public async Task CreateAndGetAsync_ShouldRoundTripEveryComponent()
     {
         // Arrange
         await ResetAsync();
@@ -31,7 +55,7 @@ public abstract partial class RepositoryTestBase
     }
 
     [Fact]
-    public async Task HierarchicalPartitionKey_GetAsync_ShouldNotFindTheDocumentUnderAnotherLeaf()
+    public async Task GetAsync_ShouldNotFindTheDocumentUnderAnotherLeaf()
     {
         // Arrange
         await ResetAsync();
@@ -53,22 +77,28 @@ public abstract partial class RepositoryTestBase
     }
 
     [Fact]
-    public async Task HierarchicalPartitionKey_CreateAsync_ShouldKeepDocumentsOfDifferentLeavesApart()
+    public async Task CreateAsync_ShouldKeepDocumentsOfDifferentLeavesApart()
     {
-        // Arrange: same id, same customer, same meter - only the time bucket differs. Documents
-        // are unique per logical partition, so both have to survive
+        // Arrange: the same id, the same customer and the same meter - only the narrowest
+        // component differs. A document is unique per logical partition, so both have to survive:
+        // a provider that flattened the hierarchy would reject the second create as a conflict,
+        // or overwrite the first
         await ResetAsync();
         var first = UsageEvent.Faker.Generate();
-        var second = UsageEvent.Faker.Generate();
-        second.CustomerId = first.CustomerId;
-        second.MeterSlug = first.MeterSlug;
-        second.TimeBucket = first.TimeBucket + "-later";
+        var second = new UsageEvent
+        {
+            Id = first.Id,
+            CustomerId = first.CustomerId,
+            MeterSlug = first.MeterSlug,
+            TimeBucket = first.TimeBucket + "-later",
+            Quantity = first.Quantity + 1
+        };
 
         // Act
         await UsageEventRepository.CreateAsync(first);
         await UsageEventRepository.CreateAsync(second);
 
-        // Assert
+        // Assert: each key reaches its own document, and neither overwrote the other
         var fetchedFirst = await UsageEventRepository.GetAsync(
             first.Id,
             first.GetPartitionKey());
@@ -77,11 +107,11 @@ public abstract partial class RepositoryTestBase
             second.GetPartitionKey());
 
         fetchedFirst.Quantity.ShouldBe(first.Quantity);
-        fetchedSecond.Quantity.ShouldBe(second.Quantity);
+        fetchedSecond.Quantity.ShouldBe(first.Quantity + 1);
     }
 
     [Fact]
-    public async Task HierarchicalPartitionKey_UpdateAsync_ShouldWork()
+    public async Task UpdateAsync_ShouldWork()
     {
         // Arrange
         await ResetAsync();
@@ -104,7 +134,7 @@ public abstract partial class RepositoryTestBase
     }
 
     [Fact]
-    public async Task HierarchicalPartitionKey_UpsertAsync_ShouldWork()
+    public async Task UpsertAsync_ShouldWork()
     {
         // Arrange
         await ResetAsync();
@@ -123,7 +153,7 @@ public abstract partial class RepositoryTestBase
     }
 
     [Fact]
-    public async Task HierarchicalPartitionKey_PatchAsync_ShouldWork()
+    public async Task PatchAsync_ShouldWork()
     {
         // Arrange
         await ResetAsync();
@@ -142,7 +172,7 @@ public abstract partial class RepositoryTestBase
     }
 
     [Fact]
-    public async Task HierarchicalPartitionKey_DeleteAsync_ShouldWork()
+    public async Task DeleteAsync_ShouldWork()
     {
         // Arrange
         await ResetAsync();
@@ -162,7 +192,7 @@ public abstract partial class RepositoryTestBase
     }
 
     [Fact]
-    public async Task HierarchicalPartitionKey_CreateTransactionalBatch_ShouldCommitInsideOneLeaf()
+    public async Task CreateTransactionalBatch_ShouldCommitInsideOneLeaf()
     {
         // Arrange: this is the case the feature exists for - a balance patch and a usage event
         // written atomically, while the store is still free to split the customer's tail
@@ -197,7 +227,7 @@ public abstract partial class RepositoryTestBase
     }
 
     [Fact]
-    public async Task HierarchicalPartitionKey_CreateTransactionalBatch_ShouldRejectAnotherLeaf()
+    public async Task CreateTransactionalBatch_ShouldRejectAnotherLeaf()
     {
         // Arrange
         await ResetAsync();
@@ -219,7 +249,7 @@ public abstract partial class RepositoryTestBase
     }
 
     [Fact]
-    public async Task HierarchicalPartitionKey_QueryAsync_ShouldReturnEveryLeafOfAComponentPrefix()
+    public async Task QueryAsync_ShouldReturnEveryLeafOfAComponentPrefix()
     {
         // Arrange: the same customer, spread over two leaves
         await ResetAsync();
@@ -241,5 +271,83 @@ public abstract partial class RepositoryTestBase
         usageEvents.Select(x => x.Id).ShouldBe(
             new[] { first.Id, second.Id },
             ignoreOrder: true);
+    }
+
+    [Fact]
+    public async Task GetAsync_ShouldRejectAKeyOfTheWrongDepth()
+    {
+        // Arrange
+        await ResetAsync();
+        var usageEvent = UsageEvent.Faker.Generate();
+        await UsageEventRepository.CreateAsync(usageEvent);
+
+        // Act: a string converts to a one-component key implicitly, so this compiles cleanly
+        // against an entity partitioned by three - and would otherwise be reported as a plain
+        // not-found, which sends the caller looking for a missing document
+        var exception = await Record.ExceptionAsync(
+            () => UsageEventRepository.GetAsync(usageEvent.Id, usageEvent.CustomerId));
+
+        // Assert
+        exception.ShouldBeOfType<UnexpectedErrorException>();
+        ((UnexpectedErrorException)exception).Code.ShouldBe("PartitionKeyDepthMismatch");
+    }
+
+    [Fact]
+    public async Task UpsertAsync_ShouldRejectAKeyOfTheWrongDepth()
+    {
+        // Arrange: the write path matters more than the read one - a document written under an
+        // under-specified key lands in a partition no read path can address
+        await ResetAsync();
+        var usageEvent = UsageEvent.Faker.Generate();
+
+        // Act
+        var exception = await Record.ExceptionAsync(
+            () => UsageEventRepository.UpsertAsync(usageEvent, usageEvent.CustomerId));
+
+        // Assert
+        exception.ShouldBeOfType<UnexpectedErrorException>();
+        ((UnexpectedErrorException)exception).Code.ShouldBe("PartitionKeyDepthMismatch");
+    }
+
+    [Fact]
+    public async Task CreateTransactionalBatch_ShouldRejectAKeyOfTheWrongDepth()
+    {
+        // Arrange
+        await ResetAsync();
+        var usageEvent = UsageEvent.Faker.Generate();
+
+        // Act
+        var exception = Record.Exception(
+            () => UsageEventRepository.CreateTransactionalBatch(usageEvent.CustomerId));
+
+        // Assert
+        exception.ShouldBeOfType<UnexpectedErrorException>();
+        ((UnexpectedErrorException)exception).Code.ShouldBe("PartitionKeyDepthMismatch");
+    }
+
+    [Fact]
+    public async Task UpdateAsync_ShouldAwaitAnAsynchronousUpdateAction()
+    {
+        // Arrange: the mutation happens after an await, so an update action whose task is not
+        // awaited applies it only after the entity has already been written
+        await ResetAsync();
+        var usageEvent = UsageEvent.Faker.Generate();
+        await UsageEventRepository.CreateAsync(usageEvent);
+
+        // Act
+        await UsageEventRepository.UpdateAsync(
+            usageEvent.Id,
+            usageEvent.GetPartitionKey(),
+            async x =>
+            {
+                await Task.Yield();
+                x.Quantity = 8125;
+            });
+
+        // Assert
+        var fetchedUsageEvent = await UsageEventRepository.GetAsync(
+            usageEvent.Id,
+            usageEvent.GetPartitionKey());
+        fetchedUsageEvent.Quantity.ShouldBe(8125);
     }
 }

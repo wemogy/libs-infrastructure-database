@@ -118,7 +118,8 @@ var usageEvents = await usageEventRepository.QueryAsync(x => x.CustomerId == cus
 
 A query scoped to a *prefix* of the key is currently served as a cross-partition query with a
 filter — correct, but not as cheap as it could be. Cosmos DB can restrict such a query to the
-matching physical partitions; that optimization is tracked separately.
+matching physical partitions; that optimization is tracked in
+[issue #165](https://github.com/wemogy/libs-infrastructure-database/issues/165).
 
 :::
 

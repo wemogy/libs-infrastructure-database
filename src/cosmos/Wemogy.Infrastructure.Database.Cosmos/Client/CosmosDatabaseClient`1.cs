@@ -44,6 +44,8 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Client
 
         public async Task<TEntity> GetAsync(string id, PartitionKeyValue partitionKey, CancellationToken cancellationToken)
         {
+            EnsurePartitionKeyDepth(partitionKey);
+
             try
             {
                 var itemResponse = await _container.ReadItemAsync<TEntity>(
@@ -213,6 +215,8 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Client
 
         public async Task<TEntity> UpsertAsync(TEntity entity, PartitionKeyValue partitionKey)
         {
+            EnsurePartitionKeyDepth(partitionKey);
+
             var upsertResponse = await _container.UpsertItemAsync(
                 entity,
                 partitionKey.ToCosmosPartitionKey(),
@@ -226,6 +230,8 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Client
 
         public IDatabaseTransactionalBatch<TEntity> CreateTransactionalBatch(PartitionKeyValue partitionKey)
         {
+            EnsurePartitionKeyDepth(partitionKey);
+
             var batch = _container.CreateTransactionalBatch(partitionKey.ToCosmosPartitionKey());
 
             return new CosmosTransactionalBatch<TEntity>(
@@ -245,6 +251,8 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Client
             Expression<Func<TEntity, bool>>? condition,
             CancellationToken cancellationToken)
         {
+            EnsurePartitionKeyDepth(partitionKey);
+
             var patchOperations = CosmosPatchTranslator.ToPatchOperations(
                 PatchOperationsBuilder<TEntity>.Build(operations),
                 _serializeMemberName);
@@ -318,6 +326,8 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Client
 
         public Task DeleteAsync(string id, PartitionKeyValue partitionKey)
         {
+            EnsurePartitionKeyDepth(partitionKey);
+
             return DeleteItemAsync(
                 id,
                 partitionKey);

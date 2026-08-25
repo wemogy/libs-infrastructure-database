@@ -50,6 +50,18 @@ public abstract class DatabaseClientBase<TEntity>
     }
 
     /// <summary>
+    ///     Rejects a partition key a caller passed in that is not as deep as the entity type is
+    ///     partitioned by, so a key of the wrong shape is named as such instead of quietly
+    ///     addressing a partition nothing lives in.
+    /// </summary>
+    protected void EnsurePartitionKeyDepth(PartitionKeyValue partitionKey)
+    {
+        _partitionKeyDefinition.EnsureDepth(
+            partitionKey,
+            typeof(TEntity));
+    }
+
+    /// <summary>
     ///     Returns the eTag value of the entity, or null if the entity does not opt into
     ///     optimistic concurrency via the <see cref="ETagAttribute"/>.
     /// </summary>

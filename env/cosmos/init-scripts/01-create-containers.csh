@@ -5,3 +5,7 @@ mkdb infrastructuredbtests
 
 mkcon users /tenantId --database=infrastructuredbtests
 mkcon datacenters /partitionKey --database=infrastructuredbtests
+
+# comma-separated paths define a hierarchical partition key, ordered from the broadest
+# component to the narrowest - the order the entity numbers its components in
+mkcon usageevents /customerId,/meterSlug,/timeBucket --database=infrastructuredbtests

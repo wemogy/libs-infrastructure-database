@@ -59,6 +59,23 @@ public static class FixedPointError
     }
 
     /// <summary>
+    ///     A stored value past the range the database holds exactly. A write is refused against
+    ///     the same bound, but the accumulated result of a server-side increment is not something
+    ///     the database can pre-check - so a counter that has grown out of range is reported on
+    ///     the read that would otherwise hand out a value only approximately equal to what the
+    ///     increments added up to.
+    /// </summary>
+    public static UnexpectedErrorException StoredValueOutOfRange(
+        string path,
+        decimal scaledValue,
+        long maxExactMagnitude)
+    {
+        return Error.Unexpected(
+            "FixedPointStoredValueOutOfRange",
+            $"The stored value {scaledValue} for {path} is outside ±{maxExactMagnitude}, beyond which the database no longer holds an integer exactly; the counter has grown past the exact range of its fixed-point scale");
+    }
+
+    /// <summary>
     ///     A stored value that is not the scaled integer the member is written as, e.g. a document
     ///     written before the member was marked with the <see cref="FixedPointAttribute"/>.
     /// </summary>

@@ -71,11 +71,19 @@ depth of the entity - a member of a nested object or of a collection item is sca
 way. Putting it on any other type throws `FixedPointMemberIsNotADecimal` the first time the
 member is read.
 
-**The exact range.** Exactness holds while the *scaled* value stays inside ±(2^53 − 1), which
-at scale 6 is roughly ±9.0 × 10⁹ in domain units. A value written or incremented past that
-bound is refused with `FixedPointValueOutOfRange` rather than silently degraded. The database
-cannot check the accumulated result of a server-side increment, so keep the range of the
-counter inside the bound.
+**The exact range.** Exactness holds while the *scaled* value stays inside ±(2^53 − 1), which at
+scale 6 is roughly ±9.0 × 10⁹ in domain units. Two different things happen at that bound, and the
+difference matters:
+
+- **A value you hand over is checked.** The value of a create, a replace, an upsert or a `Set`, and
+  the *operand* of an `Increment`, are refused with `FixedPointValueOutOfRange` rather than
+  silently degraded.
+- **The accumulated result of an increment is yours to keep in range.** An atomic increment is
+  applied by the database without reading the current value first, so nothing can pre-check what
+  it adds up to — a counter incremented by in-range operands can still cross the bound. It is
+  caught on the next read instead, with `FixedPointStoredValueOutOfRange`, rather than handing back
+  a value only approximately equal to what the increments added up to. Size the counter so it
+  cannot get there.
 
 **No silent rounding.** A value carrying more decimal places than the declared scale is refused
 with `FixedPointPrecisionExceeded` on every write path - a create, a replace, an upsert, a `Set`

@@ -14,9 +14,12 @@ namespace Wemogy.Infrastructure.Database.Core.Models;
 ///     entity carries against it. Every provider asks this class, so a member is scaled the same
 ///     way and an invalid value is refused by both of them.
 ///     <para>
-///         The attribute is resolved by declared type, the way the Cosmos contract resolver
-///         resolves it as well: a value reached through a member declared as <c>object</c> is not
-///         inspected.
+///         The walk follows properties, fields, collection items and dictionary values, and decides
+///         where to recurse from the <em>runtime</em> type of what it finds - the way Newtonsoft
+///         resolves the contract of a value behind an <c>object</c>, a base class or an interface.
+///         The one thing it cannot see is an entity type whose declared graph carries no
+///         fixed-point member at all, because <see cref="HasFixedPointMembers"/> is what keeps this
+///         class off the write path of everything that does not use the feature.
 ///     </para>
 /// </summary>
 public static class FixedPointMetadata
@@ -294,8 +297,14 @@ public static class FixedPointMetadata
                 continue;
             }
 
-            // pruned by declared type, so a member of an unrelated type is never even read
-            if (HasFixedPointMembers(GetMemberType(member)!))
+            // decided on the runtime type of the value, not on the declared type of the member:
+            // Newtonsoft resolves the contract of what it actually finds, so a fixed-point member
+            // behind an object, a base class or an interface is converted by the Cosmos serializer
+            // and has to be checked here as well - otherwise Cosmos refuses a value the in-memory
+            // provider accepted. A collection is walked whatever its declared type says, which is
+            // what reaches the items of a non-generic one
+            if (HasFixedPointMembers(memberValue.GetType()) ||
+                memberValue is IEnumerable and not string)
             {
                 EnsureValuesAreValid(
                     memberValue,

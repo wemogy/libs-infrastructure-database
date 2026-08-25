@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Collections.Generic;
 using Shouldly;
 using Wemogy.Core.Errors.Exceptions;
@@ -158,6 +159,36 @@ public class FixedPointMetadataTests
     }
 
     [Fact]
+    public void EnsureValuesAreValid_ShouldWalkIntoAValueBehindAnObjectMember()
+    {
+        // Act & Assert: Newtonsoft resolves the contract of what it actually finds, so the Cosmos
+        // serializer scales this member - and refusing it only there would leave the in-memory
+        // provider accepting a value the real write rejects
+        var exception = Should.Throw<UnexpectedErrorException>(
+            () => FixedPointMetadata.EnsureValuesAreValid(
+                new PolymorphicTarget
+                {
+                    Payload = new PatchTargetInner { Amount = 1.23456m }
+                }));
+        exception.Code.ShouldBe("FixedPointPrecisionExceeded");
+    }
+
+    [Fact]
+    public void EnsureValuesAreValid_ShouldWalkIntoANonGenericCollection()
+    {
+        // Act & Assert: an ArrayList reports no element type to prune by, so the items are
+        // inspected by their runtime type instead
+        var exception = Should.Throw<UnexpectedErrorException>(
+            () => FixedPointMetadata.EnsureValuesAreValid(
+                new PolymorphicTarget
+                {
+                    Payload = 1m,
+                    Items = new ArrayList { new PatchTargetInner { Amount = 1.23456m } }
+                }));
+        exception.Code.ShouldBe("FixedPointPrecisionExceeded");
+    }
+
+    [Fact]
     public void EnsureValuesAreValid_ShouldTerminateOnAGraphThatPointsBackAtItself()
     {
         // Arrange: a cycle would recurse forever without the reference check
@@ -166,6 +197,21 @@ public class FixedPointMetadataTests
 
         // Act & Assert
         Should.NotThrow(() => FixedPointMetadata.EnsureValuesAreValid(target));
+    }
+
+    /// <summary>
+    ///     Carries a fixed-point value only at runtime, behind an <c>object</c> member and inside a
+    ///     non-generic collection. It needs a fixed-point member of its own, because that is what
+    ///     keeps the walk off the write path of every entity that does not use the feature.
+    /// </summary>
+    private class PolymorphicTarget
+    {
+        [FixedPoint(Scale = 6)]
+        public decimal Balance { get; set; }
+
+        public object? Payload { get; set; }
+
+        public ArrayList Items { get; set; } = new ArrayList();
     }
 
     private class RenamedTarget

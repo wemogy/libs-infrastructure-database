@@ -138,6 +138,7 @@ patch therefore asks for the write response and pays its request charge; the bat
 | The Cosmos client cannot report how it names a member | `UnexpectedErrorException` | `PatchMemberNamesNotResolvable` |
 | A fixed-point value carries more decimal places than its declared scale | `UnexpectedErrorException` | `FixedPointPrecisionExceeded` |
 | A fixed-point value is outside the range the database holds exactly | `UnexpectedErrorException` | `FixedPointValueOutOfRange` |
+| A stored fixed-point counter has grown out of that range | `UnexpectedErrorException` | `FixedPointStoredValueOutOfRange` |
 
 The path errors are thrown while the operations are collected, before any I/O.
 
@@ -164,9 +165,11 @@ The path errors are thrown while the operations are collected, before any I/O.
 - **A `[FixedPoint]` decimal is carried as its scaled integer.** Both the value of a `Set` or an
   `Increment` and the constants of the condition are scaled by `10^Scale` before they leave the
   process, so `p.Increment(x => x.Balance, 0.5m)` with `condition: x => x.Balance <= 100m` becomes
-  `incr /balance 500000` under `FROM c WHERE c.balance <= 100000000`. An increment finer than the
-  declared scale, or one that would take the value out of the exact range, is refused before any
-  I/O - see [`[FixedPoint]`](./06-attributes.md#fixedpoint).
+  `incr /balance 500000` under `FROM c WHERE c.balance <= 100000000`. An increment operand finer
+  than the declared scale, or out of the exact range itself, is refused before any I/O. The
+  *result* is not pre-checked - the database applies the increment without reading the current
+  value - so keeping the counter inside the exact range is the caller's job - see
+  [`[FixedPoint]`](./06-attributes.md#fixedpoint).
 
 ## Not supported
 

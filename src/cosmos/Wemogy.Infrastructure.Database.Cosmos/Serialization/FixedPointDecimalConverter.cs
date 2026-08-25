@@ -20,6 +20,13 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Serialization
     /// </summary>
     internal class FixedPointDecimalConverter : JsonConverter
     {
+        /// <summary>
+        ///     The largest magnitude a double is converted from at all. Past it the value is not a
+        ///     scaled integer of any scale, and the conversion to a long would overflow rather
+        ///     than report anything.
+        /// </summary>
+        private const double MaxDoubleMagnitude = 9.2e18;
+
         private readonly int _scale;
         private readonly string _path;
 
@@ -70,11 +77,11 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Serialization
                 _scale);
         }
 
-        private static bool IsExactWholeNumber(double value)
+        private static bool IsWholeNumber(double value)
         {
             return !double.IsNaN(value) &&
                 !double.IsInfinity(value) &&
-                Math.Abs(value) <= FixedPointScale.MaxExactMagnitude &&
+                Math.Abs(value) <= MaxDoubleMagnitude &&
                 Math.Floor(value) == value;
         }
 
@@ -82,8 +89,7 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Serialization
         ///     Reads the stored value as the integer it was written as. Cosmos DB hands a whole
         ///     number back as a JSON integer, but a value that passed through the double number
         ///     type of the database can come back as a float token - accepted as long as it is
-        ///     still a whole number inside the exact range, and refused otherwise rather than
-        ///     rounded into place.
+        ///     still a whole number, and refused otherwise rather than rounded into place.
         /// </summary>
         private long ReadScaledValue(JsonReader reader)
         {
@@ -92,15 +98,13 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Serialization
             switch (value)
             {
                 case long longValue:
-                    return longValue;
+                    return EnsureIsInExactRange(longValue);
                 case int intValue:
                     return intValue;
-                case double doubleValue when IsExactWholeNumber(doubleValue):
-                    return (long)doubleValue;
-                case decimal decimalValue
-                    when decimalValue == decimal.Truncate(decimalValue) &&
-                        Math.Abs(decimalValue) <= FixedPointScale.MaxExactMagnitude:
-                    return (long)decimalValue;
+                case double doubleValue when IsWholeNumber(doubleValue):
+                    return EnsureIsInExactRange((long)doubleValue);
+                case decimal decimalValue when decimalValue == decimal.Truncate(decimalValue):
+                    return EnsureIsInExactRange(decimalValue);
                 default:
                     var description = Convert.ToString(
                         value,
@@ -110,6 +114,26 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Serialization
                         _path,
                         description);
             }
+        }
+
+        /// <summary>
+        ///     Refuses a stored value the database can no longer hold exactly. A write is checked
+        ///     against the same bound, but the accumulated result of a server-side increment is
+        ///     nobody's to check up front - so the counter having crossed the bound is reported
+        ///     here, on the read that would otherwise hand out a value that is only approximately
+        ///     what the increments added up to.
+        /// </summary>
+        private long EnsureIsInExactRange(decimal scaled)
+        {
+            if (Math.Abs(scaled) > FixedPointScale.MaxExactMagnitude)
+            {
+                throw FixedPointError.StoredValueOutOfRange(
+                    _path,
+                    scaled,
+                    FixedPointScale.MaxExactMagnitude);
+            }
+
+            return (long)scaled;
         }
     }
 }

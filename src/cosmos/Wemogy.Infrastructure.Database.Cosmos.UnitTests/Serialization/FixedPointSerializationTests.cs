@@ -90,6 +90,29 @@ public class FixedPointSerializationTests
     }
 
     [Fact]
+    public void FromStream_ShouldRefuseAStoredCounterThatGrewOutOfTheExactRange()
+    {
+        // Act & Assert: an accumulated increment can cross the bound without any single operand
+        // doing so, and past it the stored number is no longer what the increments added up to.
+        // Reported on both token kinds a whole number can arrive as
+        var fromInteger = Should.Throw<UnexpectedErrorException>(() => Deserialize("{\"balance\":9007199254740993}"));
+        var fromFloat = Should.Throw<UnexpectedErrorException>(() => Deserialize("{\"balance\":1e17}"));
+
+        fromInteger.Code.ShouldBe("FixedPointStoredValueOutOfRange");
+        fromFloat.Code.ShouldBe("FixedPointStoredValueOutOfRange");
+    }
+
+    [Fact]
+    public void FromStream_ShouldAcceptTheLargestExactStoredValue()
+    {
+        // Act
+        var target = Deserialize("{\"balance\":9007199254740991}");
+
+        // Assert
+        target.Balance.ShouldBe(9007199254.740991m);
+    }
+
+    [Fact]
     public void RoundTrip_ShouldPreserveAValueNoBinaryFloatingPointNumberCanHold()
     {
         // Arrange

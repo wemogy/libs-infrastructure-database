@@ -10,6 +10,7 @@ using Wemogy.Infrastructure.Database.Core.UnitTests.Fakes.Entities;
 using Wemogy.Infrastructure.Database.Core.ValueObjects;
 using Wemogy.Infrastructure.Database.Cosmos.Extensions;
 using Wemogy.Infrastructure.Database.Cosmos.Models;
+using Wemogy.Infrastructure.Database.Cosmos.Serialization;
 using Xunit;
 
 namespace Wemogy.Infrastructure.Database.Cosmos.UnitTests.Extensions;
@@ -338,6 +339,45 @@ public class CosmosQueryDefinitionTests
 
         // Assert
         queryText.ShouldEndWith("OFFSET 0 LIMIT 25");
+    }
+
+    [Theory]
+    [InlineData("2026-08-25T10:00:00Z")]
+    [InlineData("2026-08-25T10:00:00+00:00")]
+    public void GetQueryDefinition_ShouldSpellASearchAfterTimestampTheWayTheDocumentWasWritten(string cursor)
+    {
+        // Arrange: a caller builds a keyset cursor from the entity's own UpdatedAt, and
+        // System.Text.Json spells a DateTimeOffset as "+00:00" where the stored document carries
+        // the "Z" form
+        var queryParameters = new QueryParameters
+        {
+            Sortings = new List<QuerySorting>
+            {
+                new QuerySorting
+                {
+                    OrderBy = "updatedAt",
+                    SearchAfter = $"\"{cursor}\""
+                }
+            }
+        };
+
+        // Act
+        var queryDefinition = Build(queryParameters);
+        var parameter = queryDefinition.GetQueryParameters().Single();
+
+        // Assert: whichever spelling arrives, the parameter reaches Cosmos DB as the one the
+        // document was written with. "+" is 0x2B and "Z" is 0x5A, so a "+00:00" cursor compared
+        // against a stored "Z" would sort before every row of the page it is meant to end and
+        // hand the last row back on the next page.
+        parameter.Value.ShouldBeOfType<DateTimeOffset>();
+        Serialize(parameter.Value).ShouldBe("\"2026-08-25T10:00:00Z\"");
+    }
+
+    private static string Serialize(object value)
+    {
+        using var stream = new CosmosEntitySerializer().ToStream(value);
+        using var reader = new System.IO.StreamReader(stream);
+        return reader.ReadToEnd();
     }
 
     [Fact]

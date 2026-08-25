@@ -81,8 +81,23 @@ Starting from `CreateDefaultOptions()` matters: it carries the camelCase naming 
 
 The JSON a caller writes into `QueryFilter.Value` and `QuerySorting.SearchAfter` is read with
 options that stay as lenient as the `Newtonsoft.Json` reader they replace: an enum is accepted
-under its name as well as its number, a number is accepted inside a string, and a property name is
-matched case insensitively. A filter that worked in v4 keeps working.
+under its name as well as its number, a number is accepted inside a string, a property name is
+matched case insensitively, and a date is accepted in the spellings `System.Text.Json` rejects on
+its own (`2026-08-25 10:00:00`, `08/25/2026`). Query building has no `try`/`catch` around it, so a
+spelling that stopped being accepted would throw at the call site rather than filter nothing.
+
+A date spelling that carries **no** offset is still read in the zone of the running machine, as it
+was in v4. Spell a filter value or a cursor with an explicit offset if you want it to mean the same
+thing everywhere.
+
+### Cursors over a timestamp keep working
+
+A `searchAfter` cursor is compared against the stored string, so it only matches while it is
+spelled the way the document was written. A value that parses as a timestamp is therefore
+re-spelled by the same converter that writes the entity - a cursor built with
+`JsonSerializer.Serialize(user.UpdatedAt)`, which produces `2026-08-25T10:00:00+00:00`, reaches
+Cosmos DB as `2026-08-25T10:00:00Z`. Without that, `+` (0x2B) sorting before `Z` (0x5A) would make
+an ascending page hand back the last row of the previous one.
 
 ## `CreatedAt` and `UpdatedAt` become `DateTimeOffset`
 

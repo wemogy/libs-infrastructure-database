@@ -109,6 +109,39 @@ public class MappingMetadataTests
     }
 
     [Fact]
+    public void Deserialize_ShouldParseATimestampSoTheClientCanRespellIt()
+    {
+        // Arrange
+        var mappingMetadata = new MappingMetadata();
+
+        // Act
+        var value = mappingMetadata.Deserialize(
+            "updatedAt",
+            "\"2026-08-25T10:00:00+00:00\"");
+
+        // Assert: handing the raw string to the query would compare "…+00:00" against documents
+        // stored as "…Z", and "+" (0x2B) sorts before "Z" (0x5A) - an ascending search-after
+        // cursor would hand back the last row of the previous page. As a timestamp, the client of
+        // the container writes it in the same spelling the document was written with.
+        value.ShouldBe(new DateTimeOffset(2026, 8, 25, 10, 0, 0, TimeSpan.Zero));
+    }
+
+    [Fact]
+    public void Deserialize_ShouldKeepAStringThatIsNotATimestamp()
+    {
+        // Arrange
+        var mappingMetadata = new MappingMetadata();
+
+        // Act
+        var value = mappingMetadata.Deserialize(
+            "firstname",
+            "\"2026 was a good year\"");
+
+        // Assert
+        value.ShouldBe("2026 was a good year");
+    }
+
+    [Fact]
     public void Deserialize_ShouldReturnNullForJsonNull()
     {
         // Arrange
@@ -186,16 +219,13 @@ public class MappingMetadataTests
         mappingMetadata.AddCustomMappings(
             new Dictionary<string, Type> { { "createdAt", typeof(DateTime) } });
 
-        // Act: only long values are treated as unix timestamps
+        // Act: only a number is treated as a unix timestamp
         var value = mappingMetadata.Deserialize(
             "createdAt",
             "\"2023-01-01T00:00:00Z\"");
 
-        // Assert: the string reaches the query the way the caller wrote it. Cosmos DB compares a
-        // timestamp as the string it is stored as, so passing it through unchanged is what makes
-        // the parameter match the document - parsing it into a DateTime and writing it back would
-        // only introduce a chance to re-spell it.
-        value.ShouldBe("2023-01-01T00:00:00Z");
+        // Assert
+        value.ShouldBe(new DateTimeOffset(2023, 1, 1, 0, 0, 0, TimeSpan.Zero));
     }
 
     [Fact]

@@ -94,6 +94,18 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Models
             switch (element.ValueKind)
             {
                 case JsonValueKind.String:
+                    // A timestamp is stored, compared and ordered as the string it was written
+                    // as, so a filter value and a search-after cursor only match while they are
+                    // spelled the way the document was. Parsing it here hands the value to the
+                    // client of the container as a timestamp, which respells a zero offset as the
+                    // "Z" form the entity was written with - without this, a cursor built from a
+                    // DateTimeOffset arrives as "+00:00", sorts before every stored "Z" and makes
+                    // the page boundary repeat a row rather than move past it.
+                    if (element.TryGetDateTimeOffset(out var timestamp))
+                    {
+                        return timestamp;
+                    }
+
                     return element.GetString();
                 case JsonValueKind.Number:
                     return MapNumber(

@@ -705,7 +705,13 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Extensions
 
             logger?.LogDebug("Query:");
             logger?.LogDebug(queryText);
-            logger?.LogDebug(JsonSerializer.Serialize(queryDefinition.GetQueryParameters()));
+
+            // projected, because a query parameter is a value tuple whose members are fields and
+            // System.Text.Json skips a field - logging the tuples directly prints a row of "{}"
+            logger?.LogDebug(
+                JsonSerializer.Serialize(
+                    queryDefinition.GetQueryParameters()
+                        .Select(x => new { x.Name, x.Value })));
 
             return queryDefinition;
         }

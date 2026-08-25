@@ -117,6 +117,13 @@ namespace Wemogy.Infrastructure.Database.InMemory.Client
                                 partition.Value.Select(entity => entity.Clone()).ToList()))
                             .ToList()
                         : null;
+
+                    // the checkpoint is written when the processor first starts, not when it first
+                    // handles something - the way Cosmos creates the lease at start. Without it a
+                    // processor that was stopped before anything happened would start at the end of
+                    // the feed again and skip everything written while it was down, and the change
+                    // log would drop those writes for lack of anyone to keep them for
+                    Checkpoints[processorName] = processor.Cursor;
                 }
 
                 RunningProcessors.Add(processor);

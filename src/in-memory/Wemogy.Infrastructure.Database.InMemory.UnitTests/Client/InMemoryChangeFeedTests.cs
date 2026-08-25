@@ -264,6 +264,36 @@ public class InMemoryChangeFeedTests
     }
 
     [Fact]
+    public async Task ChangeFeed_ShouldPickUpWritesMadeWhileStoppedEvenIfItNeverHandledAnything()
+    {
+        // Arrange: started and stopped again without a single change passing through it
+        var client = new InMemoryDatabaseClient<KeyedEntity>();
+        var partitionKey = NewPartitionKey();
+        var processorName = NewProcessorName();
+        var firstRun = new Recorder();
+        var processor = client.CreateChangeFeedProcessor(
+            processorName,
+            firstRun.Handle,
+            null);
+        await processor.StartAsync();
+        await processor.StopAsync();
+
+        // Act
+        await client.CreateAsync(NewEntity(partitionKey, "while-stopped"));
+        var secondRun = new Recorder();
+        await using var resumedProcessor = client.CreateChangeFeedProcessor(
+            processorName,
+            secondRun.Handle,
+            null);
+        await resumedProcessor.StartAsync();
+
+        // Assert: the checkpoint exists from the first start, so the write is not skipped as
+        // "before the processor existed"
+        await WaitUntilAsync(() => secondRun.For(partitionKey).Count == 1);
+        secondRun.For(partitionKey).Single().Key.ShouldBe("while-stopped");
+    }
+
+    [Fact]
     public async Task ChangeFeed_ShouldSplitABatchAtTheConfiguredMaximum()
     {
         // Arrange

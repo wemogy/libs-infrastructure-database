@@ -19,9 +19,7 @@ public partial class MultiTenantDatabaseRepository<TEntity>
             BuildComposedProcessorName(processorName),
             (changes, context, cancellationToken) =>
             {
-                var tenantChanges = FilterToTenant(
-                    changes,
-                    entity => entity);
+                var tenantChanges = FilterToTenant(changes);
 
                 // the underlying feed carries every tenant, so a batch can be empty after filtering.
                 // Handlers are documented to only see non-empty batches, and one that writes a
@@ -45,11 +43,7 @@ public partial class MultiTenantDatabaseRepository<TEntity>
             BuildComposedProcessorName(processorName),
             (changes, context, cancellationToken) =>
             {
-                // a delete carries no current version, so the partition key of the document that was
-                // removed is the one on the previous version
-                var tenantChanges = FilterToTenant(
-                    changes,
-                    change => change.Current ?? change.Previous);
+                var tenantChanges = FilterToTenant(changes);
 
                 return tenantChanges.Count == 0
                     ? Task.CompletedTask
@@ -62,42 +56,74 @@ public partial class MultiTenantDatabaseRepository<TEntity>
     }
 
     /// <summary>
-    ///     Keeps the changes whose document lives in the partition prefix of the current tenant and
-    ///     strips the prefix off them, so a handler sees the partition key values it wrote.
+    ///     Keeps the documents that live in the partition prefix of the current tenant and strips
+    ///     the prefix off them, so a handler sees the partition key values it wrote.
     /// </summary>
     /// <param name="changes">The batch as the underlying repository read it, across all tenants</param>
-    /// <param name="entitySelector">
-    ///     Finds the document to judge inside a change, which is the change itself on the latest
-    ///     version feed and the current or previous version on the all-versions feed
-    /// </param>
-    private List<TChange> FilterToTenant<TChange>(
-        IReadOnlyCollection<TChange> changes,
-        Func<TChange, TEntity?> entitySelector)
+    private List<TEntity> FilterToTenant(IReadOnlyCollection<TEntity> changes)
     {
         var prefix = BuildComposedPartitionKey(null);
-        var tenantChanges = new List<TChange>(changes.Count);
+        var tenantChanges = new List<TEntity>(changes.Count);
 
-        foreach (var change in changes)
+        foreach (var entity in changes)
         {
-            var entity = entitySelector(change);
-            if (entity is null)
-            {
-                continue;
-            }
-
-            var partitionKey = (string)_partitionKeyProperty.GetValue(entity)!;
-            if (!partitionKey.StartsWith(
-                    prefix,
-                    StringComparison.Ordinal))
+            if (!BelongsToTenant(entity, prefix))
             {
                 continue;
             }
 
             RemovePartitionKeyPrefix(entity);
+            tenantChanges.Add(entity);
+        }
+
+        return tenantChanges;
+    }
+
+    /// <summary>
+    ///     Keeps the changes whose document lives in the partition prefix of the current tenant and
+    ///     strips the prefix off *both* versions it carries.
+    /// </summary>
+    /// <param name="changes">The batch as the underlying repository read it, across all tenants</param>
+    private List<DatabaseChange<TEntity>> FilterToTenant(IReadOnlyCollection<DatabaseChange<TEntity>> changes)
+    {
+        var prefix = BuildComposedPartitionKey(null);
+        var tenantChanges = new List<DatabaseChange<TEntity>>(changes.Count);
+
+        foreach (var change in changes)
+        {
+            // a delete carries no current version, so the partition of the document that was removed
+            // is the one on the previous version
+            var entity = change.Current ?? change.Previous;
+
+            if (entity is null || !BelongsToTenant(entity, prefix))
+            {
+                continue;
+            }
+
+            // both versions, not just the one the tenancy was judged on: a handler comparing the
+            // previous against the current version must not find the prefix on one and not the other
+            if (change.Current is not null)
+            {
+                RemovePartitionKeyPrefix(change.Current);
+            }
+
+            if (change.Previous is not null)
+            {
+                RemovePartitionKeyPrefix(change.Previous);
+            }
+
             tenantChanges.Add(change);
         }
 
         return tenantChanges;
+    }
+
+    private bool BelongsToTenant(TEntity entity, string prefix)
+    {
+        var partitionKey = (string)_partitionKeyProperty.GetValue(entity)!;
+        return partitionKey.StartsWith(
+            prefix,
+            StringComparison.Ordinal);
     }
 
     /// <summary>

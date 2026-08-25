@@ -7,10 +7,15 @@ namespace Wemogy.Infrastructure.Database.Core.Abstractions;
 ///     A running reader of the change feed of one repository. Created stopped: nothing is read and
 ///     no handler is invoked until <see cref="StartAsync"/> is awaited.
 ///     <para>
-///         The processor takes leases on the ranges of the container, so several instances of the
-///         same processor name share the work rather than each seeing every change, and the position
-///         it reached is checkpointed - a processor restarted under the same name continues where the
-///         previous one stopped rather than from the position its options ask for.
+///         The position the processor reached is checkpointed, so one restarted under the same name
+///         continues where the previous one stopped rather than from the position its options ask
+///         for - it neither replays what it handled nor skips what was written while it was down.
+///     </para>
+///     <para>
+///         Instances sharing a processor name take leases on the ranges of the container and split
+///         them between them, so a deployment scaled to several replicas handles each change once.
+///         The in-memory provider models the checkpointing but not the lease contention: two of its
+///         processors running under one name each see every change.
 ///     </para>
 /// </summary>
 public interface IChangeFeedProcessor : IAsyncDisposable

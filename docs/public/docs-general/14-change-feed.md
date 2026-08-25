@@ -222,6 +222,11 @@ tested without a database. Two differences are worth knowing:
 - **Lease contention is not modelled.** Two processors running under the same name each see every
   change instead of splitting the ranges between them. Checkpointing *is* modelled, so a test can
   stop a processor, write, start it again under the same name and assert it caught up.
+- **The change log is kept for whatever could still be read.** Nothing is recorded until the first
+  processor starts, and once a checkpoint exists the writes after it are retained for the lifetime of
+  the process — a stopped processor is entitled to resume from its checkpoint, so those writes cannot
+  be dropped. That is more conservative than Cosmos DB, which retains the feed for the retention
+  window of the container whether or not a lease exists.
 
 :::caution The Cosmos DB emulator
 

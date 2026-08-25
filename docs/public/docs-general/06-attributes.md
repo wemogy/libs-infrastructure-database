@@ -81,7 +81,9 @@ counter inside the bound.
 with `FixedPointPrecisionExceeded` on every write path - a create, a replace, an upsert, a `Set`
 and an `Increment` alike, and by both providers. Round it yourself before writing it. Because of
 that rule a stored value is always exactly the scaled integer divided by `10^Scale`, which is
-what lets the Cosmos and the in-memory provider agree on what is stored.
+what lets the Cosmos and the in-memory provider agree on what is stored. The check walks the entity
+by declared type — properties, fields, collection elements and dictionary values — so a member
+reached only through an `object` reference is scaled by the serializer but not checked up front.
 
 **Queries and conditions scale with the value.** A patch condition, a query predicate and a
 `QueryParameters` filter on a fixed-point member are all rewritten against the scaled integer, so
@@ -89,7 +91,10 @@ what lets the Cosmos and the in-memory provider agree on what is stored.
 orders like the value it encodes. A predicate the rewrite cannot express against the stored value -
 comparing two members of different scales, comparing against another field of the document, a
 conversion out of `decimal`, or a construct like `list.Contains(x.Value)` - is refused with
-`FixedPointExpressionNotSupported` instead of quietly answering a different question.
+`FixedPointExpressionNotSupported` instead of quietly answering a different question. So is an
+access the rewrite cannot reach at all — inside a nested lambda or behind an indexer, e.g.
+`x => x.Items.Any(i => i.Balance > 1m)`; filter such a collection in memory, or keep the member on
+the entity the query addresses.
 
 **Adding it to an existing container needs a migration.** The attribute changes how the member is
 read as well as written. A document written before it was added carries the unscaled value, and

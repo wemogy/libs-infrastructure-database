@@ -74,6 +74,13 @@ public partial class MultiTenantDatabaseRepository<TEntity> : IDatabaseRepositor
     /// </summary>
     private PartitionKeyValue BuildComposedPartitionKey(PartitionKeyValue partitionKey)
     {
+        // validated here rather than left to the client underneath: the plugin composes the key
+        // before it delegates, so a null or too-shallow key would fail inside that composition
+        // instead of as the named error the providers raise for it
+        _partitionKeyDefinition.EnsureDepth(
+            partitionKey,
+            typeof(TEntity));
+
         return partitionKey.WithComponent(
             0,
             BuildComposedPartitionKeyComponent(partitionKey[0]));

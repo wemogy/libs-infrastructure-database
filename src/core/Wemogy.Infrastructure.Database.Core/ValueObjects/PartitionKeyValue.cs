@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Linq;
 using Wemogy.Core.Errors;
 
@@ -35,6 +36,14 @@ public sealed class PartitionKeyValue : IEquatable<PartitionKeyValue>
     private const string ComponentSeparator = "/";
 
     private readonly string[] _components;
+
+    /// <summary>
+    ///     Wraps <see cref="_components"/> so a caller cannot cast the exposed list back to the
+    ///     array and write to it. The instance is a key of the in-memory store, and a component
+    ///     changed after insertion would move its hash and strand the whole partition. Built once
+    ///     per key rather than per read of <see cref="Components"/>.
+    /// </summary>
+    private readonly ReadOnlyCollection<string> _readOnlyComponents;
 
     /// <summary>
     ///     Initializes a new instance of the <see cref="PartitionKeyValue"/> class with a single
@@ -108,13 +117,14 @@ public sealed class PartitionKeyValue : IEquatable<PartitionKeyValue>
         }
 
         _components = components.ToArray();
+        _readOnlyComponents = new ReadOnlyCollection<string>(_components);
     }
 
     /// <summary>
     ///     The components of the key, ordered from the broadest to the narrowest. Always holds at
     ///     least one entry.
     /// </summary>
-    public IReadOnlyList<string> Components => _components;
+    public IReadOnlyList<string> Components => _readOnlyComponents;
 
     /// <summary>
     ///     The number of components the key is built from.

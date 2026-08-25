@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using Shouldly;
 using Wemogy.Core.Errors.Exceptions;
@@ -149,5 +150,21 @@ public class PartitionKeyValueTests
         // Assert
         prefixed.Components.ShouldBe(new[] { "tenant__cust-1", "api-calls", "2026-08" });
         partitionKey.Components.ShouldBe(new[] { "cust-1", "api-calls", "2026-08" });
+    }
+
+    [Fact]
+    public void Components_ShouldNotBeWritableThroughACast()
+    {
+        // Arrange: the key is a dictionary key of the in-memory store, so a component changed
+        // after insertion would move its hash and strand the whole partition
+        var partitionKey = new PartitionKeyValue("cust-1", "api-calls");
+
+        // Act & Assert
+        (partitionKey.Components as string[]).ShouldBeNull();
+
+        var mutable = partitionKey.Components as IList<string>;
+        mutable.ShouldNotBeNull();
+        Should.Throw<NotSupportedException>(() => mutable![0] = "tampered");
+        partitionKey[0].ShouldBe("cust-1");
     }
 }

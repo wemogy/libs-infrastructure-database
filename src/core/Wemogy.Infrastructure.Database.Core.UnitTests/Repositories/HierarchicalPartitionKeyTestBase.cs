@@ -350,4 +350,22 @@ public abstract class HierarchicalPartitionKeyTestBase
             usageEvent.GetPartitionKey());
         fetchedUsageEvent.Quantity.ShouldBe(8125);
     }
+
+    [Fact]
+    public async Task GetAsync_ShouldRejectANullKey()
+    {
+        // Arrange: a null literal binds to PartitionKeyValue directly rather than going through
+        // the implicit string conversion, so it reaches the repository as a null reference
+        await ResetAsync();
+        var usageEvent = UsageEvent.Faker.Generate();
+
+        // Act
+        var exception = await Record.ExceptionAsync(
+            () => UsageEventRepository.GetAsync(usageEvent.Id, null!));
+
+        // Assert: named, rather than a NullReferenceException out of whichever layer touched it
+        // first - which for the multi-tenant plugin is its own key composition
+        exception.ShouldBeOfType<UnexpectedErrorException>();
+        ((UnexpectedErrorException)exception).Code.ShouldBe("PartitionKeyValueNull");
+    }
 }

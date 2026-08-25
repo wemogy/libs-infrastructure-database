@@ -34,6 +34,9 @@ Provider specifics:
   `TransactionalBatch` of the Cosmos SDK.
 - [Partial updates](./13-partial-update.md) are mapped onto `PatchItem`, and a patch condition
   onto a filter predicate, which accepts comparisons but no arithmetic on document fields.
+- The [change feed](./14-change-feed.md) is mapped onto the change feed processor of the Cosmos SDK.
+  It needs a lease container, configured with the `leaseContainerName` argument of the factory and
+  defaulting to `leases`, which has to exist with the partition key path `/id`.
 - [Multi-tenancy](./04-multi-tenancy.md) is supported.
 - The third constructor argument enables *insecure development mode* (gateway
   connection mode and relaxed certificate validation) for use with the local
@@ -70,6 +73,9 @@ Provider specifics:
   condition is compiled and evaluated in process, which accepts more than the Cosmos DB filter
   predicate does - a condition doing arithmetic on document fields passes here and is refused
   there.
+- The [change feed](./14-change-feed.md) replays the writes of the store in order, with the same
+  ordering, checkpointing and redelivery semantics. One logical partition stands in for one physical
+  partition key range, and lease contention between two processors sharing a name is not modelled.
 
 :::tip Testing strategy
 
@@ -90,3 +96,8 @@ logic and tests stay provider-independent.
 | [Optimistic concurrency (ETag)](./09-optimistic-concurrency.md) | ✅        | ✅        |
 | [Transactional batch](./12-transactional-batch.md)            | ✅        | ✅        |
 | [Partial update (Patch)](./13-partial-update.md)              | ✅        | ✅        |
+| [Change feed (latest version)](./14-change-feed.md)          | ✅        | ✅        |
+| [Change feed (all versions and deletes)](./14-change-feed.md#all-versions-and-deletes) | ✅ ¹      | ✅        |
+
+¹ Needs a container configured with a full fidelity retention window, and is not served by the
+Linux vNext emulator.

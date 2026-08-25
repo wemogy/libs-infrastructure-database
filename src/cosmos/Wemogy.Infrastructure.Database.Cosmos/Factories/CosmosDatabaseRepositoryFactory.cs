@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using Wemogy.Infrastructure.Database.Core.Abstractions;
 using Wemogy.Infrastructure.Database.Core.Factories;
+using Wemogy.Infrastructure.Database.Cosmos.Client;
 
 namespace Wemogy.Infrastructure.Database.Cosmos.Factories
 {
@@ -11,7 +12,8 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Factories
             string databaseName,
             bool insecureDevelopmentMode = false,
             bool enableLogging = false,
-            List<string>? containerNames = null)
+            List<string>? containerNames = null,
+            string leaseContainerName = CosmosDatabaseClientOptions.DefaultLeaseContainerName)
             where TDatabaseRepository : class, IDatabaseRepositoryBase
         {
             var cosmosClientFactory = new CosmosDatabaseClientFactory(
@@ -19,7 +21,8 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Factories
                 databaseName,
                 insecureDevelopmentMode,
                 enableLogging,
-                containerNames);
+                containerNames,
+                leaseContainerName);
             return new DatabaseRepositoryFactory(cosmosClientFactory)
                 .CreateInstance<TDatabaseRepository>();
         }

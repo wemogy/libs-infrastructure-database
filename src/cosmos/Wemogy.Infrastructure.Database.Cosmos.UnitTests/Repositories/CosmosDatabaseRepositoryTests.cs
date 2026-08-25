@@ -43,6 +43,15 @@ public class CosmosDatabaseRepositoryTests : RepositoryTestBase
             true);
     }
 
+    /// <summary>
+    ///     The lease container is not created by the provider, so the suite creates it before a
+    ///     processor is started rather than relying on the emulator having been seeded with it.
+    /// </summary>
+    protected override Task PrepareChangeFeedAsync()
+    {
+        return TestingContainers.EnsureLeaseContainerAsync();
+    }
+
     [Fact]
     public async Task GetAsync_ShouldPopulateETagFromCosmos()
     {

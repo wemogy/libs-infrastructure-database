@@ -2,6 +2,8 @@ using System;
 using System.Linq.Expressions;
 using System.Threading;
 using System.Threading.Tasks;
+using Wemogy.Infrastructure.Database.Core.Delegates;
+using Wemogy.Infrastructure.Database.Core.Models;
 using Wemogy.Infrastructure.Database.Core.ValueObjects;
 
 namespace Wemogy.Infrastructure.Database.Core.Abstractions;
@@ -67,4 +69,21 @@ public interface IDatabaseClient<TEntity> : IDatabaseClient
         Action<IPatchOperations<TEntity>> operations,
         Expression<Func<TEntity, bool>>? condition,
         CancellationToken cancellationToken);
+
+    /// <summary>
+    ///     Creates a stopped processor reading the latest version change feed of this collection.
+    /// </summary>
+    IChangeFeedProcessor CreateChangeFeedProcessor(
+        string processorName,
+        ChangeFeedHandler<TEntity> onChanges,
+        ChangeFeedProcessorOptions? options);
+
+    /// <summary>
+    ///     Creates a stopped processor reading the all-versions-and-deletes change feed of this
+    ///     collection.
+    /// </summary>
+    IChangeFeedProcessor CreateAllVersionsAndDeletesChangeFeedProcessor(
+        string processorName,
+        AllVersionsAndDeletesChangeFeedHandler<TEntity> onChanges,
+        ChangeFeedProcessorOptions? options);
 }

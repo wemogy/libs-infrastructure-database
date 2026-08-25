@@ -5,3 +5,7 @@ mkdb infrastructuredbtests
 
 mkcon users /tenantId --database=infrastructuredbtests
 mkcon datacenters /partitionKey --database=infrastructuredbtests
+
+# the change feed processors keep their leases here; the partition key path has to be /id,
+# and the library deliberately does not create the container itself
+mkcon leases /id --database=infrastructuredbtests

@@ -1,4 +1,5 @@
 using System;
+using System.Threading.Tasks;
 using Wemogy.Infrastructure.Database.Core.Abstractions;
 using Wemogy.Infrastructure.Database.Core.Plugins.MultiTenantDatabase.Abstractions;
 using Wemogy.Infrastructure.Database.Core.Plugins.MultiTenantDatabase.Factories;
@@ -22,6 +23,15 @@ public class CosmosMultiTenantDatabaseRepositoryTests : MultiTenantDatabaseRepos
             GetFactoryUser(new AppleTenantProvider()),
             GetFactoryDataCenter(new DataCenterTenantProvider()))
     {
+    }
+
+    /// <summary>
+    ///     The lease container is not created by the provider, so the suite creates it before a
+    ///     processor is started rather than relying on the emulator having been seeded with it.
+    /// </summary>
+    protected override Task PrepareChangeFeedAsync()
+    {
+        return TestingContainers.EnsureLeaseContainerAsync();
     }
 
     private static Func<IDatabaseRepository<User>> GetFactoryUser(IDatabaseTenantProvider provider)

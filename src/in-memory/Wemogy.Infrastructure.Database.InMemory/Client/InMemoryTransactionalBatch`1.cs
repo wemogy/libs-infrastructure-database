@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using FastExpressionCompiler;
 using Wemogy.Infrastructure.Database.Core.Models;
 using Wemogy.Infrastructure.Database.Core.Repositories;
+using Wemogy.Infrastructure.Database.Core.ValueObjects;
 
 namespace Wemogy.Infrastructure.Database.InMemory.Client
 {
@@ -28,12 +29,12 @@ namespace Wemogy.Infrastructure.Database.InMemory.Client
         /// </summary>
         /// <param name="client">The client that owns the store the batch is applied to</param>
         /// <param name="partitionKey">The logical partition every operation of the batch acts on</param>
-        /// <param name="resolvePartitionKeyValue">Reads the partition key value of an entity</param>
+        /// <param name="resolvePartitionKey">Reads the partition key of an entity</param>
         public InMemoryTransactionalBatch(
             InMemoryDatabaseClient<TEntity> client,
-            string partitionKey,
-            Func<TEntity, string> resolvePartitionKeyValue)
-            : base(partitionKey, resolvePartitionKeyValue)
+            PartitionKeyValue partitionKey,
+            Func<TEntity, PartitionKeyValue> resolvePartitionKey)
+            : base(partitionKey, resolvePartitionKey)
         {
             _client = client;
         }

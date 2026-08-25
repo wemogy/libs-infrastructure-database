@@ -2,12 +2,13 @@ using System;
 using System.Linq.Expressions;
 using System.Threading;
 using System.Threading.Tasks;
+using Wemogy.Infrastructure.Database.Core.ValueObjects;
 
 namespace Wemogy.Infrastructure.Database.Core.Plugins.MultiTenantDatabase.Repositories;
 
 public partial class MultiTenantDatabaseRepository<TEntity>
 {
-    public async Task EnsureExistsAsync(string id, string partitionKey, CancellationToken cancellationToken = default)
+    public async Task EnsureExistsAsync(string id, PartitionKeyValue partitionKey, CancellationToken cancellationToken = default)
     {
         try
         {

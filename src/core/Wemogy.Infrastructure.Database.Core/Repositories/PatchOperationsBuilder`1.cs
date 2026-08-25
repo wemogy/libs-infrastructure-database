@@ -187,7 +187,11 @@ public class PatchOperationsBuilder<TEntity> : IPatchOperations<TEntity>
                 "id");
         }
 
-        if (member.GetCustomAttribute<PartitionKeyAttribute>() != null)
+        // either attribute declares the partition key, and a component of a hierarchical one is
+        // no more patchable than a single-value key: moving a document between partitions is a
+        // delete and a create, not an update
+        if (member.GetCustomAttribute<PartitionKeyAttribute>() != null ||
+            member.GetCustomAttribute<HierarchicalPartitionKeyAttribute>() != null)
         {
             throw PatchError.PathNotAllowed(
                 pathDescription,

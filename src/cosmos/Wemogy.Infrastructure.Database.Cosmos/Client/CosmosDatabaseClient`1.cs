@@ -43,13 +43,15 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Client
             _logger = logger;
         }
 
-        public async Task<TEntity> GetAsync(string id, string partitionKey, CancellationToken cancellationToken)
+        public async Task<TEntity> GetAsync(string id, PartitionKeyValue partitionKey, CancellationToken cancellationToken)
         {
+            EnsurePartitionKeyDepth(partitionKey);
+
             try
             {
                 var itemResponse = await _container.ReadItemAsync<TEntity>(
                     id,
-                    new PartitionKey<string>(partitionKey).CosmosPartitionKey,
+                    partitionKey.ToCosmosPartitionKey(),
                     cancellationToken: cancellationToken);
 
                 return itemResponse;
@@ -60,7 +62,7 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Client
                 {
                     throw DatabaseError.EntityNotFound(
                         id,
-                        partitionKey,
+                        partitionKey.ToString(),
                         hint: typeof(TEntity).Name,
                         innerException: e);
                 }
@@ -132,7 +134,7 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Client
             {
                 var createResponse = await _container.CreateItemAsync(
                     entity,
-                    partitionKey.CosmosPartitionKey,
+                    partitionKey.ToCosmosPartitionKey(),
                     new ItemRequestOptions
                     {
                         EnableContentResponseOnWrite = true
@@ -158,8 +160,7 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Client
         {
             EnsureFixedPointValuesAreValid(entity);
             var id = ResolveIdValue(entity);
-            var partitionKeyValue = ResolvePartitionKeyValue(entity);
-            var partitionKey = new PartitionKey<string>(partitionKeyValue);
+            var partitionKey = ResolvePartitionKey(entity);
 
             // entities that opt into optimistic concurrency via [ETag] carry the eTag they
             // were read with; passing it as IfMatch makes Cosmos reject stale writes with a 412
@@ -170,7 +171,7 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Client
                 var replaceResponse = await _container.ReplaceItemAsync(
                     entity,
                     id,
-                    partitionKey.CosmosPartitionKey,
+                    partitionKey.ToCosmosPartitionKey(),
                     new ItemRequestOptions
                     {
                         IfMatchEtag = eTag
@@ -184,7 +185,7 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Client
                 {
                     throw Error.PreconditionFailed(
                         "EtagMismatch",
-                        $"The eTag of the entity with id {id} and partition key {partitionKeyValue} does not match the version in the database",
+                        $"The eTag of the entity with id {id} and partition key {partitionKey} does not match the version in the database",
                         cosmosException);
                 }
 
@@ -192,7 +193,7 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Client
                 {
                     throw DatabaseError.EntityNotFound(
                         id,
-                        partitionKeyValue,
+                        partitionKey.ToString(),
                         hint: typeof(TEntity).Name,
                         innerException: cosmosException);
                 }
@@ -207,7 +208,7 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Client
             var partitionKey = ResolvePartitionKey(entity);
             var upsertResponse = await _container.UpsertItemAsync(
                 entity,
-                partitionKey.CosmosPartitionKey,
+                partitionKey.ToCosmosPartitionKey(),
                 new ItemRequestOptions
                 {
                     EnableContentResponseOnWrite = true
@@ -216,12 +217,14 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Client
             return upsertResponse.Resource;
         }
 
-        public async Task<TEntity> UpsertAsync(TEntity entity, string partitionKey)
+        public async Task<TEntity> UpsertAsync(TEntity entity, PartitionKeyValue partitionKey)
         {
             EnsureFixedPointValuesAreValid(entity);
+            EnsurePartitionKeyDepth(partitionKey);
+
             var upsertResponse = await _container.UpsertItemAsync(
                 entity,
-                new PartitionKey<string>(partitionKey).CosmosPartitionKey,
+                partitionKey.ToCosmosPartitionKey(),
                 new ItemRequestOptions
                 {
                     EnableContentResponseOnWrite = true
@@ -230,27 +233,31 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Client
             return upsertResponse.Resource;
         }
 
-        public IDatabaseTransactionalBatch<TEntity> CreateTransactionalBatch(string partitionKey)
+        public IDatabaseTransactionalBatch<TEntity> CreateTransactionalBatch(PartitionKeyValue partitionKey)
         {
-            var batch = _container.CreateTransactionalBatch(new PartitionKey<string>(partitionKey).CosmosPartitionKey);
+            EnsurePartitionKeyDepth(partitionKey);
+
+            var batch = _container.CreateTransactionalBatch(partitionKey.ToCosmosPartitionKey());
 
             return new CosmosTransactionalBatch<TEntity>(
                 batch,
                 _container,
                 partitionKey,
                 ResolveIdValue,
-                ResolvePartitionKeyValue,
+                ResolvePartitionKey,
                 ResolveETagValue,
                 _serializeMemberName);
         }
 
         public async Task<TEntity> PatchAsync(
             string id,
-            string partitionKey,
+            PartitionKeyValue partitionKey,
             Action<IPatchOperations<TEntity>> operations,
             Expression<Func<TEntity, bool>>? condition,
             CancellationToken cancellationToken)
         {
+            EnsurePartitionKeyDepth(partitionKey);
+
             var patchOperations = CosmosPatchTranslator.ToPatchOperations(
                 PatchOperationsBuilder<TEntity>.Build(operations),
                 _serializeMemberName);
@@ -262,7 +269,7 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Client
             {
                 var patchResponse = await _container.PatchItemAsync<TEntity>(
                     id,
-                    new PartitionKey<string>(partitionKey).CosmosPartitionKey,
+                    partitionKey.ToCosmosPartitionKey(),
                     patchOperations,
                     new PatchItemRequestOptions
                     {
@@ -284,14 +291,14 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Client
                 {
                     throw PatchError.ConditionNotMet(
                         id,
-                        partitionKey);
+                        partitionKey.ToString());
                 }
 
                 if (cosmosException.StatusCode == HttpStatusCode.NotFound)
                 {
                     throw DatabaseError.EntityNotFound(
                         id,
-                        partitionKey,
+                        partitionKey.ToString(),
                         hint: typeof(TEntity).Name,
                         innerException: cosmosException);
                 }
@@ -314,7 +321,7 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Client
                     // out, which is what the in-memory provider does for the same cause
                     throw PatchError.Failed(
                         id,
-                        partitionKey,
+                        partitionKey.ToString(),
                         "the database refused the patch");
                 }
 
@@ -322,8 +329,10 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Client
             }
         }
 
-        public Task DeleteAsync(string id, string partitionKey)
+        public Task DeleteAsync(string id, PartitionKeyValue partitionKey)
         {
+            EnsurePartitionKeyDepth(partitionKey);
+
             return DeleteItemAsync(
                 id,
                 partitionKey);
@@ -338,10 +347,9 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Client
                 async entity =>
                 {
                     var id = ResolveIdValue(entity);
-                    var partitionKeyValue = ResolvePartitionKeyValue(entity);
                     await DeleteItemAsync(
                         id,
-                        partitionKeyValue);
+                        ResolvePartitionKey(entity));
                 });
         }
 
@@ -357,18 +365,13 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Client
             return FixedPointPredicateRewriter.Rewrite(predicate)!;
         }
 
-        /// <summary>
-        ///     Takes the partition key as its value rather than as a <see cref="PartitionKey{T}"/>,
-        ///     so a not-found names the partition the caller asked for. The wrapper has no ToString
-        ///     of its own, so the message used to carry the name of its type.
-        /// </summary>
-        private async Task DeleteItemAsync(string id, string partitionKeyValue)
+        private async Task DeleteItemAsync(string id, PartitionKeyValue partitionKey)
         {
             try
             {
                 await _container.DeleteItemAsync<TEntity>(
                     id,
-                    new PartitionKey<string>(partitionKeyValue).CosmosPartitionKey);
+                    partitionKey.ToCosmosPartitionKey());
             }
             catch (CosmosException e)
             {
@@ -377,19 +380,13 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Client
                     case HttpStatusCode.NotFound:
                         throw DatabaseError.EntityNotFound(
                             id,
-                            partitionKeyValue,
+                            partitionKey.ToString(),
                             hint: typeof(TEntity).Name,
                             innerException: e);
                     default:
                         throw;
                 }
             }
-        }
-
-        private PartitionKey<string> ResolvePartitionKey(TEntity item)
-        {
-            var partitionKeyValue = ResolvePartitionKeyValue(item);
-            return new PartitionKey<string>(partitionKeyValue);
         }
 
         private FeedIterator<TEntity> GetFeedIterator(

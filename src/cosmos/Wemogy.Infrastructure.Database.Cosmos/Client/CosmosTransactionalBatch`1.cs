@@ -9,6 +9,7 @@ using Microsoft.Azure.Cosmos;
 using Wemogy.Infrastructure.Database.Core.Errors;
 using Wemogy.Infrastructure.Database.Core.Models;
 using Wemogy.Infrastructure.Database.Core.Repositories;
+using Wemogy.Infrastructure.Database.Core.ValueObjects;
 
 namespace Wemogy.Infrastructure.Database.Cosmos.Client
 {
@@ -58,18 +59,18 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Client
         /// <param name="container">The container the batch runs against, used to translate a patch condition</param>
         /// <param name="partitionKey">The logical partition every operation of the batch acts on</param>
         /// <param name="resolveIdValue">Reads the id value of an entity</param>
-        /// <param name="resolvePartitionKeyValue">Reads the partition key value of an entity</param>
+        /// <param name="resolvePartitionKey">Reads the partition key of an entity</param>
         /// <param name="resolveETagValue">Reads the eTag value of an entity, null if it does not opt into optimistic concurrency</param>
         /// <param name="serializeMemberName">Returns how a member is named in the document</param>
         public CosmosTransactionalBatch(
             TransactionalBatch batch,
             Container container,
-            string partitionKey,
+            PartitionKeyValue partitionKey,
             Func<TEntity, string> resolveIdValue,
-            Func<TEntity, string> resolvePartitionKeyValue,
+            Func<TEntity, PartitionKeyValue> resolvePartitionKey,
             Func<TEntity, string?> resolveETagValue,
             Func<MemberInfo, string> serializeMemberName)
-            : base(partitionKey, resolvePartitionKeyValue)
+            : base(partitionKey, resolvePartitionKey)
         {
             _batch = batch;
             _container = container;
@@ -208,7 +209,7 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Client
                     return TransactionalBatchError.EntityNotFound(
                         operationIndex,
                         id,
-                        PartitionKey,
+                        PartitionKey.ToString(),
                         typeof(TEntity).Name);
 
                 // the same status covers two different answers: a patch condition that did not
@@ -218,12 +219,12 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Client
                     return PatchError.ConditionNotMet(
                         operationIndex,
                         id,
-                        PartitionKey);
+                        PartitionKey.ToString());
                 case HttpStatusCode.PreconditionFailed:
                     return TransactionalBatchError.ETagMismatch(
                         operationIndex,
                         id,
-                        PartitionKey);
+                        PartitionKey.ToString());
 
                 // a bad request on a patch covers two rejections, the filter predicate and the
                 // operations themselves, and only the message of the response tells them apart
@@ -239,7 +240,7 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Client
                     return PatchError.Failed(
                         operationIndex,
                         id,
-                        PartitionKey,
+                        PartitionKey.ToString(),
                         "the database refused the patch");
                 default:
                     return TransactionalBatchError.Failed(

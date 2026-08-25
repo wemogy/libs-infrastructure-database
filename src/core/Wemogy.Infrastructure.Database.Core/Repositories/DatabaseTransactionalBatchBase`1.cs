@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Wemogy.Infrastructure.Database.Core.Abstractions;
 using Wemogy.Infrastructure.Database.Core.Errors;
 using Wemogy.Infrastructure.Database.Core.Models;
+using Wemogy.Infrastructure.Database.Core.ValueObjects;
 
 namespace Wemogy.Infrastructure.Database.Core.Repositories;
 
@@ -25,7 +26,7 @@ public abstract class DatabaseTransactionalBatchBase<TEntity> : IDatabaseTransac
     /// </summary>
     public const int MaxOperationCount = 100;
 
-    private readonly Func<TEntity, string> _resolvePartitionKeyValue;
+    private readonly Func<TEntity, PartitionKeyValue> _resolvePartitionKey;
 
     private bool _executed;
 
@@ -33,17 +34,19 @@ public abstract class DatabaseTransactionalBatchBase<TEntity> : IDatabaseTransac
     ///     Initializes a new instance of the <see cref="DatabaseTransactionalBatchBase{TEntity}"/> class.
     /// </summary>
     /// <param name="partitionKey">The logical partition every operation of the batch acts on</param>
-    /// <param name="resolvePartitionKeyValue">Reads the partition key value of an entity</param>
-    protected DatabaseTransactionalBatchBase(string partitionKey, Func<TEntity, string> resolvePartitionKeyValue)
+    /// <param name="resolvePartitionKey">Reads the partition key of an entity</param>
+    protected DatabaseTransactionalBatchBase(
+        PartitionKeyValue partitionKey,
+        Func<TEntity, PartitionKeyValue> resolvePartitionKey)
     {
         PartitionKey = partitionKey;
-        _resolvePartitionKeyValue = resolvePartitionKeyValue;
+        _resolvePartitionKey = resolvePartitionKey;
     }
 
     /// <summary>
     ///     The logical partition every operation of the batch acts on.
     /// </summary>
-    protected string PartitionKey { get; }
+    protected PartitionKeyValue PartitionKey { get; }
 
     /// <inheritdoc />
     public int OperationCount { get; private set; }
@@ -194,12 +197,15 @@ public abstract class DatabaseTransactionalBatchBase<TEntity> : IDatabaseTransac
 
     private void EnsureSamePartition(TEntity entity)
     {
-        var entityPartitionKey = _resolvePartitionKeyValue(entity);
+        var entityPartitionKey = _resolvePartitionKey(entity);
+
+        // compared by value across every component: a batch is limited to one logical partition,
+        // and for a hierarchical key that means the whole hierarchy has to match, not just its head
         if (entityPartitionKey != PartitionKey)
         {
             throw TransactionalBatchError.PartitionKeyMismatch(
-                entityPartitionKey,
-                PartitionKey,
+                entityPartitionKey.ToString(),
+                PartitionKey.ToString(),
                 typeof(TEntity).Name);
         }
     }

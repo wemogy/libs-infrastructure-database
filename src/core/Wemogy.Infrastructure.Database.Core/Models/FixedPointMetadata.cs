@@ -30,9 +30,6 @@ public static class FixedPointMetadata
     private static readonly ConcurrentDictionary<Type, MemberInfo[]> DataMembers =
         new ConcurrentDictionary<Type, MemberInfo[]>();
 
-    private static readonly ConcurrentDictionary<Type, IReadOnlyDictionary<string, int>> ScalesByPath =
-        new ConcurrentDictionary<Type, IReadOnlyDictionary<string, int>>();
-
     /// <summary>
     ///     Returns the declared scale of the member, or null when it is not a fixed-point member.
     /// </summary>
@@ -63,26 +60,36 @@ public static class FixedPointMetadata
 
     /// <summary>
     ///     Returns the scale of every fixed-point member reachable from the type by a chain of
-    ///     member accesses, keyed by the dot separated member path, e.g. <c>Inner.Value</c>. The
-    ///     lookup a caller builds from it has to ignore case, because a query addresses a property
-    ///     by its serialized, camelCased name.
+    ///     member accesses, keyed by the dot separated path, e.g. <c>Inner.Value</c>. The lookup
+    ///     ignores case, because a query addresses a property by its camelCased name.
+    ///     <para>
+    ///         Every member is registered under its CLR name and, when a naming rule is given,
+    ///         under the name it is serialized as as well - a member renamed with a
+    ///         <c>[JsonProperty]</c> is addressed by the stored name in a query, and looking only
+    ///         for the CLR name would miss it and compare an unscaled value against the scaled
+    ///         document.
+    ///     </para>
     /// </summary>
     /// <param name="type">The type to inspect</param>
-    /// <returns>The scale of every reachable fixed-point member, by member path</returns>
-    public static IReadOnlyDictionary<string, int> GetScalesByPath(Type type)
+    /// <param name="serializeMemberName">
+    ///     How a member is named in the document, null when only the CLR names are of interest
+    /// </param>
+    /// <returns>The scale of every reachable fixed-point member, by path</returns>
+    public static IReadOnlyDictionary<string, int> GetScalesByPath(
+        Type type,
+        Func<MemberInfo, string>? serializeMemberName = null)
     {
-        return ScalesByPath.GetOrAdd(
+        var scalesByPath = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+
+        CollectScalesByPath(
             type,
-            x =>
-            {
-                var scalesByPath = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
-                CollectScalesByPath(
-                    x,
-                    string.Empty,
-                    scalesByPath,
-                    new HashSet<Type>());
-                return scalesByPath;
-            });
+            string.Empty,
+            string.Empty,
+            serializeMemberName,
+            scalesByPath,
+            new HashSet<Type>());
+
+        return scalesByPath;
     }
 
     /// <summary>
@@ -177,7 +184,9 @@ public static class FixedPointMetadata
 
     private static void CollectScalesByPath(
         Type type,
-        string pathPrefix,
+        string memberPathPrefix,
+        string serializedPathPrefix,
+        Func<MemberInfo, string>? serializeMemberName,
         IDictionary<string, int> scalesByPath,
         HashSet<Type> visitedTypes)
     {
@@ -188,23 +197,38 @@ public static class FixedPointMetadata
 
         foreach (var member in GetDataMembers(type))
         {
-            var path = pathPrefix.Length == 0 ? member.Name : $"{pathPrefix}.{member.Name}";
+            var memberPath = Append(
+                memberPathPrefix,
+                member.Name);
+            var serializedPath = serializeMemberName == null
+                ? memberPath
+                : Append(
+                    serializedPathPrefix,
+                    serializeMemberName(member));
             var scale = GetScale(member);
 
             if (scale != null)
             {
-                scalesByPath[path] = scale.Value;
+                scalesByPath[memberPath] = scale.Value;
+                scalesByPath[serializedPath] = scale.Value;
                 continue;
             }
 
             CollectScalesByPath(
                 GetMemberType(member)!,
-                path,
+                memberPath,
+                serializedPath,
+                serializeMemberName,
                 scalesByPath,
                 visitedTypes);
         }
 
         visitedTypes.Remove(type);
+    }
+
+    private static string Append(string prefix, string segment)
+    {
+        return prefix.Length == 0 ? segment : $"{prefix}.{segment}";
     }
 
     private static void EnsureValuesAreValid(object value, string path, HashSet<object> visitedValues)
@@ -216,20 +240,31 @@ public static class FixedPointMetadata
             return;
         }
 
+        // a dictionary is walked by its values, the way its element type resolves: the entries
+        // themselves carry no members a serializer would write
+        if (value is IDictionary dictionary)
+        {
+            foreach (DictionaryEntry entry in dictionary)
+            {
+                EnsureItemIsValid(
+                    entry.Value,
+                    $"{path}[{entry.Key}]",
+                    visitedValues);
+            }
+
+            return;
+        }
+
         if (value is IEnumerable enumerable and not string)
         {
             var index = 0;
 
             foreach (var item in enumerable)
             {
-                if (item != null && HasFixedPointMembers(item.GetType()))
-                {
-                    EnsureValuesAreValid(
-                        item,
-                        $"{path}[{index}]",
-                        visitedValues);
-                }
-
+                EnsureItemIsValid(
+                    item,
+                    $"{path}[{index}]",
+                    visitedValues);
                 index++;
             }
 
@@ -270,6 +305,19 @@ public static class FixedPointMetadata
         }
     }
 
+    private static void EnsureItemIsValid(object? item, string path, HashSet<object> visitedValues)
+    {
+        if (item == null || !HasFixedPointMembers(item.GetType()))
+        {
+            return;
+        }
+
+        EnsureValuesAreValid(
+            item,
+            path,
+            visitedValues);
+    }
+
     private static object? GetValue(object owner, MemberInfo member)
     {
         return member switch
@@ -295,6 +343,12 @@ public static class FixedPointMetadata
     /// <summary>
     ///     The element type of a collection member, so a list of objects carrying a fixed-point
     ///     member is inspected as well. Null when the type is not a collection.
+    ///     <para>
+    ///         A dictionary resolves to the type of its <em>values</em>, which is what a serializer
+    ///         writes the members of. Its <c>KeyValuePair</c> element type would be treated as a
+    ///         leaf and hide them, while the Cosmos serializer still scales them - and the two
+    ///         providers would disagree about a value only one of them refuses.
+    ///     </para>
     /// </summary>
     private static Type? GetElementType(Type type)
     {
@@ -308,11 +362,27 @@ public static class FixedPointMetadata
             return type.GetElementType();
         }
 
+        var valueType = GetInterface(
+            type,
+            typeof(IDictionary<,>));
+
+        if (valueType != null)
+        {
+            return valueType.GenericTypeArguments[1];
+        }
+
+        return GetInterface(
+            type,
+            typeof(IEnumerable<>))
+            ?.GenericTypeArguments[0];
+    }
+
+    private static Type? GetInterface(Type type, Type genericTypeDefinition)
+    {
         return type
             .GetInterfaces()
             .Concat(new[] { type })
-            .FirstOrDefault(x => x.IsGenericType && x.GetGenericTypeDefinition() == typeof(IEnumerable<>))
-            ?.GenericTypeArguments[0];
+            .FirstOrDefault(x => x.IsGenericType && x.GetGenericTypeDefinition() == genericTypeDefinition);
     }
 
     /// <summary>

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Reflection;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Wemogy.Core.Extensions;
@@ -27,8 +28,25 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Models
 
         public void InitializeUsingReflection(Type modelType)
         {
+            InitializeUsingReflection(
+                modelType,
+                null);
+        }
+
+        /// <summary>
+        ///     Reads the metadata of the entity type that a query has to know about.
+        /// </summary>
+        /// <param name="modelType">The entity type of the repository</param>
+        /// <param name="serializeMemberName">
+        ///     How the client names a member in the document, so a filter on a member renamed with
+        ///     a <c>[JsonProperty]</c> finds its fixed-point scale under the stored name too
+        /// </param>
+        public void InitializeUsingReflection(Type modelType, Func<MemberInfo, string>? serializeMemberName)
+        {
             // ToDo: implement the property type mappings as well
-            _fixedPointScales = FixedPointMetadata.GetScalesByPath(modelType);
+            _fixedPointScales = FixedPointMetadata.GetScalesByPath(
+                modelType,
+                serializeMemberName);
         }
 
         public void AddCustomMappings(Dictionary<string, Type> customMappings)

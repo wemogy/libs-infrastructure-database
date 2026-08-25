@@ -418,7 +418,9 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Client
             }
 
             var mappingMetadata = new MappingMetadata();
-            mappingMetadata.InitializeUsingReflection(typeof(TEntity));
+            mappingMetadata.InitializeUsingReflection(
+                typeof(TEntity),
+                _serializeMemberName);
 
             _cachedMappingMetadata = mappingMetadata;
 

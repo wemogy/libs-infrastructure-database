@@ -1,8 +1,10 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Linq.Expressions;
 using Shouldly;
 using Wemogy.Core.Errors.Exceptions;
+using Wemogy.Infrastructure.Database.Core.Attributes;
 using Wemogy.Infrastructure.Database.Core.UnitTests.Fakes.Entities;
 using Wemogy.Infrastructure.Database.Cosmos.Query;
 using Xunit;
@@ -171,6 +173,44 @@ public class FixedPointPredicateRewriterTests
         exception.Code.ShouldBe("FixedPointExpressionNotSupported");
     }
 
+    [Fact]
+    public void Rewrite_ShouldRefuseAnAccessInsideANestedLambda()
+    {
+        // Act & Assert: the rewrite cannot reach into the lambda of an Any, and handing the
+        // predicate to the database unchanged would compare 1 against the stored 1000000
+        var exception = Should.Throw<UnexpectedErrorException>(
+            () => FixedPointPredicateRewriter.Rewrite<Wallet>(x => x.Items.Any(i => i.Balance > 1m)));
+        exception.Code.ShouldBe("FixedPointExpressionNotSupported");
+    }
+
+    [Fact]
+    public void Rewrite_ShouldRefuseAnAccessBehindAnIndexer()
+    {
+        // Act & Assert
+        var exception = Should.Throw<UnexpectedErrorException>(
+            () => FixedPointPredicateRewriter.Rewrite<Wallet>(x => x.Items[0].Balance > 1m));
+        exception.Code.ShouldBe("FixedPointExpressionNotSupported");
+    }
+
+    [Fact]
+    public void Rewrite_ShouldStillScaleAgainstACapturedEntityOfTheSameType()
+    {
+        // Arrange: the captured entity carries the decimal in memory, not the scaled integer, so
+        // it has to be scaled rather than refused as an unreachable access
+        var other = new PatchTarget { Balance = 0.5m };
+
+        // Act
+        var rewritten = Rewrite(x => x.Balance <= other.Balance);
+
+        // Assert
+        Evaluate(
+            rewritten,
+            new PatchTarget { Balance = 500000m }).ShouldBeTrue();
+        Evaluate(
+            rewritten,
+            new PatchTarget { Balance = 500001m }).ShouldBeFalse();
+    }
+
     private static Expression<Func<PatchTarget, bool>> Rewrite(Expression<Func<PatchTarget, bool>> predicate)
     {
         return FixedPointPredicateRewriter.Rewrite(predicate)!;
@@ -183,5 +223,20 @@ public class FixedPointPredicateRewriterTests
     private static bool Evaluate(Expression<Func<PatchTarget, bool>> predicate, PatchTarget storedEntity)
     {
         return predicate.Compile()(storedEntity);
+    }
+
+    /// <summary>
+    ///     An entity whose fixed-point member sits inside a collection, which no rewrite can
+    ///     reach.
+    /// </summary>
+    private class Wallet
+    {
+        public List<WalletItem> Items { get; set; } = new List<WalletItem>();
+    }
+
+    private class WalletItem
+    {
+        [FixedPoint(Scale = 6)]
+        public decimal Balance { get; set; }
     }
 }

@@ -77,9 +77,7 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Query
 
             public Expression Rewrite(Expression body)
             {
-                new AccessCollector(
-                    _parameter,
-                    _unscaledAccesses).Visit(body);
+                new AccessCollector(_unscaledAccesses).Visit(body);
 
                 if (_unscaledAccesses.Count == 0)
                 {
@@ -354,23 +352,32 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Query
         }
 
         /// <summary>
-        ///     Collects every fixed-point member access of a predicate, so the rewriter can tell
-        ///     afterwards whether it scaled all of them.
+        ///     Collects every fixed-point member access of a predicate that reads the document, so
+        ///     the rewriter can tell afterwards whether it scaled all of them.
+        ///     <para>
+        ///         "Reads the document" is anything the subtree of which touches a lambda
+        ///         parameter - the parameter of the predicate itself, but a nested one just as
+        ///         much, so <c>x =&gt; x.Items.Any(i =&gt; i.Balance &gt; 1m)</c> and
+        ///         <c>x =&gt; x.Items[0].Balance &gt; 1m</c> are counted even though the rewriter
+        ///         cannot scale either of them: an access this class does not count is one the
+        ///         leftover check cannot report, and the predicate would reach the database
+        ///         unscaled. An access that touches no parameter is a value the client holds, e.g.
+        ///         the balance of an entity the caller captured, and is scaled where it is
+        ///         compared instead.
+        ///     </para>
         /// </summary>
         private sealed class AccessCollector : ExpressionVisitor
         {
-            private readonly ParameterExpression _parameter;
             private readonly Dictionary<MemberExpression, int> _accesses;
 
-            public AccessCollector(ParameterExpression parameter, Dictionary<MemberExpression, int> accesses)
+            public AccessCollector(Dictionary<MemberExpression, int> accesses)
             {
-                _parameter = parameter;
                 _accesses = accesses;
             }
 
             protected override Expression VisitMember(MemberExpression node)
             {
-                if (IsFixedPointAccess(node))
+                if (FixedPointMetadata.GetScale(node.Member) != null && ReadsTheDocument(node))
                 {
                     _accesses[node] = _accesses.TryGetValue(
                         node,
@@ -382,21 +389,26 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Query
                 return base.VisitMember(node);
             }
 
-            private bool IsFixedPointAccess(MemberExpression node)
+            private static bool ReadsTheDocument(MemberExpression node)
             {
-                if (FixedPointMetadata.GetScale(node.Member) == null)
-                {
-                    return false;
-                }
+                var detector = new ParameterDetector();
+                detector.Visit(node);
+                return detector.Found;
+            }
+        }
 
-                Expression? expression = node.Expression;
+        /// <summary>
+        ///     Whether an expression reads a lambda parameter at all, which is what separates a
+        ///     field of the document from a value the client can evaluate up front.
+        /// </summary>
+        private sealed class ParameterDetector : ExpressionVisitor
+        {
+            public bool Found { get; private set; }
 
-                while (expression is MemberExpression memberExpression)
-                {
-                    expression = memberExpression.Expression;
-                }
-
-                return expression == _parameter;
+            protected override Expression VisitParameter(ParameterExpression node)
+            {
+                Found = true;
+                return node;
             }
         }
     }

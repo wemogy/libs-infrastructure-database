@@ -118,6 +118,46 @@ public class FixedPointMetadataTests
     }
 
     [Fact]
+    public void GetScalesByPath_ShouldAlsoRegisterTheSerializedName()
+    {
+        // Arrange: a query addresses a renamed member by its stored name, so looking only for the
+        // CLR name would compare an unscaled value against the scaled document
+        var scales = FixedPointMetadata.GetScalesByPath(
+            typeof(RenamedTarget),
+            member => member.Name == nameof(RenamedTarget.Renamed) ? "bal" : member.Name);
+
+        // Assert
+        scales["bal"].ShouldBe(6);
+        scales[nameof(RenamedTarget.Renamed)].ShouldBe(6);
+    }
+
+    [Fact]
+    public void EnsureValuesAreValid_ShouldWalkIntoTheValuesOfADictionary()
+    {
+        // Act & Assert: the Cosmos serializer scales a member behind a dictionary value, so this
+        // guard has to see it too - otherwise a test against the in-memory provider passes on a
+        // value the Cosmos write refuses
+        var exception = Should.Throw<UnexpectedErrorException>(
+            () => FixedPointMetadata.EnsureValuesAreValid(
+                new DictionaryTarget
+                {
+                    Map = new Dictionary<string, PatchTargetInner>
+                    {
+                        { "a", new PatchTargetInner { Amount = 1.23456m } }
+                    }
+                }));
+        exception.Code.ShouldBe("FixedPointPrecisionExceeded");
+        exception.Message.ShouldContain("Map[a]");
+    }
+
+    [Fact]
+    public void HasFixedPointMembers_ShouldFindAMemberBehindADictionaryValue()
+    {
+        // Act & Assert
+        FixedPointMetadata.HasFixedPointMembers(typeof(DictionaryTarget)).ShouldBeTrue();
+    }
+
+    [Fact]
     public void EnsureValuesAreValid_ShouldTerminateOnAGraphThatPointsBackAtItself()
     {
         // Arrange: a cycle would recurse forever without the reference check
@@ -126,6 +166,18 @@ public class FixedPointMetadataTests
 
         // Act & Assert
         Should.NotThrow(() => FixedPointMetadata.EnsureValuesAreValid(target));
+    }
+
+    private class RenamedTarget
+    {
+        [FixedPoint(Scale = 6)]
+        public decimal Renamed { get; set; }
+    }
+
+    private class DictionaryTarget
+    {
+        public Dictionary<string, PatchTargetInner> Map { get; set; } =
+            new Dictionary<string, PatchTargetInner>();
     }
 
     private class InvalidTarget

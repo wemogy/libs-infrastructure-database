@@ -40,6 +40,75 @@ jobs:
           git-email: it@wemogy.com
           mode: semantic
 
+      # The version action walks the history in reverse *commit date* order and stops at the
+      # commit the previous tag points at, so a branch that was open while another release was cut
+      # carries commits older than that tag which are never analyzed. That is how the breaking
+      # changes of v5 shipped as the minor v4.4.0. This compares the same range by *ancestry* and
+      # stops the release rather than letting a breaking change out under a minor number.
+      - name: Verify the bump covers every breaking change
+        if: ${{ github.event.inputs.version == '' && steps.release-version.outputs.tag-created == 'true' }}
+        env:
+          PREVIOUS_VERSION_NAME: ${{ steps.release-version.outputs.previous-version-name }}
+          PREVIOUS_VERSION: ${{ steps.release-version.outputs.previous-version }}
+          NEXT_VERSION: ${{ steps.release-version.outputs.version }}
+          NEXT_VERSION_NAME: ${{ steps.release-version.outputs.version-name }}
+        shell: bash
+        run: |
+          set -uo pipefail
+
+          if [ -z "$PREVIOUS_VERSION_NAME" ]; then
+            echo "No previous version to compare against, nothing to verify."
+            exit 0
+          fi
+
+          range="$PREVIOUS_VERSION_NAME..HEAD"
+
+          # "feat!:" / "fix(scope)!:" in the subject, or a "BREAKING CHANGE:" footer in the body
+          breaking=$(
+            {
+              git log "$range" --format='%h %s' --extended-regexp \
+                --grep='^[a-zA-Z]+(\([^)]*\))?!:'
+              git log "$range" --format='%h %s' --extended-regexp \
+                --grep='^BREAKING[ -]CHANGE:'
+            } | sort -u
+          )
+
+          if [ -z "$breaking" ]; then
+            echo "No breaking commits in $range."
+            exit 0
+          fi
+
+          echo "Breaking commits in $range:"
+          echo "$breaking"
+
+          if [ "${NEXT_VERSION%%.*}" -gt "${PREVIOUS_VERSION%%.*}" ]; then
+            echo "$PREVIOUS_VERSION -> $NEXT_VERSION is a major bump. OK."
+            exit 0
+          fi
+
+          # the action already pushed the tag for the wrong version, so take it back out to leave
+          # the repository re-runnable
+          echo "Removing the tag $NEXT_VERSION_NAME that was created for the wrong version."
+          git push --delete origin "$NEXT_VERSION_NAME" || echo "Could not delete the remote tag, remove it by hand."
+          git tag --delete "$NEXT_VERSION_NAME" || true
+
+          {
+            echo "### Release stopped: breaking changes would have shipped as $NEXT_VERSION"
+            echo
+            echo "These commits are marked breaking, but the computed bump is"
+            echo "\`$PREVIOUS_VERSION\` -> \`$NEXT_VERSION\`, which is not a new major:"
+            echo
+            echo '```'
+            echo "$breaking"
+            echo '```'
+            echo
+            echo "The tag \`$NEXT_VERSION_NAME\` has been removed again. Re-run this workflow with an"
+            echo "explicit \`version\` input set to the intended major."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          echo "::error::Breaking commits in $range, but $PREVIOUS_VERSION -> $NEXT_VERSION is not a major bump. Re-run with an explicit version input."
+          exit 1
+
       # Nuget
       - name: Build .NET
         uses: ./.github/actions/dotnet

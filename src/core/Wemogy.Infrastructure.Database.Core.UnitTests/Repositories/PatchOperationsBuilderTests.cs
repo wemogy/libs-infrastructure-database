@@ -91,6 +91,96 @@ public class PatchOperationsBuilderTests
     }
 
     [Fact]
+    public void Build_ShouldScaleAnIncrementOfAFixedPointMember()
+    {
+        // Act: the increment travels as the integer the document carries, which is the only form
+        // Cosmos DB can add exactly
+        var operations = PatchOperationsBuilder<PatchTarget>.Build(p => p.Increment(x => x.Balance, 0.5m));
+
+        // Assert
+        var operation = operations.Single();
+        operation.Kind.ShouldBe(DatabasePatchOperationKind.Increment);
+        operation.Value.ShouldBe(500000L);
+        operation.Scale.ShouldBe(6);
+    }
+
+    [Fact]
+    public void Build_ShouldScaleASetOfAFixedPointMember()
+    {
+        // Act: a Set has to write the same encoding an increment adds to
+        var operations = PatchOperationsBuilder<PatchTarget>.Build(p => p.Set(x => x.Inner.Amount, 1.2345m));
+
+        // Assert
+        var operation = operations.Single();
+        operation.Value.ShouldBe(12345L);
+        operation.Scale.ShouldBe(4);
+    }
+
+    [Fact]
+    public void Build_ShouldScaleANullableFixedPointMemberAndKeepNull()
+    {
+        // Act
+        var scaled = PatchOperationsBuilder<PatchTarget>.Build(p => p.Set(x => x.Discount, 12.34m));
+        var cleared = PatchOperationsBuilder<PatchTarget>.Build(p => p.Set(x => x.Discount, null));
+
+        // Assert: null is null at every scale
+        scaled.Single().Value.ShouldBe(1234L);
+        cleared.Single().Value.ShouldBeNull();
+        cleared.Single().Scale.ShouldBe(2);
+    }
+
+    [Fact]
+    public void Build_ShouldRejectAnIncrementFinerThanTheDeclaredScale()
+    {
+        // Act & Assert: a silent truncation of a money-like counter is what the encoding exists
+        // to prevent
+        var exception = Should.Throw<UnexpectedErrorException>(
+            () => PatchOperationsBuilder<PatchTarget>.Build(p => p.Increment(x => x.Balance, 0.5000001m)));
+        exception.Code.ShouldBe("FixedPointPrecisionExceeded");
+    }
+
+    [Fact]
+    public void Build_ShouldRejectAnIncrementBeyondTheExactRange()
+    {
+        // Act & Assert
+        var exception = Should.Throw<UnexpectedErrorException>(
+            () => PatchOperationsBuilder<PatchTarget>.Build(p => p.Increment(x => x.Balance, 10_000_000_000m)));
+        exception.Code.ShouldBe("FixedPointValueOutOfRange");
+    }
+
+    [Fact]
+    public void Build_ShouldRejectADecimalIncrementOfAMemberWithoutTheAttribute()
+    {
+        // Act & Assert: without the fixed-point encoding there is nothing exact to add to
+        var exception = Should.Throw<UnexpectedErrorException>(
+            () => PatchOperationsBuilder<PatchTarget>.Build(p => p.Increment(x => x.Money, 1.5m)));
+        exception.Code.ShouldBe("PatchPathNotSupported");
+        exception.Message.ShouldContain("[FixedPoint]");
+    }
+
+    [Fact]
+    public void Build_ShouldRejectAWholeNumberIncrementOfAFixedPointMember()
+    {
+        // Act & Assert: the member holds value * 10^6, so adding 1 would move it by 0.000001
+        var exception = Should.Throw<UnexpectedErrorException>(
+            () => PatchOperationsBuilder<PatchTarget>.Build(p => p.Increment(x => (long)x.Balance, 1)));
+        exception.Code.ShouldBe("PatchPathNotSupported");
+    }
+
+    [Fact]
+    public void Build_ShouldRejectSettingANestedObjectCarryingAnInvalidFixedPointValue()
+    {
+        // Act & Assert: a Set can write a whole object, and the members inside it are stored the
+        // same way as the ones a path addresses directly
+        var exception = Should.Throw<UnexpectedErrorException>(
+            () => PatchOperationsBuilder<PatchTarget>.Build(
+                p => p.Set(
+                    x => x.Inner,
+                    new PatchTargetInner { Amount = 1.23456m })));
+        exception.Code.ShouldBe("FixedPointPrecisionExceeded");
+    }
+
+    [Fact]
     public void Build_ShouldRejectAWholeNumberIncrementOfAFloatingPointMember()
     {
         // Act & Assert: only a cast reaches this, and the providers would disagree about the

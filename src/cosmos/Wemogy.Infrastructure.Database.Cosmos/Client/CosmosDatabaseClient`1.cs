@@ -10,7 +10,9 @@ using Microsoft.Azure.Cosmos.Linq;
 using Microsoft.Extensions.Logging;
 using Wemogy.Core.Errors;
 using Wemogy.Infrastructure.Database.Core.Abstractions;
+using Wemogy.Infrastructure.Database.Core.Delegates;
 using Wemogy.Infrastructure.Database.Core.Errors;
+using Wemogy.Infrastructure.Database.Core.Models;
 using Wemogy.Infrastructure.Database.Core.Repositories;
 using Wemogy.Infrastructure.Database.Core.ValueObjects;
 using Wemogy.Infrastructure.Database.Cosmos.Extensions;
@@ -19,11 +21,13 @@ using Wemogy.Infrastructure.Database.Cosmos.Query;
 
 namespace Wemogy.Infrastructure.Database.Cosmos.Client
 {
-    public class CosmosDatabaseClient<TEntity> : DatabaseClientBase<TEntity>, IDatabaseClient<TEntity>
+    public partial class CosmosDatabaseClient<TEntity> : DatabaseClientBase<TEntity>, IDatabaseClient<TEntity>
         where TEntity : class
     {
         private readonly ILogger? _logger;
         private readonly Container _container;
+        private readonly Container _leaseContainer;
+        private readonly CosmosDatabaseClientOptions _options;
 
         /// <summary>
         ///     How the client of this container names a member in the document. Resolved once, so a
@@ -39,6 +43,11 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Client
             var database = cosmosClient.GetDatabase(options.DatabaseName);
             var containerName = options.ContainerName;
             _container = database.GetContainer(containerName);
+
+            // resolved eagerly like the monitored container: neither call reaches the service, so a
+            // client whose repository never reads the change feed pays nothing for this
+            _leaseContainer = database.GetContainer(options.LeaseContainerName);
+            _options = options;
             _serializeMemberName = CosmosPatchTranslator.ResolveMemberNameSerializer(cosmosClient);
             _logger = logger;
         }

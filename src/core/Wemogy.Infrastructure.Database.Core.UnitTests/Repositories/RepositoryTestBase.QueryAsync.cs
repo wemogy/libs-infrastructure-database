@@ -208,4 +208,84 @@ public partial class RepositoryTestBase
         // Assert that queriedUser are paginated
         queriedUser.Count.ShouldBe(pagination.Take);
     }
+
+    [Fact]
+    public async Task CreateAsync_ShouldRoundTripTheTimestampsAsTheSameInstant()
+    {
+        // Arrange
+        await ResetAsync();
+        var user = User.Faker.Generate();
+        user.CreatedAt = new DateTimeOffset(2026, 8, 25, 10, 0, 0, TimeSpan.Zero);
+        user.UpdatedAt = user.CreatedAt;
+
+        // Act
+        await MicrosoftUserRepository.CreateAsync(user);
+        var stored = await MicrosoftUserRepository.GetAsync(user.Id);
+
+        // Assert: the offset is part of the value, so a document written in one zone and read in
+        // another has to come back as the very same instant rather than as the same wall clock
+        stored.CreatedAt.ShouldBe(user.CreatedAt);
+        stored.CreatedAt.Offset.ShouldBe(TimeSpan.Zero);
+        stored.UpdatedAt.ShouldBe(user.UpdatedAt);
+    }
+
+    [Fact]
+    public async Task QueryAsync_ShouldFilterOnAnEntityTimestamp()
+    {
+        // Arrange
+        await ResetAsync();
+        var midnight = new DateTimeOffset(2026, 8, 25, 0, 0, 0, TimeSpan.Zero);
+        for (var i = 0; i < 5; i++)
+        {
+            var user = User.Faker.Generate();
+            user.UpdatedAt = midnight.AddHours(i);
+            await MicrosoftUserRepository.CreateAsync(user);
+        }
+
+        // Act
+        var queriedUsers = await MicrosoftUserRepository.QueryAsync(x => x.UpdatedAt > midnight.AddHours(2));
+
+        // Assert
+        queriedUsers.Count.ShouldBe(2);
+    }
+
+    [Theory]
+    [InlineData(SortDirection.Ascending)]
+    [InlineData(SortDirection.Descending)]
+    public async Task QueryAsync_ShouldRespectSortingOnAnEntityTimestamp(SortDirection sortDirection)
+    {
+        // Arrange: a timestamp is stored as an ISO-8601 string and ordered as one, so this only
+        // holds while every document spells the same instant the same way
+        await ResetAsync();
+        var midnight = new DateTimeOffset(2026, 8, 25, 0, 0, 0, TimeSpan.Zero);
+        for (var i = 0; i < 5; i++)
+        {
+            var user = User.Faker.Generate();
+            user.UpdatedAt = midnight.AddHours(i);
+            await MicrosoftUserRepository.CreateAsync(user);
+        }
+
+        var sortingParameters = new Sorting<User>()
+            .OrderBy(x => x.UpdatedAt, sortDirection);
+
+        // Act
+        var queriedUsers = await MicrosoftUserRepository.QueryAsync(
+            x => true,
+            sortingParameters);
+
+        // Assert
+        queriedUsers.Count.ShouldBe(5);
+        for (var i = 0; i < queriedUsers.Count - 1; i++)
+        {
+            var sortOrder = queriedUsers[i].UpdatedAt.CompareTo(queriedUsers[i + 1].UpdatedAt);
+            if (sortDirection == SortDirection.Ascending)
+            {
+                sortOrder.ShouldBeLessThanOrEqualTo(0);
+            }
+            else
+            {
+                sortOrder.ShouldBeGreaterThanOrEqualTo(0);
+            }
+        }
+    }
 }

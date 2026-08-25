@@ -3,13 +3,14 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
+using System.Text.Json;
+using System.Text.Json.Nodes;
 using Microsoft.Azure.Cosmos;
 using Microsoft.Extensions.Logging;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
 using Wemogy.Core.Errors;
 using Wemogy.Core.Extensions;
 using Wemogy.Infrastructure.Database.Core.Enums;
+using Wemogy.Infrastructure.Database.Core.Serialization;
 using Wemogy.Infrastructure.Database.Core.ValueObjects;
 using Wemogy.Infrastructure.Database.Cosmos.Helpers;
 using Wemogy.Infrastructure.Database.Cosmos.Models;
@@ -37,9 +38,10 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Extensions
                 param);
 
             var propertyType = ResolvePropertyType<T>(propertyName);
-            var searchAfterValue = JsonConvert.DeserializeObject(
+            var searchAfterValue = JsonSerializer.Deserialize(
                 querySorting.SearchAfter!,
-                propertyType);
+                propertyType,
+                DatabaseJson.QueryValueOptions);
 
             MethodInfo? comparisonMethod = null;
             Expression searchAfterValueExpression = Expression.Constant(searchAfterValue);
@@ -62,16 +64,17 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Extensions
                     searchAfterValueExpression,
                     guidToStringMethod);
             }
-            else if (propertyType == typeof(DateTime))
+            else if (propertyType == typeof(DateTime) || propertyType == typeof(DateTimeOffset))
             {
-                // DateTime is supported by Expression.GreaterThan
+                // both are supported by Expression.GreaterThan, and only the operator translates
+                // into the SQL the Cosmos LINQ provider builds - a CompareTo call does not
             }
-            else if (propertyType == typeof(JValue))
+            else if (typeof(JsonNode).IsAssignableFrom(propertyType))
             {
                 comparisonMethod = typeof(string).GetMethod(
                     nameof(string.CompareTo),
                     new[] { typeof(string) });
-                var jValueToStringMethod = typeof(JValue).GetMethod(
+                var jValueToStringMethod = typeof(JsonNode).GetMethod(
                     nameof(string.ToString),
                     new Type[0])!;
                 propertyExpression = Expression.Call(
@@ -288,10 +291,10 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Extensions
                 valueType = valueType.GenericTypeArguments.FirstOrDefault() ?? valueType;
             }
 
-            // JsonConvert.Deserialize
-            var valueObj = JsonConvert.DeserializeObject(
+            var valueObj = JsonSerializer.Deserialize(
                 value,
-                valueType);
+                valueType,
+                DatabaseJson.QueryValueOptions);
 
             var constant = Expression.Constant(valueObj);
             return Expression.Convert(
@@ -702,7 +705,13 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Extensions
 
             logger?.LogDebug("Query:");
             logger?.LogDebug(queryText);
-            logger?.LogDebug(JsonConvert.SerializeObject(queryDefinition.GetQueryParameters()));
+
+            // projected, because a query parameter is a value tuple whose members are fields and
+            // System.Text.Json skips a field - logging the tuples directly prints a row of "{}"
+            logger?.LogDebug(
+                JsonSerializer.Serialize(
+                    queryDefinition.GetQueryParameters()
+                        .Select(x => new { x.Name, x.Value })));
 
             return queryDefinition;
         }
@@ -725,7 +734,7 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Extensions
             return container.GetItemQueryIterator<T>(queryDefinition);
         }
 
-        public static FeedIterator<JObject> GetCount(
+        public static FeedIterator<JsonObject> GetCount(
             this Container container,
             QueryParameters queryParameters,
             MappingMetadata mappingMetadata,
@@ -740,7 +749,7 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Extensions
                 generalFilter,
                 logger);
 
-            return container.GetItemQueryIterator<JObject>(queryDefinition);
+            return container.GetItemQueryIterator<JsonObject>(queryDefinition);
         }
 
         private static QueryDefinitionFilterCondition GetQueryDefinitionFilterCondition(
@@ -793,25 +802,22 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Extensions
                         condition = $"ARRAY_LENGTH(c.{filter.Property}) > 0";
                         break;
                     case Comparator.IsOneOf:
-                        var arr = mappingMetadata.Deserialize(
+                        var arr = mappingMetadata.DeserializeArray(
                             filter.Property,
-                            filter.Value) as JArray;
+                            filter.Value);
                         if (arr == null)
                         {
                             logger?.LogError(
-                                $"Comparator.IsOneOf failed for filter: {JsonConvert.SerializeObject(filter)}");
+                                $"Comparator.IsOneOf failed for filter: {JsonSerializer.Serialize(filter)}");
                             continue;
                         }
 
                         var isOneOfQueryDefinition = new QueryDefinitionFilterCondition();
                         foreach (var item in arr)
                         {
-                            var json = JsonConvert.SerializeObject(item);
                             isOneOfQueryDefinition.Or(
                                 $"c.{filter.Property} = @paramHere",
-                                mappingMetadata.Deserialize(
-                                    filter.Property,
-                                    json),
+                                item,
                                 true);
                         }
 
@@ -832,7 +838,7 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Extensions
                         continue;
                     default:
                         logger?.LogError(
-                            $"GetQueryDefinitionFilterCondition failed for filter: {JsonConvert.SerializeObject(filter)}");
+                            $"GetQueryDefinitionFilterCondition failed for filter: {JsonSerializer.Serialize(filter)}");
                         continue;
                 }
 

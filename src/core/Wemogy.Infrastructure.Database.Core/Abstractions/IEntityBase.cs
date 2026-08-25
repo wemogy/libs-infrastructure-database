@@ -11,7 +11,19 @@ public interface IEntityBase
 
     public string? ETag { get; }
 
-    public DateTime CreatedAt { get; set; }
+    /// <summary>
+    ///     When the entity was created. Stamped in UTC by <c>EntityBase</c>'s constructor.
+    /// </summary>
+    public DateTimeOffset CreatedAt { get; set; }
 
-    public DateTime UpdatedAt { get; set; }
+    /// <summary>
+    ///     When the entity was last written.
+    /// </summary>
+    /// <remarks>
+    ///     Stamped in UTC alongside <see cref="CreatedAt"/> when the entity is constructed, and
+    ///     <b>not</b> refreshed by any write path: a caller that wants it to track the last write
+    ///     has to assign it. Reading it as a last-write timestamp without doing so returns the
+    ///     creation timestamp forever.
+    /// </remarks>
+    public DateTimeOffset UpdatedAt { get; set; }
 }

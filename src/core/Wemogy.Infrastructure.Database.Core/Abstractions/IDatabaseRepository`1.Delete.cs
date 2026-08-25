@@ -3,6 +3,7 @@ using System.Linq.Expressions;
 using System.Threading.Tasks;
 using Wemogy.Core.Errors.Exceptions;
 
+using Wemogy.Infrastructure.Database.Core.ValueObjects;
 namespace Wemogy.Infrastructure.Database.Core.Abstractions;
 
 public partial interface IDatabaseRepository<TEntity>
@@ -25,7 +26,7 @@ public partial interface IDatabaseRepository<TEntity>
     ///     Thrown when the entity is not found (either because it does not exist or
     ///     because it has been soft-deleted when this is supported)
     /// </exception>
-    Task DeleteAsync(string id, string partitionKey); // TODO: make exception-throwing behaviour consistent, as seen in the other two methods
+    Task DeleteAsync(string id, PartitionKeyValue partitionKey); // TODO: make exception-throwing behaviour consistent, as seen in the other two methods
 
     /// <summary>
     ///     Delete an entity from the repository, as identified by a given predicate.

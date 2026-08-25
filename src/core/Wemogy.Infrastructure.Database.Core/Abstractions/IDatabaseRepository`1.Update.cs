@@ -1,6 +1,7 @@
 using System;
 using System.Threading.Tasks;
 
+using Wemogy.Infrastructure.Database.Core.ValueObjects;
 namespace Wemogy.Infrastructure.Database.Core.Abstractions;
 
 public partial interface IDatabaseRepository<TEntity>
@@ -12,7 +13,7 @@ public partial interface IDatabaseRepository<TEntity>
     /// <param name="partitionKey">The unique partitionKey of where the corresponding entity should be located</param>
     /// <param name="updateAction">The update action to execute</param>
     /// <returns>The updated entity as persisted</returns>
-    Task<TEntity> UpdateAsync(string id, string partitionKey, Action<TEntity> updateAction);
+    Task<TEntity> UpdateAsync(string id, PartitionKeyValue partitionKey, Action<TEntity> updateAction);
 
     /// <summary>
     ///     Update an entity in the database as retrieved by a unique identifier.
@@ -31,7 +32,7 @@ public partial interface IDatabaseRepository<TEntity>
     /// <param name="partitionKey">The unique partitionKey of where the corresponding entity should be located</param>
     /// <param name="updateAction">The async update function to execute</param>
     /// <returns>The updated entity as persisted</returns>
-    Task<TEntity> UpdateAsync(string id, string partitionKey, Func<TEntity, Task> updateAction);
+    Task<TEntity> UpdateAsync(string id, PartitionKeyValue partitionKey, Func<TEntity, Task> updateAction);
 
     /// <summary>
     ///     Update an entity in the database as retrieved by a unique identifier.

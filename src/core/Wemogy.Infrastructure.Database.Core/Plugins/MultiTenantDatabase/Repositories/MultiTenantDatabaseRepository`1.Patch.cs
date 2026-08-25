@@ -3,6 +3,7 @@ using System.Linq.Expressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Wemogy.Infrastructure.Database.Core.Abstractions;
+using Wemogy.Infrastructure.Database.Core.ValueObjects;
 
 namespace Wemogy.Infrastructure.Database.Core.Plugins.MultiTenantDatabase.Repositories;
 
@@ -10,7 +11,7 @@ public partial class MultiTenantDatabaseRepository<TEntity>
 {
     public async Task<TEntity> PatchAsync(
         string id,
-        string partitionKey,
+        PartitionKeyValue partitionKey,
         Action<IPatchOperations<TEntity>> operations,
         Expression<Func<TEntity, bool>>? condition = null,
         CancellationToken cancellationToken = default)

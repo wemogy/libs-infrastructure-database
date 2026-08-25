@@ -37,6 +37,21 @@ public class User : EntityBase
     public double Score { get; set; }
 
     /// <summary>
+    ///     An exact base-10 balance, so the patch and query tests have a money-like field to
+    ///     increment and to filter on. Stored as the integer <c>value * 10^6</c>, which is what
+    ///     makes the increment of it exact.
+    /// </summary>
+    [FixedPoint(Scale = 6)]
+    public decimal Balance { get; set; }
+
+    /// <summary>
+    ///     A nullable fixed-point member at a different scale, so the tests cover both a member
+    ///     the document may not carry at all and two scales side by side.
+    /// </summary>
+    [FixedPoint(Scale = 2)]
+    public decimal? Discount { get; set; }
+
+    /// <summary>
     ///     Serialized under a name of its own, so the patch tests can prove that a path is
     ///     resolved through the serializer instead of a hand-rolled camelCase.
     /// </summary>

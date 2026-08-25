@@ -2,6 +2,7 @@ using System.Reflection;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Serialization;
 using Wemogy.Infrastructure.Database.Core.Attributes;
+using Wemogy.Infrastructure.Database.Core.Models;
 
 namespace Wemogy.Infrastructure.Database.Cosmos.Serialization
 {
@@ -32,6 +33,17 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Serialization
                 // Rule 2: never persist the eTag into the document body, otherwise queries
                 // would deserialize a stale value and cause false 412s on later replaces
                 property.ShouldSerialize = _ => false;
+            }
+
+            var scale = FixedPointMetadata.GetScale(member);
+
+            if (scale != null)
+            {
+                // a fixed-point decimal is persisted as the scaled integer it is exact as, so the
+                // server-side increment of it is exact too
+                property.Converter = new FixedPointDecimalConverter(
+                    scale.Value,
+                    $"{member.DeclaringType?.Name}.{member.Name}");
             }
 
             return property;

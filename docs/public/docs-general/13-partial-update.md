@@ -27,6 +27,7 @@ same semantics and the same errors, so a quota rule can be covered by unit tests
 | `Set(x => x.Field, value)` | Writes a value, creating the field if the document does not carry it |
 | `Increment(x => x.Counter, 5)` | Adds to a `long` field; a field that is not there starts at zero |
 | `Increment(x => x.Score, 0.5)` | Adds to a `double` field |
+| `Increment(x => x.Balance, 0.5m)` | Adds to a `decimal` field marked with [`[FixedPoint]`](./06-attributes.md#fixedpoint) |
 
 `Increment` takes signed values, so a decrement is `Increment(..., -n)` - there is no
 `Decrement`. Operations chain, and up to ten of them are applied in one act:
@@ -135,6 +136,8 @@ patch therefore asks for the write response and pays its request charge; the bat
 | No operations | `UnexpectedErrorException` | `PatchIsEmpty` |
 | Condition uses an unsupported construct | `UnexpectedErrorException` | `PatchConditionNotSupported` |
 | The Cosmos client cannot report how it names a member | `UnexpectedErrorException` | `PatchMemberNamesNotResolvable` |
+| A fixed-point value carries more decimal places than its declared scale | `UnexpectedErrorException` | `FixedPointPrecisionExceeded` |
+| A fixed-point value is outside the range the database holds exactly | `UnexpectedErrorException` | `FixedPointValueOutOfRange` |
 
 The path errors are thrown while the operations are collected, before any I/O.
 
@@ -158,16 +161,23 @@ The path errors are thrown while the operations are collected, before any I/O.
   wrong field. The in-memory provider addresses members directly and is not affected.
 - **Filters do not apply.** Read filters, property filters and soft delete are not applied to a
   patch, consistent with the other write paths.
+- **A `[FixedPoint]` decimal is carried as its scaled integer.** Both the value of a `Set` or an
+  `Increment` and the constants of the condition are scaled by `10^Scale` before they leave the
+  process, so `p.Increment(x => x.Balance, 0.5m)` with `condition: x => x.Balance <= 100m` becomes
+  `incr /balance 500000` under `FROM c WHERE c.balance <= 100000000`. An increment finer than the
+  declared scale, or one that would take the value out of the exact range, is refused before any
+  I/O - see [`[FixedPoint]`](./06-attributes.md#fixedpoint).
 
 ## Not supported
 
 - **`Add`, `Remove`, `Move` and array-index paths.** `Set` and `Increment` cover the cases this
   exists for.
-- **`decimal` increments.** Cosmos DB increments a field as a 64-bit integer or as a double.
-  Narrowing a `decimal` to a `double` would silently lose precision on values that are usually
-  money, so there is no overload that does it, and a cast that reaches one is refused with
-  `PatchPathNotSupported`. Keep such a value in a `long` of minor units, or read-modify-write it
-  with `UpdateAsync`.
+- **`decimal` increments without `[FixedPoint]`.** Cosmos DB increments a field as a 64-bit
+  integer or as a double, and narrowing a `decimal` to a `double` would silently lose precision on
+  values that are usually money. A plain `decimal` member is therefore refused with
+  `PatchPathNotSupported`; mark it with [`[FixedPoint(Scale = n)]`](./06-attributes.md#fixedpoint)
+  to store it as an exact scaled integer, keep it in a `long` of minor units, or read-modify-write
+  it with `UpdateAsync`.
 - **An increment whose value does not match the kind of the field.**
   `Increment(x => x.LoginCount, 0.5)` on an `int` binds to the `double` overload, and
   `Increment(x => (long)x.Score, 1)` reaches the `long` overload through a cast. Either way the two

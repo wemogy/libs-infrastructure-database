@@ -14,6 +14,7 @@ These attributes are applied to properties of an entity class.
 | `[PartitionKey]`   | Property | Yes      | Marks the property used as the partition key (see [Getting Started](./02-getting-started.md#partition-key)). |
 | `[SoftDeleteFlag]` | Property | No       | Marks the `bool` property that flags an entity as soft-deleted (see [Soft Delete](./07-soft-delete.md)). |
 | `[ETag]`           | Property | No       | Opts the entity into optimistic concurrency (see [Optimistic Concurrency](./09-optimistic-concurrency.md)). |
+| `[FixedPoint]`     | Property, Field | No | Persists a `decimal` as an exact scaled integer, which is what makes an atomic increment of it possible (see below). |
 
 When you derive from `EntityBase`, `[Id]` and `[SoftDeleteFlag]` are already
 provided. `GlobalEntityBase` additionally provides a global `[PartitionKey]`.
@@ -30,6 +31,70 @@ public class User : EntityBase // provides [Id] Id and [SoftDeleteFlag] IsDelete
     public string Firstname { get; set; } = string.Empty;
 }
 ```
+
+### `[FixedPoint]`
+
+A `decimal` written as a floating point number is at the mercy of the number type of the
+database. Cosmos DB stores every number as IEEE 754 binary64, and its `Increment` takes a
+`long` or a `double` - so a base-10 domain like money or a metered quota has no exact
+atomic increment at all.
+
+`[FixedPoint(Scale = n)]` moves such a member into whole units of `10^-n`: the document
+carries the integer `value * 10^n`, and the entity reads the decimal back by dividing by
+the same factor. `0.5m` at scale 6 is stored as `500000`, an increment of `0.5m` becomes
+`incr /value 500000`, and a condition or filter comparing against `100m` compares against
+`100000000`.
+
+```csharp title="A quota balance that can be incremented exactly"
+using Wemogy.Infrastructure.Database.Core.Abstractions;
+using Wemogy.Infrastructure.Database.Core.Attributes;
+
+public class QuotaBalance : GlobalEntityBase
+{
+    [FixedPoint(Scale = 6)]
+    public decimal Value { get; set; }
+}
+
+await repository.PatchAsync(
+    id,
+    partitionKey,
+    p => p.Increment(x => x.Value, 0.5m),
+    condition: x => x.Value <= 100m);
+```
+
+| Parameter | Type  | Description                                                                                  |
+| --------- | ----- | -------------------------------------------------------------------------------------------- |
+| `Scale`   | `int` | The number of decimal places the member is stored with, between 0 and 18. Scale 6 stores `0.5` as `500000`. |
+
+**What it applies to.** Only a `decimal` or a `decimal?`, on a property or a field, at any
+depth of the entity - a member of a nested object or of a collection item is scaled the same
+way. Putting it on any other type throws `FixedPointMemberIsNotADecimal` the first time the
+member is read.
+
+**The exact range.** Exactness holds while the *scaled* value stays inside ±(2^53 − 1), which
+at scale 6 is roughly ±9.0 × 10⁹ in domain units. A value written or incremented past that
+bound is refused with `FixedPointValueOutOfRange` rather than silently degraded. The database
+cannot check the accumulated result of a server-side increment, so keep the range of the
+counter inside the bound.
+
+**No silent rounding.** A value carrying more decimal places than the declared scale is refused
+with `FixedPointPrecisionExceeded` on every write path - a create, a replace, an upsert, a `Set`
+and an `Increment` alike, and by both providers. Round it yourself before writing it. Because of
+that rule a stored value is always exactly the scaled integer divided by `10^Scale`, which is
+what lets the Cosmos and the in-memory provider agree on what is stored.
+
+**Queries and conditions scale with the value.** A patch condition, a query predicate and a
+`QueryParameters` filter on a fixed-point member are all rewritten against the scaled integer, so
+`x => x.Value <= 100m` asks the question you wrote. Sorting is unaffected - a scaled integer
+orders like the value it encodes. A predicate the rewrite cannot express against the stored value -
+comparing two members of different scales, comparing against another field of the document, a
+conversion out of `decimal`, or a construct like `list.Contains(x.Value)` - is refused with
+`FixedPointExpressionNotSupported` instead of quietly answering a different question.
+
+**Adding it to an existing container needs a migration.** The attribute changes how the member is
+read as well as written. A document written before it was added carries the unscaled value, and
+reading it throws `FixedPointStoredValueIsNotScaled` rather than handing out a value 10^Scale times
+too small.
 
 ## Repository attributes
 

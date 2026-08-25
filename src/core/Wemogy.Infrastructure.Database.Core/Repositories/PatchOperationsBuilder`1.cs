@@ -86,6 +86,16 @@ public class PatchOperationsBuilder<TEntity> : IPatchOperations<TEntity>
             typeof(double));
     }
 
+    /// <inheritdoc />
+    public IPatchOperations<TEntity> Increment(Expression<Func<TEntity, decimal>> path, decimal value)
+    {
+        return Add(
+            DatabasePatchOperationKind.Increment,
+            path,
+            value,
+            typeof(decimal));
+    }
+
     /// <summary>
     ///     Returns the collected operations.
     /// </summary>
@@ -232,16 +242,45 @@ public class PatchOperationsBuilder<TEntity> : IPatchOperations<TEntity>
         }
 
         var underlyingMemberType = Nullable.GetUnderlyingType(memberType) ?? memberType;
+        var scale = FixedPointMetadata.GetScale(member);
 
-        // a decimal is deliberately not incrementable: Cosmos DB increments a field as a 64-bit
-        // integer or as a double, and narrowing a decimal to a double would silently lose precision
-        // on values that are usually money. Reachable through an explicit cast in the path, which
+        if (incrementValueType == typeof(decimal))
+        {
+            // the decimal overload exists for fixed-point members only: they are the ones the
+            // document carries as a scaled integer, which is what makes the increment exact
+            if (scale == null)
+            {
+                var reason = underlyingMemberType == typeof(decimal)
+                    ? $"a decimal member can only be incremented when it is marked with [FixedPoint], which persists it as an exact scaled integer. Mark {member.Name} with [FixedPoint(Scale = ...)], keep it in a long of minor units, or read-modify-write it"
+                    : $"a decimal value can only increment a decimal member marked with [FixedPoint]; increment {member.Name} by a value of its own type instead";
+
+                throw PatchError.PathNotSupported(
+                    pathDescription,
+                    reason);
+            }
+
+            return;
+        }
+
+        // a fixed-point member holds the value multiplied by 10^Scale, so a raw whole number would
+        // move it by that many units of 10^-Scale, and a raw double would write a value the member
+        // cannot read back exactly. Reachable through an explicit cast in the path, which
         // UnwrapNumericConversion unwraps, so it has to be refused here
+        if (scale != null)
+        {
+            throw PatchError.PathNotSupported(
+                pathDescription,
+                $"{member.Name} is marked with [FixedPoint] and is stored as a scaled integer; increment it by a decimal value instead");
+        }
+
+        // a decimal without the attribute is deliberately not incrementable: Cosmos DB increments a
+        // field as a 64-bit integer or as a double, and narrowing a decimal to a double would
+        // silently lose precision on values that are usually money
         if (underlyingMemberType == typeof(decimal))
         {
             throw PatchError.PathNotSupported(
                 pathDescription,
-                "a decimal member cannot be incremented, because the database increments a field as a 64-bit integer or as a double and narrowing a decimal to a double would lose precision. Keep such a value in a long of minor units, or read-modify-write it");
+                "a decimal member cannot be incremented, because the database increments a field as a 64-bit integer or as a double and narrowing a decimal to a double would lose precision. Mark it with [FixedPoint(Scale = ...)] to store it as an exact scaled integer, keep it in a long of minor units, or read-modify-write it");
         }
 
         // a fractional increment on an integral field is refused instead of silently disagreeing
@@ -270,6 +309,26 @@ public class PatchOperationsBuilder<TEntity> : IPatchOperations<TEntity>
         return NumericTypes.Contains(Nullable.GetUnderlyingType(type) ?? type);
     }
 
+    private static object? ToScaledValue(object? value, int scale, string pathDescription)
+    {
+        if (value == null)
+        {
+            return null;
+        }
+
+        if (value is not decimal decimalValue)
+        {
+            throw PatchError.PathNotSupported(
+                pathDescription,
+                "a member marked with [FixedPoint] can only carry a decimal value");
+        }
+
+        return FixedPointScale.ToScaled(
+            decimalValue,
+            scale,
+            pathDescription);
+    }
+
     private IPatchOperations<TEntity> Add<TValue>(
         DatabasePatchOperationKind kind,
         Expression<Func<TEntity, TValue>> path,
@@ -281,11 +340,34 @@ public class PatchOperationsBuilder<TEntity> : IPatchOperations<TEntity>
             throw PatchError.OperationLimitExceeded(MaxOperationCount);
         }
 
+        var members = ResolvePath(
+            path,
+            incrementValueType);
+        var scale = FixedPointMetadata.GetScale(members[members.Count - 1]);
+
+        if (scale != null)
+        {
+            // a fixed-point member is carried as the scaled integer the document holds, for a Set
+            // and for an Increment alike - so the value is validated here, once, and neither
+            // provider has to know how the member is encoded
+            value = ToScaledValue(
+                value,
+                scale.Value,
+                path.ToString());
+        }
+        else if (kind == DatabasePatchOperationKind.Set)
+        {
+            // a Set can write a whole object that carries fixed-point members of its own, which
+            // the providers serialize themselves - validated here so both refuse the same value
+            FixedPointMetadata.EnsureValuesAreValid(value);
+        }
+
         _operations.Add(
             new DatabasePatchOperation(
                 kind,
-                ResolvePath(path, incrementValueType),
-                value));
+                members,
+                value,
+                scale));
 
         return this;
     }

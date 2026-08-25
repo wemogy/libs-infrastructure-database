@@ -15,6 +15,7 @@ using Wemogy.Infrastructure.Database.Core.Repositories;
 using Wemogy.Infrastructure.Database.Core.ValueObjects;
 using Wemogy.Infrastructure.Database.Cosmos.Extensions;
 using Wemogy.Infrastructure.Database.Cosmos.Models;
+using Wemogy.Infrastructure.Database.Cosmos.Query;
 
 namespace Wemogy.Infrastructure.Database.Cosmos.Client
 {
@@ -91,7 +92,7 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Client
             CancellationToken cancellationToken = default)
         {
             var queryable = _container.GetItemLinqQueryable<TEntity>()
-                .Where(predicate);
+                .Where(ToStoredPredicate(predicate));
 
             if (sorting != null)
             {
@@ -115,7 +116,7 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Client
         public async Task<long> CountAsync(Expression<Func<TEntity, bool>> predicate, CancellationToken cancellationToken)
         {
             var queryable = _container.GetItemLinqQueryable<TEntity>()
-                .Where(predicate);
+                .Where(ToStoredPredicate(predicate));
 
             var response = await queryable
                 .CountAsync(cancellationToken);
@@ -125,6 +126,7 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Client
 
         public async Task<TEntity> CreateAsync(TEntity entity)
         {
+            EnsureFixedPointValuesAreValid(entity);
             var partitionKey = ResolvePartitionKey(entity);
             try
             {
@@ -154,6 +156,7 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Client
 
         public async Task<TEntity> ReplaceAsync(TEntity entity)
         {
+            EnsureFixedPointValuesAreValid(entity);
             var id = ResolveIdValue(entity);
             var partitionKeyValue = ResolvePartitionKeyValue(entity);
             var partitionKey = new PartitionKey<string>(partitionKeyValue);
@@ -200,6 +203,7 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Client
 
         public async Task<TEntity> UpsertAsync(TEntity entity)
         {
+            EnsureFixedPointValuesAreValid(entity);
             var partitionKey = ResolvePartitionKey(entity);
             var upsertResponse = await _container.UpsertItemAsync(
                 entity,
@@ -214,6 +218,7 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Client
 
         public async Task<TEntity> UpsertAsync(TEntity entity, string partitionKey)
         {
+            EnsureFixedPointValuesAreValid(entity);
             var upsertResponse = await _container.UpsertItemAsync(
                 entity,
                 new PartitionKey<string>(partitionKey).CosmosPartitionKey,
@@ -341,6 +346,18 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Client
         }
 
         /// <summary>
+        ///     Returns the predicate as it has to read against the stored document: a member marked
+        ///     with the <see cref="Core.Attributes.FixedPointAttribute"/> is persisted as a scaled
+        ///     integer, so every value it is compared against is scaled by the same factor. Without
+        ///     it a query would compare <c>0.5</c> against the <c>500000</c> the document carries
+        ///     and quietly return the wrong rows.
+        /// </summary>
+        private static Expression<Func<TEntity, bool>> ToStoredPredicate(Expression<Func<TEntity, bool>> predicate)
+        {
+            return FixedPointPredicateRewriter.Rewrite(predicate)!;
+        }
+
+        /// <summary>
         ///     Takes the partition key as its value rather than as a <see cref="PartitionKey{T}"/>,
         ///     so a not-found names the partition the caller asked for. The wrapper has no ToString
         ///     of its own, so the message used to carry the name of its type.
@@ -382,7 +399,7 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Client
             IQueryable<TEntity> queryable = _container.GetItemLinqQueryable<TEntity>();
             if (generalFilterPredicate != null)
             {
-                queryable = queryable.Where(generalFilterPredicate);
+                queryable = queryable.Where(ToStoredPredicate(generalFilterPredicate));
             }
 
             var mappingMetadata = GetMappingMetadata();

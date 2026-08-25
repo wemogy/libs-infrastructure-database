@@ -170,9 +170,9 @@ public static class FixedPointMetadata
         return GetDataMembers(type)
             .Any(
                 member => GetScale(member) != null ||
-                          ContainsFixedPointMember(
-                              GetMemberType(member)!,
-                              visitedTypes));
+                    ContainsFixedPointMember(
+                        GetMemberType(member)!,
+                        visitedTypes));
     }
 
     private static void CollectScalesByPath(
@@ -325,10 +325,10 @@ public static class FixedPointMetadata
         var underlyingType = Nullable.GetUnderlyingType(type) ?? type;
 
         return underlyingType.IsPrimitive ||
-               underlyingType.IsEnum ||
-               underlyingType.IsPointer ||
-               underlyingType.Namespace == null ||
-               underlyingType.Namespace == "System" ||
-               underlyingType.Namespace.StartsWith("System.", StringComparison.Ordinal);
+            underlyingType.IsEnum ||
+            underlyingType.IsPointer ||
+            underlyingType.Namespace == null ||
+            underlyingType.Namespace == "System" ||
+            underlyingType.Namespace.StartsWith("System.", StringComparison.Ordinal);
     }
 }

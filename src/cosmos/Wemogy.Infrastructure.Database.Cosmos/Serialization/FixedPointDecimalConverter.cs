@@ -73,9 +73,9 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Serialization
         private static bool IsExactWholeNumber(double value)
         {
             return !double.IsNaN(value) &&
-                   !double.IsInfinity(value) &&
-                   Math.Abs(value) <= FixedPointScale.MaxExactMagnitude &&
-                   Math.Floor(value) == value;
+                !double.IsInfinity(value) &&
+                Math.Abs(value) <= FixedPointScale.MaxExactMagnitude &&
+                Math.Floor(value) == value;
         }
 
         /// <summary>
@@ -97,8 +97,9 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Serialization
                     return intValue;
                 case double doubleValue when IsExactWholeNumber(doubleValue):
                     return (long)doubleValue;
-                case decimal decimalValue when decimalValue == decimal.Truncate(decimalValue) &&
-                                               Math.Abs(decimalValue) <= FixedPointScale.MaxExactMagnitude:
+                case decimal decimalValue
+                    when decimalValue == decimal.Truncate(decimalValue) &&
+                        Math.Abs(decimalValue) <= FixedPointScale.MaxExactMagnitude:
                     return (long)decimalValue;
                 default:
                     var description = Convert.ToString(

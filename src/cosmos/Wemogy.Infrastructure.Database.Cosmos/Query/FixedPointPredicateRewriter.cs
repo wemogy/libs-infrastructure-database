@@ -159,8 +159,8 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Query
                 var declaringType = node.Member.DeclaringType;
 
                 return node.Member.Name == nameof(Nullable<int>.Value) &&
-                       declaringType is { IsGenericType: true } &&
-                       declaringType.GetGenericTypeDefinition() == typeof(Nullable<>);
+                    declaringType is { IsGenericType: true } &&
+                    declaringType.GetGenericTypeDefinition() == typeof(Nullable<>);
             }
 
             /// <summary>
@@ -222,8 +222,8 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Query
 
                             // a conversion out of decimal would compare the scaled integer in a
                             // number type that cannot hold it exactly
-                            var underlyingType = Nullable.GetUnderlyingType(unaryExpression.Type) ??
-                                                 unaryExpression.Type;
+                            var underlyingType =
+                                Nullable.GetUnderlyingType(unaryExpression.Type) ?? unaryExpression.Type;
 
                             if (underlyingType != typeof(decimal))
                             {

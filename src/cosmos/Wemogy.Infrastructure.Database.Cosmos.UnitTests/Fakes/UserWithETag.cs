@@ -1,4 +1,4 @@
-using Newtonsoft.Json;
+using System.Text.Json.Serialization;
 using Wemogy.Infrastructure.Database.Core.Abstractions;
 using Wemogy.Infrastructure.Database.Core.Attributes;
 
@@ -20,6 +20,6 @@ public class UserWithETag : EntityBase
     ///     Serialized under a name carrying a slash, which a JSON pointer has to escape as ~1 -
     ///     without that, a patch of it would address a nested path instead of this field.
     /// </summary>
-    [JsonProperty("limits/daily")]
+    [JsonPropertyName("limits/daily")]
     public long DailyLimit { get; set; }
 }

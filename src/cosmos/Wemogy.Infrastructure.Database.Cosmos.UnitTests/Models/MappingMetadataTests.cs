@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using Newtonsoft.Json.Linq;
 using Shouldly;
 using Wemogy.Core.Errors.Exceptions;
 using Wemogy.Infrastructure.Database.Core.UnitTests.Fakes.Entities;
@@ -42,9 +41,9 @@ public class MappingMetadataTests
     }
 
     [Fact]
-    public void Deserialize_ShouldReturnAJArrayForJsonArrays()
+    public void Deserialize_ShouldReturnAListForJsonArrays()
     {
-        // Arrange: this is the shape the IsOneOf comparator relies on
+        // Arrange
         var mappingMetadata = new MappingMetadata();
 
         // Act
@@ -52,9 +51,96 @@ public class MappingMetadataTests
             "firstname",
             "[\"John\",\"Jane\"]");
 
+        // Assert: a plain CLR list, because the client of the container serializes the query
+        // parameter and cannot be handed a node of the document it was parsed from
+        var array = value.ShouldBeOfType<List<object?>>();
+        array.ShouldBe(new object?[] { "John", "Jane" });
+    }
+
+    [Fact]
+    public void DeserializeArray_ShouldReturnOneValuePerElement()
+    {
+        // Arrange: this is the shape the IsOneOf comparator relies on, which needs a parameter
+        // per element rather than one parameter holding the whole array
+        var mappingMetadata = new MappingMetadata();
+
+        // Act
+        var value = mappingMetadata.DeserializeArray(
+            "firstname",
+            "[\"John\",\"Jane\"]");
+
         // Assert
-        var array = value.ShouldBeOfType<JArray>();
-        array.Count.ShouldBe(2);
+        value.ShouldBe(new object?[] { "John", "Jane" });
+    }
+
+    [Fact]
+    public void DeserializeArray_ShouldApplyTheMappingToEveryElement()
+    {
+        // Arrange
+        var mappingMetadata = new MappingMetadata();
+        mappingMetadata.AddCustomMappings(
+            new Dictionary<string, Type> { { "createdAt", typeof(DateTime) } });
+
+        // Act
+        var value = mappingMetadata.DeserializeArray(
+            "createdAt",
+            "[0,1000000]");
+
+        // Assert
+        value.ShouldBe(
+            new object?[]
+            {
+                new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc),
+                new DateTime(1970, 1, 1, 0, 16, 40, DateTimeKind.Utc)
+            });
+    }
+
+    [Fact]
+    public void DeserializeArray_ShouldReturnNullForJsonThatIsNotAnArray()
+    {
+        // Arrange
+        var mappingMetadata = new MappingMetadata();
+
+        // Act
+        var value = mappingMetadata.DeserializeArray(
+            "firstname",
+            "\"John\"");
+
+        // Assert: the caller reports the filter as unusable rather than building a condition
+        value.ShouldBeNull();
+    }
+
+    [Fact]
+    public void Deserialize_ShouldParseATimestampSoTheClientCanRespellIt()
+    {
+        // Arrange
+        var mappingMetadata = new MappingMetadata();
+
+        // Act
+        var value = mappingMetadata.Deserialize(
+            "updatedAt",
+            "\"2026-08-25T10:00:00+00:00\"");
+
+        // Assert: handing the raw string to the query would compare "…+00:00" against documents
+        // stored as "…Z", and "+" (0x2B) sorts before "Z" (0x5A) - an ascending search-after
+        // cursor would hand back the last row of the previous page. As a timestamp, the client of
+        // the container writes it in the same spelling the document was written with.
+        value.ShouldBe(new DateTimeOffset(2026, 8, 25, 10, 0, 0, TimeSpan.Zero));
+    }
+
+    [Fact]
+    public void Deserialize_ShouldKeepAStringThatIsNotATimestamp()
+    {
+        // Arrange
+        var mappingMetadata = new MappingMetadata();
+
+        // Act
+        var value = mappingMetadata.Deserialize(
+            "firstname",
+            "\"2026 was a good year\"");
+
+        // Assert
+        value.ShouldBe("2026 was a good year");
     }
 
     [Fact]
@@ -135,14 +221,13 @@ public class MappingMetadataTests
         mappingMetadata.AddCustomMappings(
             new Dictionary<string, Type> { { "createdAt", typeof(DateTime) } });
 
-        // Act: only long values are treated as unix timestamps, an ISO string is parsed by
-        // Newtonsoft itself and must keep its instant
+        // Act: only a number is treated as a unix timestamp
         var value = mappingMetadata.Deserialize(
             "createdAt",
             "\"2023-01-01T00:00:00Z\"");
 
         // Assert
-        value.ShouldBe(new DateTime(2023, 1, 1, 0, 0, 0, DateTimeKind.Utc));
+        value.ShouldBe(new DateTimeOffset(2023, 1, 1, 0, 0, 0, TimeSpan.Zero));
     }
 
     [Fact]
@@ -197,10 +282,9 @@ public class MappingMetadataTests
     }
 
     [Fact]
-    public void Deserialize_ShouldHandTheArrayOfAnIsOneOfFilterThroughUnscaled()
+    public void Deserialize_ShouldScaleEveryItemOfAnArray()
     {
-        // Arrange: the query builder re-enters this method once per item, which is where the
-        // scaling happens
+        // Arrange
         var mappingMetadata = new MappingMetadata();
         mappingMetadata.InitializeUsingReflection(typeof(PatchTarget));
 
@@ -209,8 +293,41 @@ public class MappingMetadataTests
             "balance",
             "[0.5,1]");
 
-        // Assert
-        value.ShouldBeOfType<JArray>().Count.ShouldBe(2);
+        // Assert: scaled here rather than by re-entering this method per item, so the value the
+        // query is built from is scaled whichever way the caller reaches it
+        value.ShouldBe(new object?[] { 500000L, 1000000L });
+    }
+
+    [Fact]
+    public void DeserializeArray_ShouldScaleEveryItemOfAnIsOneOfFilter()
+    {
+        // Arrange: this is the path the IsOneOf comparator takes, which needs a parameter per
+        // item rather than one holding the whole array
+        var mappingMetadata = new MappingMetadata();
+        mappingMetadata.InitializeUsingReflection(typeof(PatchTarget));
+
+        // Act
+        var value = mappingMetadata.DeserializeArray(
+            "balance",
+            "[0.5,1]");
+
+        // Assert: an unscaled 0.5 against a stored 500000 would answer a different question
+        value.ShouldBe(new object?[] { 500000L, 1000000L });
+    }
+
+    [Fact]
+    public void DeserializeArray_ShouldRefuseAFixedPointItemItCannotScale()
+    {
+        // Arrange
+        var mappingMetadata = new MappingMetadata();
+        mappingMetadata.InitializeUsingReflection(typeof(PatchTarget));
+
+        // Act & Assert
+        var exception = Should.Throw<UnexpectedErrorException>(
+            () => mappingMetadata.DeserializeArray(
+                "balance",
+                "[0.5,\"not a number\"]"));
+        exception.Code.ShouldBe("FixedPointFilterValueNotSupported");
     }
 
     [Fact]

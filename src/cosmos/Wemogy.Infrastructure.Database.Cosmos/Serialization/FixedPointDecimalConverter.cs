@@ -1,8 +1,7 @@
 using System;
-using System.Globalization;
-using Newtonsoft.Json;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using Wemogy.Infrastructure.Database.Core.Attributes;
-using Wemogy.Infrastructure.Database.Core.Errors;
 using Wemogy.Infrastructure.Database.Core.Models;
 
 namespace Wemogy.Infrastructure.Database.Cosmos.Serialization
@@ -18,15 +17,8 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Serialization
     ///         differently.
     ///     </para>
     /// </summary>
-    internal class FixedPointDecimalConverter : JsonConverter
+    internal class FixedPointDecimalConverter : JsonConverter<decimal>
     {
-        /// <summary>
-        ///     The largest magnitude a double is converted from at all. Past it the value is not a
-        ///     scaled integer of any scale, and the conversion to a long would overflow rather
-        ///     than report anything.
-        /// </summary>
-        private const double MaxDoubleMagnitude = 9.2e18;
-
         private readonly int _scale;
         private readonly string _path;
 
@@ -41,99 +33,21 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Serialization
             _path = path;
         }
 
-        public override bool CanConvert(Type objectType)
+        public override decimal Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
         {
-            return (Nullable.GetUnderlyingType(objectType) ?? objectType) == typeof(decimal);
+            return FixedPointScaledJson.Read(
+                ref reader,
+                _scale,
+                _path);
         }
 
-        public override void WriteJson(JsonWriter writer, object? value, JsonSerializer serializer)
+        public override void Write(Utf8JsonWriter writer, decimal value, JsonSerializerOptions options)
         {
-            if (value == null)
-            {
-                writer.WriteNull();
-                return;
-            }
-
-            writer.WriteValue(
-                FixedPointScale.ToScaled(
-                    (decimal)value,
-                    _scale,
-                    _path));
-        }
-
-        public override object? ReadJson(
-            JsonReader reader,
-            Type objectType,
-            object? existingValue,
-            JsonSerializer serializer)
-        {
-            if (reader.TokenType == JsonToken.Null)
-            {
-                return null;
-            }
-
-            return FixedPointScale.FromScaled(
-                ReadScaledValue(reader),
-                _scale);
-        }
-
-        private static bool IsWholeNumber(double value)
-        {
-            return !double.IsNaN(value) &&
-                !double.IsInfinity(value) &&
-                Math.Abs(value) <= MaxDoubleMagnitude &&
-                Math.Floor(value) == value;
-        }
-
-        /// <summary>
-        ///     Reads the stored value as the integer it was written as. Cosmos DB hands a whole
-        ///     number back as a JSON integer, but a value that passed through the double number
-        ///     type of the database can come back as a float token - accepted as long as it is
-        ///     still a whole number, and refused otherwise rather than rounded into place.
-        /// </summary>
-        private long ReadScaledValue(JsonReader reader)
-        {
-            var value = reader.Value;
-
-            switch (value)
-            {
-                case long longValue:
-                    return EnsureIsInExactRange(longValue);
-                case int intValue:
-                    return intValue;
-                case double doubleValue when IsWholeNumber(doubleValue):
-                    return EnsureIsInExactRange((long)doubleValue);
-                case decimal decimalValue when decimalValue == decimal.Truncate(decimalValue):
-                    return EnsureIsInExactRange(decimalValue);
-                default:
-                    var description = Convert.ToString(
-                        value,
-                        CultureInfo.InvariantCulture) ?? "null";
-
-                    throw FixedPointError.StoredValueIsNotScaled(
-                        _path,
-                        description);
-            }
-        }
-
-        /// <summary>
-        ///     Refuses a stored value the database can no longer hold exactly. A write is checked
-        ///     against the same bound, but the accumulated result of a server-side increment is
-        ///     nobody's to check up front - so the counter having crossed the bound is reported
-        ///     here, on the read that would otherwise hand out a value that is only approximately
-        ///     what the increments added up to.
-        /// </summary>
-        private long EnsureIsInExactRange(decimal scaled)
-        {
-            if (Math.Abs(scaled) > FixedPointScale.MaxExactMagnitude)
-            {
-                throw FixedPointError.StoredValueOutOfRange(
-                    _path,
-                    scaled,
-                    FixedPointScale.MaxExactMagnitude);
-            }
-
-            return (long)scaled;
+            FixedPointScaledJson.Write(
+                writer,
+                value,
+                _scale,
+                _path);
         }
     }
 }

@@ -1,35 +1,77 @@
+using System;
 using System.IO;
 using System.Reflection;
-using System.Text;
+using System.Text.Encodings.Web;
+using System.Text.Json;
+using System.Text.Json.Serialization;
+using System.Text.Json.Serialization.Metadata;
 using Microsoft.Azure.Cosmos;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Serialization;
 using Wemogy.Infrastructure.Database.Core.Attributes;
+using Wemogy.Infrastructure.Database.Core.Serialization;
 
 namespace Wemogy.Infrastructure.Database.Cosmos.Serialization
 {
     /// <summary>
-    ///     Newtonsoft.Json based Cosmos serializer that keeps the previous default behavior
-    ///     (camelCase property names, null values omitted) and additionally applies the
-    ///     <see cref="ETagAttribute"/> serialization rules via <see cref="ETagContractResolver"/>.
-    ///     It derives from <see cref="CosmosLinqSerializer"/> so that LINQ queries translate
-    ///     member names with the very same naming rules.
+    ///     System.Text.Json based Cosmos serializer that keeps the wire format the package has
+    ///     always written (camelCase property names, null values omitted) and additionally applies
+    ///     the <see cref="ETagAttribute"/> serialization rules.
+    ///     It derives from <see cref="CosmosLinqSerializer"/> so that LINQ queries and patch paths
+    ///     translate member names with the very same naming rules.
     /// </summary>
+    /// <remarks>
+    ///     The Cosmos SDK still uses Newtonsoft.Json for its own request and response types; the
+    ///     serializer configured here is the one it applies to entities, query parameters and patch
+    ///     values, which is everything this package puts on the wire.
+    /// </remarks>
     public class CosmosEntitySerializer : CosmosLinqSerializer
     {
-        private static readonly Encoding DefaultEncoding = new UTF8Encoding(false, true);
-
-        private readonly CamelCaseNamingStrategy _namingStrategy;
-        private readonly JsonSerializer _serializer;
+        private readonly JsonSerializerOptions _options;
 
         public CosmosEntitySerializer()
+            : this(CreateDefaultOptions())
         {
-            _namingStrategy = new CamelCaseNamingStrategy();
-            _serializer = JsonSerializer.Create(new JsonSerializerSettings
+        }
+
+        /// <summary>
+        ///     Initializes a new instance of the <see cref="CosmosEntitySerializer"/> class from
+        ///     custom options, for an entity that needs a converter of its own. Start from
+        ///     <see cref="CreateDefaultOptions"/> and add to it, so the naming rules keep matching
+        ///     what <see cref="SerializeMemberName"/> reports and the <see cref="ETagAttribute"/>
+        ///     rules stay in place.
+        /// </summary>
+        /// <param name="options">The options to serialize an entity with.</param>
+        public CosmosEntitySerializer(JsonSerializerOptions options)
+        {
+            _options = options ?? throw new ArgumentNullException(nameof(options));
+        }
+
+        /// <summary>
+        ///     The options this package configures Cosmos DB with.
+        /// </summary>
+        public static JsonSerializerOptions CreateDefaultOptions()
+        {
+            var options = new JsonSerializerOptions
             {
-                NullValueHandling = NullValueHandling.Ignore,
-                ContractResolver = new ETagContractResolver()
-            });
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+                DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
+
+                // Newtonsoft.Json matched a property name case insensitively, and a document
+                // written by an older version of a consumer may well spell one differently
+                PropertyNameCaseInsensitive = true,
+
+                // the default encoder escapes every non-ASCII character; a Cosmos document is not
+                // an HTML context, and the relaxed encoder keeps a name like "Müller" readable and
+                // byte-identical to what Newtonsoft.Json wrote
+                Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
+                TypeInfoResolver = new DefaultJsonTypeInfoResolver
+                {
+                    Modifiers = { EntityJsonTypeInfoModifier.Apply }
+                }
+            };
+
+            options.Converters.Add(new UtcDateTimeOffsetJsonConverter());
+
+            return options;
         }
 
         public override T FromStream<T>(Stream stream)
@@ -42,22 +84,25 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Serialization
 
             using (stream)
             {
-                using var streamReader = new StreamReader(stream);
-                using var jsonTextReader = new JsonTextReader(streamReader);
-                return _serializer.Deserialize<T>(jsonTextReader)!;
+                return JsonSerializer.Deserialize<T>(
+                    stream,
+                    _options)!;
             }
         }
 
         public override Stream ToStream<T>(T input)
         {
             var streamPayload = new MemoryStream();
-            using (var streamWriter = new StreamWriter(streamPayload, DefaultEncoding, 1024, leaveOpen: true))
-            using (var jsonTextWriter = new JsonTextWriter(streamWriter) { Formatting = Formatting.None })
-            {
-                _serializer.Serialize(jsonTextWriter, input);
-                jsonTextWriter.Flush();
-                streamWriter.Flush();
-            }
+
+            // Onto the stream rather than through a writer of our own, because a hand-built
+            // Utf8JsonWriter carries its own encoder and would quietly ignore the configured one.
+            // By the runtime type rather than by T, because the SDK hands a query parameter over
+            // as an object and serializing that by its declared type would write an empty document.
+            JsonSerializer.Serialize(
+                streamPayload,
+                input,
+                input?.GetType() ?? typeof(T),
+                _options);
 
             streamPayload.Position = 0;
             return streamPayload;
@@ -65,19 +110,20 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Serialization
 
         public override string SerializeMemberName(MemberInfo memberInfo)
         {
-            // keep LINQ query translation in sync with the rules applied by the contract resolver
+            // keep LINQ query translation and patch paths in sync with the rules the contract
+            // applies when the document is written
             if (memberInfo.GetCustomAttribute<ETagAttribute>() != null)
             {
-                return "_etag";
+                return EntityJsonTypeInfoModifier.ETagFieldName;
             }
 
-            var jsonProperty = memberInfo.GetCustomAttribute<JsonPropertyAttribute>();
-            if (!string.IsNullOrEmpty(jsonProperty?.PropertyName))
+            var nameAttribute = memberInfo.GetCustomAttribute<JsonPropertyNameAttribute>();
+            if (!string.IsNullOrEmpty(nameAttribute?.Name))
             {
-                return jsonProperty!.PropertyName!;
+                return nameAttribute!.Name;
             }
 
-            return _namingStrategy.GetPropertyName(memberInfo.Name, false);
+            return _options.PropertyNamingPolicy?.ConvertName(memberInfo.Name) ?? memberInfo.Name;
         }
     }
 }

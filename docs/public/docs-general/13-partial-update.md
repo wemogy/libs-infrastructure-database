@@ -153,7 +153,7 @@ The path errors are thrown while the operations are collected, before any I/O.
   relocates a document, and the eTag belongs to the provider. Both are rejected before any I/O.
 - **Paths are member accesses.** `x => x.Balance` and `x => x.Inner.Value` are paths;
   a method call, an indexer or a computed member is not. The field name is resolved through the
-  serializer of the Cosmos client itself, so a `[JsonProperty]` override is honoured - and a client
+  serializer of the Cosmos client itself, so a `[JsonPropertyName]` override is honoured - and a client
   configured with a serializer that cannot report its member names refuses to patch at all rather
   than guessing at the field a path addresses.
 - **A field whose serialized name carries a `/` or a `~` cannot be patched** against Cosmos DB: a

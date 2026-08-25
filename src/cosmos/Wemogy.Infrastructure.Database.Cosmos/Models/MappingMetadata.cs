@@ -2,8 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Reflection;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
+using System.Text.Json;
 using Wemogy.Core.Extensions;
 using Wemogy.Infrastructure.Database.Core.Errors;
 using Wemogy.Infrastructure.Database.Core.Models;
@@ -39,7 +38,7 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Models
         /// <param name="modelType">The entity type of the repository</param>
         /// <param name="serializeMemberName">
         ///     How the client names a member in the document, so a filter on a member renamed with
-        ///     a <c>[JsonProperty]</c> finds its fixed-point scale under the stored name too
+        ///     a <c>[JsonPropertyName]</c> finds its fixed-point scale under the stored name too
         /// </param>
         public void InitializeUsingReflection(Type modelType, Func<MemberInfo, string>? serializeMemberName)
         {
@@ -54,6 +53,10 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Models
             _propertyTypes.Merge(customMappings);
         }
 
+        /// <summary>
+        ///     Turns the JSON of a filter value into the CLR value that goes into the query as a
+        ///     parameter.
+        /// </summary>
         public object? Deserialize(string propertyPath, string jsonValue)
         {
             // a member marked with [FixedPoint] is stored as the integer value * 10^Scale, so a
@@ -71,26 +74,10 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Models
 
             try
             {
-                var deserializedValue = JsonConvert.DeserializeObject(jsonValue);
-                if (deserializedValue == null)
-                {
-                    return null;
-                }
-
-                if (_propertyTypes.TryGetValue(
-                        propertyPath,
-                        out var propertyType))
-                {
-                    if (propertyType == typeof(DateTime))
-                    {
-                        if (deserializedValue is long l)
-                        {
-                            return l.FromUnixEpochDate();
-                        }
-                    }
-                }
-
-                return deserializedValue;
+                using var document = JsonDocument.Parse(jsonValue);
+                return Map(
+                    propertyPath,
+                    document.RootElement);
             }
             catch
             {
@@ -100,13 +87,74 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Models
             }
         }
 
-        private static object? DeserializeFixedPoint(string propertyPath, string jsonValue, int scale)
+        /// <summary>
+        ///     Turns the JSON of a filter value into one CLR value per element, or null when the
+        ///     JSON is not an array.
+        /// </summary>
+        /// <remarks>
+        ///     A comparator like <c>IsOneOf</c> needs a parameter per element rather than one
+        ///     parameter holding the whole array.
+        /// </remarks>
+        public List<object?>? DeserializeArray(string propertyPath, string jsonValue)
         {
-            JToken token;
+            var isFixedPoint = _fixedPointScales.TryGetValue(
+                propertyPath,
+                out var scale);
+
+            JsonDocument document;
 
             try
             {
-                token = JToken.Parse(jsonValue);
+                document = JsonDocument.Parse(jsonValue);
+            }
+            catch
+            {
+                if (isFixedPoint)
+                {
+                    // a fixed-point filter is refused rather than compared unscaled
+                    throw FixedPointError.FilterValueNotSupported(
+                        propertyPath,
+                        jsonValue);
+                }
+
+                Console.WriteLine(
+                    $"MappingMetadata.DeserializeArray: Use fallback for property {propertyPath} with json value {jsonValue}");
+                return null;
+            }
+
+            using (document)
+            {
+                if (document.RootElement.ValueKind != JsonValueKind.Array)
+                {
+                    return null;
+                }
+
+                var values = new List<object?>();
+
+                foreach (var element in document.RootElement.EnumerateArray())
+                {
+                    values.Add(
+                        isFixedPoint
+                            ? MapFixedPoint(
+                                propertyPath,
+                                element,
+                                scale)
+                            : Map(
+                                propertyPath,
+                                element));
+                }
+
+                return values;
+            }
+        }
+
+        private static object? DeserializeFixedPoint(string propertyPath, string jsonValue, int scale)
+        {
+            JsonDocument document;
+
+            try
+            {
+                document = JsonDocument.Parse(jsonValue);
             }
             catch (JsonException)
             {
@@ -115,57 +163,147 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Models
                     jsonValue);
             }
 
-            switch (token.Type)
+            using (document)
             {
-                case JTokenType.Null:
-                case JTokenType.Undefined:
-                    return null;
+                var root = document.RootElement;
 
-                // an "is one of" filter hands the whole array in first and then re-enters this
-                // method once per item, which is where the scaling happens
-                case JTokenType.Array:
-                    return (JArray)token;
+                if (root.ValueKind == JsonValueKind.Array)
+                {
+                    // an "is one of" filter needs a parameter per item, each of them scaled
+                    var items = new List<object?>();
 
-                case JTokenType.Integer:
-                case JTokenType.Float:
-                case JTokenType.String:
-                    return ToScaledValue(
-                        propertyPath,
-                        jsonValue,
-                        scale,
-                        token);
+                    foreach (var element in root.EnumerateArray())
+                    {
+                        items.Add(
+                            MapFixedPoint(
+                                propertyPath,
+                                element,
+                                scale));
+                    }
 
-                default:
-                    throw FixedPointError.FilterValueNotSupported(
-                        propertyPath,
-                        jsonValue);
+                    return items;
+                }
+
+                return MapFixedPoint(
+                    propertyPath,
+                    root,
+                    scale);
             }
         }
 
-        private static long ToScaledValue(string propertyPath, string jsonValue, int scale, JToken token)
+        private static object? MapFixedPoint(string propertyPath, JsonElement element, int scale)
+        {
+            switch (element.ValueKind)
+            {
+                case JsonValueKind.Null:
+                case JsonValueKind.Undefined:
+                    return null;
+                case JsonValueKind.Number:
+                case JsonValueKind.String:
+                    return ToScaledValue(
+                        propertyPath,
+                        element,
+                        scale);
+                default:
+                    throw FixedPointError.FilterValueNotSupported(
+                        propertyPath,
+                        element.GetRawText());
+            }
+        }
+
+        private static long ToScaledValue(string propertyPath, JsonElement element, int scale)
         {
             decimal value;
 
             try
             {
-                value = token.Type == JTokenType.String
+                value = element.ValueKind == JsonValueKind.String
                     ? decimal.Parse(
-                        token.Value<string>()!,
+                        element.GetString()!,
                         NumberStyles.Float,
                         CultureInfo.InvariantCulture)
-                    : token.Value<decimal>();
+                    : element.GetDecimal();
             }
-            catch (Exception e) when (e is FormatException or OverflowException or InvalidCastException)
+            catch (Exception e) when (e is FormatException or OverflowException or InvalidOperationException)
             {
                 throw FixedPointError.FilterValueNotSupported(
                     propertyPath,
-                    jsonValue);
+                    element.GetRawText());
             }
 
             return FixedPointScale.ToScaled(
                 value,
                 scale,
                 propertyPath);
+        }
+
+        /// <summary>
+        ///     Maps one JSON element onto the CLR value a Cosmos query parameter is written from.
+        /// </summary>
+        /// <remarks>
+        ///     A parameter is serialized by the client of the container, so the value has to be a
+        ///     plain CLR value rather than a node of the document it was parsed from.
+        /// </remarks>
+        private object? Map(string propertyPath, JsonElement element)
+        {
+            switch (element.ValueKind)
+            {
+                case JsonValueKind.String:
+                    // A timestamp is stored, compared and ordered as the string it was written
+                    // as, so a filter value and a search-after cursor only match while they are
+                    // spelled the way the document was. Parsing it here hands the value to the
+                    // client of the container as a timestamp, which respells a zero offset as the
+                    // "Z" form the entity was written with - without this, a cursor built from a
+                    // DateTimeOffset arrives as "+00:00", sorts before every stored "Z" and makes
+                    // the page boundary repeat a row rather than move past it.
+                    if (element.TryGetDateTimeOffset(out var timestamp))
+                    {
+                        return timestamp;
+                    }
+
+                    return element.GetString();
+                case JsonValueKind.Number:
+                    return MapNumber(
+                        propertyPath,
+                        element);
+                case JsonValueKind.True:
+                case JsonValueKind.False:
+                    return element.GetBoolean();
+                case JsonValueKind.Null:
+                case JsonValueKind.Undefined:
+                    return null;
+                case JsonValueKind.Array:
+                    var items = new List<object?>();
+                    foreach (var item in element.EnumerateArray())
+                    {
+                        items.Add(
+                            Map(
+                                propertyPath,
+                                item));
+                    }
+
+                    return items;
+                default:
+                    // an object goes into the query the way it was written
+                    return JsonSerializer.Deserialize<Dictionary<string, object?>>(element.GetRawText());
+            }
+        }
+
+        private object? MapNumber(string propertyPath, JsonElement element)
+        {
+            if (element.TryGetInt64(out var longValue))
+            {
+                if (_propertyTypes.TryGetValue(
+                        propertyPath,
+                        out var propertyType) && propertyType == typeof(DateTime))
+                {
+                    return longValue.FromUnixEpochDate();
+                }
+
+                return longValue;
+            }
+
+            return element.GetDouble();
         }
     }
 }

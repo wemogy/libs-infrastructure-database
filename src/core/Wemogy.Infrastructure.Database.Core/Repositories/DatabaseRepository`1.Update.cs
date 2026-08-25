@@ -1,13 +1,14 @@
 using System;
 using System.Threading.Tasks;
 using Wemogy.Infrastructure.Database.Core.Abstractions;
+using Wemogy.Infrastructure.Database.Core.ValueObjects;
 
 namespace Wemogy.Infrastructure.Database.Core.Repositories;
 
 public partial class DatabaseRepository<TEntity>
     where TEntity : class, IEntityBase
 {
-    public Task<TEntity> UpdateAsync(string id, string partitionKey, Action<TEntity> updateAction)
+    public Task<TEntity> UpdateAsync(string id, PartitionKeyValue partitionKey, Action<TEntity> updateAction)
     {
         return UpdateAsync(
             id,
@@ -30,7 +31,7 @@ public partial class DatabaseRepository<TEntity>
             });
     }
 
-    public async Task<TEntity> UpdateAsync(string id, string partitionKey, Func<TEntity, Task> updateAction)
+    public async Task<TEntity> UpdateAsync(string id, PartitionKeyValue partitionKey, Func<TEntity, Task> updateAction)
     {
         var entity = await GetAsync(
             id,

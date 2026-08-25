@@ -7,6 +7,7 @@ using FastExpressionCompiler;
 using Wemogy.Core.Errors.Exceptions;
 using Wemogy.Infrastructure.Database.Core.Abstractions;
 using Wemogy.Infrastructure.Database.Core.Errors;
+using Wemogy.Infrastructure.Database.Core.ValueObjects;
 
 namespace Wemogy.Infrastructure.Database.Core.Repositories;
 
@@ -15,7 +16,7 @@ public partial class DatabaseRepository<TEntity>
 {
     public async Task<TEntity> GetAsync(
         string id,
-        string partitionKey,
+        PartitionKeyValue partitionKey,
         CancellationToken cancellationToken = default)
     {
         var entity = await _database.GetAsync(
@@ -28,7 +29,7 @@ public partial class DatabaseRepository<TEntity>
         {
             throw DatabaseError.EntityNotFound(
                 id,
-                partitionKey,
+                partitionKey.ToString(),
                 "Entity is soft deleted");
         }
 
@@ -38,7 +39,7 @@ public partial class DatabaseRepository<TEntity>
         {
             throw DatabaseError.EntityNotFound(
                 id,
-                partitionKey,
+                partitionKey.ToString(),
                 "Entity does not match read filter");
         }
 

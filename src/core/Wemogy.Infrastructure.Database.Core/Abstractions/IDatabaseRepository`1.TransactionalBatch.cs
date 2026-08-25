@@ -1,3 +1,5 @@
+using Wemogy.Infrastructure.Database.Core.ValueObjects;
+
 namespace Wemogy.Infrastructure.Database.Core.Abstractions;
 
 public partial interface IDatabaseRepository<TEntity>
@@ -7,5 +9,5 @@ public partial interface IDatabaseRepository<TEntity>
     /// </summary>
     /// <param name="partitionKey">The logical partition every operation of the batch acts on</param>
     /// <returns>An empty batch to add operations to</returns>
-    IDatabaseTransactionalBatch<TEntity> CreateTransactionalBatch(string partitionKey);
+    IDatabaseTransactionalBatch<TEntity> CreateTransactionalBatch(PartitionKeyValue partitionKey);
 }

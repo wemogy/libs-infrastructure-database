@@ -61,6 +61,11 @@ public void AddMultiTenantDatabaseRepository_ShouldWork()
 }
 ```
 
+For an entity with a [hierarchical partition key](./14-hierarchical-partition-keys.md), the prefix
+is composed into the **broadest component only** - the narrower components keep the value the
+entity gave them, and the `StartsWith` guard that isolates the tenants sits on that first
+component.
+
 The result is indexed under the ```apple_production__{ID}``` partition key and the tenantId property has the same value as the partition key.
 When querying/getting the entity out of the repository, the prefix is automatically removed.
 

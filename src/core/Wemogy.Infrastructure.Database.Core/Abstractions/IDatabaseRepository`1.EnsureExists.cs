@@ -4,6 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Wemogy.Core.Errors.Exceptions;
 
+using Wemogy.Infrastructure.Database.Core.ValueObjects;
 namespace Wemogy.Infrastructure.Database.Core.Abstractions;
 
 public partial interface IDatabaseRepository<TEntity>
@@ -18,7 +19,7 @@ public partial interface IDatabaseRepository<TEntity>
     ///     Thrown when the entity is not found (either because it does not exist or
     ///     because it has been soft-deleted when the latter is on)
     /// </exception>
-    Task EnsureExistsAsync(string id, string partitionKey, CancellationToken cancellationToken = default);
+    Task EnsureExistsAsync(string id, PartitionKeyValue partitionKey, CancellationToken cancellationToken = default);
 
     /// <summary>
     ///     Ensure that an entity exists in the repository as found by id, throw if it does not.

@@ -26,8 +26,8 @@ namespace Wemogy.Infrastructure.Database.InMemory.Client
         ///     repositories over the same entity have to see the same data. Because the type is
         ///     generic, each closed generic type gets its own store.
         /// </summary>
-        private static readonly Dictionary<string, List<TEntity>> Partitions =
-            new Dictionary<string, List<TEntity>>();
+        private static readonly Dictionary<PartitionKeyValue, List<TEntity>> Partitions =
+            new Dictionary<PartitionKeyValue, List<TEntity>>();
 
         /// <summary>
         ///     Guards <see cref="Partitions"/> and every entity list inside it. Clients are
@@ -36,8 +36,10 @@ namespace Wemogy.Infrastructure.Database.InMemory.Client
         /// </summary>
         private static readonly object Gate = new object();
 
-        public Task<TEntity> GetAsync(string id, string partitionKey, CancellationToken cancellationToken)
+        public Task<TEntity> GetAsync(string id, PartitionKeyValue partitionKey, CancellationToken cancellationToken)
         {
+            EnsurePartitionKeyDepth(partitionKey);
+
             lock (Gate)
             {
                 var entity = FindEntity(
@@ -48,7 +50,7 @@ namespace Wemogy.Infrastructure.Database.InMemory.Client
                 {
                     throw DatabaseError.EntityNotFound(
                         id,
-                        partitionKey,
+                        partitionKey.ToString(),
                         hint: typeof(TEntity).Name);
                 }
 
@@ -130,7 +132,7 @@ namespace Wemogy.Infrastructure.Database.InMemory.Client
         public Task<TEntity> CreateAsync(TEntity entity)
         {
             var id = ResolveIdValue(entity);
-            var partitionKeyValue = ResolvePartitionKeyValue(entity);
+            var partitionKeyValue = ResolvePartitionKey(entity);
 
             lock (Gate)
             {
@@ -153,7 +155,7 @@ namespace Wemogy.Infrastructure.Database.InMemory.Client
         public Task<TEntity> ReplaceAsync(TEntity entity)
         {
             var id = ResolveIdValue(entity);
-            var partitionKeyValue = ResolvePartitionKeyValue(entity);
+            var partitionKeyValue = ResolvePartitionKey(entity);
 
             lock (Gate)
             {
@@ -165,7 +167,7 @@ namespace Wemogy.Infrastructure.Database.InMemory.Client
                 {
                     throw DatabaseError.EntityNotFound(
                         id,
-                        partitionKeyValue,
+                        partitionKeyValue.ToString(),
                         hint: typeof(TEntity).Name);
                 }
 
@@ -190,11 +192,13 @@ namespace Wemogy.Infrastructure.Database.InMemory.Client
         {
             return UpsertAsync(
                 entity,
-                ResolvePartitionKeyValue(entity));
+                ResolvePartitionKey(entity));
         }
 
-        public Task<TEntity> UpsertAsync(TEntity entity, string partitionKey)
+        public Task<TEntity> UpsertAsync(TEntity entity, PartitionKeyValue partitionKey)
         {
+            EnsurePartitionKeyDepth(partitionKey);
+
             var id = ResolveIdValue(entity);
 
             lock (Gate)
@@ -217,8 +221,10 @@ namespace Wemogy.Infrastructure.Database.InMemory.Client
             }
         }
 
-        public Task DeleteAsync(string id, string partitionKey)
+        public Task DeleteAsync(string id, PartitionKeyValue partitionKey)
         {
+            EnsurePartitionKeyDepth(partitionKey);
+
             lock (Gate)
             {
                 var entity = FindEntity(
@@ -229,7 +235,7 @@ namespace Wemogy.Infrastructure.Database.InMemory.Client
                 {
                     throw DatabaseError.EntityNotFound(
                         id,
-                        partitionKey,
+                        partitionKey.ToString(),
                         hint: typeof(TEntity).Name);
                 }
 
@@ -253,23 +259,27 @@ namespace Wemogy.Infrastructure.Database.InMemory.Client
             }
         }
 
-        public IDatabaseTransactionalBatch<TEntity> CreateTransactionalBatch(string partitionKey)
+        public IDatabaseTransactionalBatch<TEntity> CreateTransactionalBatch(PartitionKeyValue partitionKey)
         {
+            EnsurePartitionKeyDepth(partitionKey);
+
             return new InMemoryTransactionalBatch<TEntity>(
                 this,
                 partitionKey,
-                ResolvePartitionKeyValue);
+                ResolvePartitionKey);
         }
 
         public Task<TEntity> PatchAsync(
             string id,
-            string partitionKey,
+            PartitionKeyValue partitionKey,
             Action<IPatchOperations<TEntity>> operations,
             Expression<Func<TEntity, bool>>? condition,
             CancellationToken cancellationToken)
         {
             try
             {
+                EnsurePartitionKeyDepth(partitionKey);
+
                 // a patch that is applied in process still must not touch the store after the
                 // caller cancelled, the way the Cosmos provider does not once it passes the token on
                 cancellationToken.ThrowIfCancellationRequested();
@@ -294,7 +304,7 @@ namespace Wemogy.Infrastructure.Database.InMemory.Client
                     {
                         throw DatabaseError.EntityNotFound(
                             id,
-                            partitionKey,
+                            partitionKey.ToString(),
                             hint: typeof(TEntity).Name);
                     }
 
@@ -335,7 +345,7 @@ namespace Wemogy.Infrastructure.Database.InMemory.Client
         /// <param name="partitionKey">The logical partition every operation of the batch acts on</param>
         /// <param name="operations">The recorded operations, in the order they were added</param>
         internal void ExecuteBatch(
-            string partitionKey,
+            PartitionKeyValue partitionKey,
             IReadOnlyList<InMemoryTransactionalBatchOperation<TEntity>> operations)
         {
             lock (Gate)
@@ -374,7 +384,7 @@ namespace Wemogy.Infrastructure.Database.InMemory.Client
             }
         }
 
-        private static List<TEntity> GetOrCreatePartition(string partitionKey)
+        private static List<TEntity> GetOrCreatePartition(PartitionKeyValue partitionKey)
         {
             if (!Partitions.TryGetValue(
                     partitionKey,
@@ -393,7 +403,7 @@ namespace Wemogy.Infrastructure.Database.InMemory.Client
             List<TEntity> entities,
             InMemoryTransactionalBatchOperation<TEntity> operation,
             int operationIndex,
-            string partitionKey)
+            PartitionKeyValue partitionKey)
         {
             if (operation.Kind == InMemoryTransactionalBatchOperationKind.Delete)
             {
@@ -407,7 +417,7 @@ namespace Wemogy.Infrastructure.Database.InMemory.Client
                     throw TransactionalBatchError.EntityNotFound(
                         operationIndex,
                         idToDelete,
-                        partitionKey,
+                        partitionKey.ToString(),
                         typeof(TEntity).Name);
                 }
 
@@ -427,7 +437,7 @@ namespace Wemogy.Infrastructure.Database.InMemory.Client
                     throw TransactionalBatchError.EntityNotFound(
                         operationIndex,
                         idToPatch,
-                        partitionKey,
+                        partitionKey.ToString(),
                         typeof(TEntity).Name);
                 }
 
@@ -466,7 +476,7 @@ namespace Wemogy.Infrastructure.Database.InMemory.Client
                         throw TransactionalBatchError.EntityNotFound(
                             operationIndex,
                             id,
-                            partitionKey,
+                            partitionKey.ToString(),
                             typeof(TEntity).Name);
                     }
 
@@ -477,7 +487,7 @@ namespace Wemogy.Infrastructure.Database.InMemory.Client
                         throw TransactionalBatchError.ETagMismatch(
                             operationIndex,
                             id,
-                            partitionKey);
+                            partitionKey.ToString());
                     }
 
                     // replaced in place, so an iteration of this partition keeps the insertion order
@@ -516,7 +526,7 @@ namespace Wemogy.Infrastructure.Database.InMemory.Client
         private TEntity BuildPatchedEntity(
             TEntity storedEntity,
             string id,
-            string partitionKey,
+            PartitionKeyValue partitionKey,
             IReadOnlyList<DatabasePatchOperation> operations,
             Func<TEntity, bool>? condition,
             int? batchOperationIndex)
@@ -532,10 +542,10 @@ namespace Wemogy.Infrastructure.Database.InMemory.Client
                     ? PatchError.ConditionNotMet(
                         batchOperationIndex.Value,
                         id,
-                        partitionKey)
+                        partitionKey.ToString())
                     : PatchError.ConditionNotMet(
                         id,
-                        partitionKey);
+                        partitionKey.ToString());
             }
 
             // a patch bumps the eTag, the same way a replace does
@@ -547,7 +557,7 @@ namespace Wemogy.Infrastructure.Database.InMemory.Client
                     patchedEntity,
                     operation,
                     id,
-                    partitionKey);
+                    partitionKey.ToString());
             }
 
             // a Set can carry a reference-typed value the caller still holds on to; copied once
@@ -555,7 +565,7 @@ namespace Wemogy.Infrastructure.Database.InMemory.Client
             return patchedEntity.Clone();
         }
 
-        private TEntity? FindEntity(string partitionKey, string id)
+        private TEntity? FindEntity(PartitionKeyValue partitionKey, string id)
         {
             var index = FindEntityIndex(
                 partitionKey,
@@ -563,7 +573,7 @@ namespace Wemogy.Infrastructure.Database.InMemory.Client
             return index < 0 ? null : Partitions[partitionKey][index];
         }
 
-        private int FindEntityIndex(string partitionKey, string id)
+        private int FindEntityIndex(PartitionKeyValue partitionKey, string id)
         {
             if (!Partitions.TryGetValue(
                     partitionKey,
@@ -601,7 +611,7 @@ namespace Wemogy.Infrastructure.Database.InMemory.Client
             return SupportsETag ? $"\"{Guid.NewGuid()}\"" : null;
         }
 
-        private void EnsureETagMatches(TEntity entity, TEntity existingEntity, string id, string partitionKey)
+        private void EnsureETagMatches(TEntity entity, TEntity existingEntity, string id, PartitionKeyValue partitionKey)
         {
             if (!ETagMatches(
                     entity,

@@ -11,7 +11,13 @@ public interface IEntityBase
 
     public string? ETag { get; }
 
-    public DateTime CreatedAt { get; set; }
+    /// <summary>
+    ///     When the entity was created. Always UTC, always written by the library.
+    /// </summary>
+    public DateTimeOffset CreatedAt { get; set; }
 
-    public DateTime UpdatedAt { get; set; }
+    /// <summary>
+    ///     When the entity was last written. Always UTC, always written by the library.
+    /// </summary>
+    public DateTimeOffset UpdatedAt { get; set; }
 }

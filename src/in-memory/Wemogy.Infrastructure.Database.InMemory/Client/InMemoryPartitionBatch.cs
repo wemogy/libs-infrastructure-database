@@ -4,6 +4,7 @@ using System.Linq.Expressions;
 using System.Threading;
 using System.Threading.Tasks;
 using FastExpressionCompiler;
+using Wemogy.Infrastructure.Database.Core.Errors;
 using Wemogy.Infrastructure.Database.Core.Models;
 using Wemogy.Infrastructure.Database.Core.Repositories;
 using Wemogy.Infrastructure.Database.Core.ValueObjects;
@@ -50,7 +51,11 @@ namespace Wemogy.Infrastructure.Database.InMemory.Client
         /// <inheritdoc />
         protected override void ApplyCreate<T>(T entity)
         {
-            Record(InMemoryTransactionalBatchOperation<T>.Create(entity));
+            // the id is passed along because a create is the one operation that has to lose to a
+            // document of *another* type holding it, see EnsureIdIsFreeInTheOtherStores
+            Record(
+                InMemoryTransactionalBatchOperation<T>.Create(entity),
+                EntityMetadata<T>.ResolveId(entity));
         }
 
         /// <inheritdoc />
@@ -116,7 +121,7 @@ namespace Wemogy.Infrastructure.Database.InMemory.Client
             return Task.CompletedTask;
         }
 
-        private void Record<T>(InMemoryTransactionalBatchOperation<T> operation)
+        private void Record<T>(InMemoryTransactionalBatchOperation<T> operation, string? idToClaim = null)
             where T : class
         {
             var participant = GetParticipant<T>();
@@ -124,9 +129,52 @@ namespace Wemogy.Infrastructure.Database.InMemory.Client
             // captured now, read at execute time: the index is the one the base class is about to
             // assign this operation
             var operationIndex = OperationCount;
-            _stageOperations.Add(() => participant.Stage(
-                operation,
-                operationIndex));
+            _stageOperations.Add(() =>
+            {
+                if (idToClaim != null)
+                {
+                    EnsureIdIsFreeInTheOtherStores(
+                        participant,
+                        idToClaim,
+                        operationIndex);
+                }
+
+                participant.Stage(
+                    operation,
+                    operationIndex);
+            });
+        }
+
+        /// <summary>
+        ///     Throws if another type taking part in the batch already holds the id in this
+        ///     partition. An id is unique per logical partition of a *container*, not per entity
+        ///     type, so Cosmos DB answers 409 for a create that collides with a document of a
+        ///     different shape - while this provider keeps a store per type and would not notice.
+        ///     <para>
+        ///         Only the types the batch itself touches can be consulted: which other types share
+        ///         the container is not something this provider knows, because it does not model
+        ///         containers at all. A collision with a co-located type that takes no part in the
+        ///         batch therefore still passes here and fails against Cosmos DB.
+        ///     </para>
+        /// </summary>
+        private void EnsureIdIsFreeInTheOtherStores(IParticipant claimant, string id, int operationIndex)
+        {
+            foreach (var participant in _participants)
+            {
+                if (ReferenceEquals(
+                        participant,
+                        claimant))
+                {
+                    continue;
+                }
+
+                if (participant.ContainsId(id))
+                {
+                    throw TransactionalBatchError.AlreadyExists(
+                        operationIndex,
+                        id);
+                }
+            }
         }
 
         private Participant<T> GetParticipant<T>()
@@ -155,6 +203,8 @@ namespace Wemogy.Infrastructure.Database.InMemory.Client
         {
             void BeginStage(PartitionKeyValue partitionKey);
 
+            bool ContainsId(string id);
+
             void Commit();
         }
 
@@ -174,6 +224,13 @@ namespace Wemogy.Infrastructure.Database.InMemory.Client
             public void BeginStage(PartitionKeyValue partitionKey)
             {
                 _staging = _client.BeginStaging(partitionKey);
+            }
+
+            public bool ContainsId(string id)
+            {
+                return _client.StagingContainsId(
+                    _staging!,
+                    id);
             }
 
             public void Stage(InMemoryTransactionalBatchOperation<T> operation, int operationIndex)

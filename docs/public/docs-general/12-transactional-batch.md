@@ -161,11 +161,17 @@ lands in **this** batch's container, where its own repository will never find it
 the repository is how you declare which container the batch writes to; make sure every
 type you add is mapped to it.
 
-The in-memory provider will not catch a mistake here. It keeps one store per entity type
-and ignores containers entirely, so a batch mixing types from different containers passes
-in-memory, and two types sharing an id in one partition succeed in-memory where Cosmos DB
-answers `409` → `AlreadyExists`. Unlike the operation cap, this invariant is **not**
-covered by a green in-memory test — verify a co-located mapping against Cosmos DB.
+The in-memory provider cannot catch a wrong mapping either: it keeps one store per entity
+type and ignores containers entirely, so a batch mixing types from different containers
+passes in-memory while Cosmos DB misplaces the document. Unlike the operation cap, that
+invariant is **not** covered by a green in-memory test — verify a co-located mapping
+against Cosmos DB.
+
+Ids, on the other hand, are checked across types: an id is unique per logical partition of
+a container rather than per entity type, so a `Create` whose id another type of the *same
+batch* already holds is refused in-memory as well, with the `AlreadyExists` Cosmos DB
+answers `409` with. A collision with a co-located type that takes no part in the batch is
+still out of reach, because the provider has no notion of which types share a container.
 
 Co-locating types in one container also means an ordinary `QueryAsync` over one type sees
 the others, since the repository adds no type discriminator — address the documents by id,

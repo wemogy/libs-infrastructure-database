@@ -492,6 +492,27 @@ namespace Wemogy.Infrastructure.Database.InMemory.Client
         }
 
         /// <summary>
+        ///     Whether the staged partition already holds an entity with the given id, counting the
+        ///     operations of the batch that have been staged so far. A mixed-type batch asks this of
+        ///     the stores it is not writing through, because an id is unique per logical partition of
+        ///     a container rather than per entity type.
+        ///     <para>
+        ///         Has to be called while <see cref="Gate"/> is held.
+        ///     </para>
+        /// </summary>
+        /// <param name="staging">The staging of <see cref="BeginStaging"/> to look in</param>
+        /// <param name="id">The id to look for</param>
+        /// <returns>True if the staged partition holds an entity with that id</returns>
+        internal bool StagingContainsId(object staging, string id)
+        {
+            var batchStaging = (BatchStaging)staging;
+
+            return FindEntityIndex(
+                batchStaging.WorkingCopy,
+                id) >= 0;
+        }
+
+        /// <summary>
         ///     Writes a staged batch to the store and appends its changes to the feed. This is the
         ///     second phase of a two-phase execution and only runs once every participating store
         ///     staged without error, so it cannot fail on validation.

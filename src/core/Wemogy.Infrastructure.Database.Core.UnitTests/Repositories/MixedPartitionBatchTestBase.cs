@@ -291,6 +291,54 @@ public abstract class MixedPartitionBatchTestBase
     }
 
     [Fact]
+    public async Task ExecuteAsync_ShouldRefuseACreateWhoseIdAnotherTypeOfTheBatchAlreadyHolds()
+    {
+        // Arrange: an id is unique per logical partition of a container, not per entity type, so a
+        // balance and an event of one partition cannot share one. The in-memory provider keeps a
+        // store per type, so without a cross-type check it would accept what Cosmos answers 409 for
+        await ResetAsync();
+        var balance = NewBalance();
+        await QuotaBalanceRepository.CreateAsync(balance);
+
+        var usageEvent = NewEventFor(balance);
+
+        // same partition as the balance, and the id the balance already occupies
+        var collidingEvent = new UsageEvent
+        {
+            Id = balance.Id,
+            CustomerId = balance.CustomerId,
+            MeterSlug = balance.MeterSlug,
+            TimeBucket = balance.TimeBucket,
+            Quantity = 1
+        };
+
+        // Act: the batch touches both types, so the balance's store is one the create can be
+        // checked against
+        var batch = UsageEventRepository.CreatePartitionBatch(balance.GetPartitionKey());
+        batch.Patch<QuotaBalance>(
+            balance.Id,
+            p => p.Increment(x => x.Consumed, 1m));
+        batch.Create(collidingEvent);
+
+        var exception = await Record.ExceptionAsync(() => batch.ExecuteAsync());
+
+        // Assert: reported as a conflict, and the patch of the same batch rolled back with it
+        exception.ShouldBeOfType<ConflictErrorException>();
+        ((ConflictErrorException)exception).Code.ShouldBe("AlreadyExists");
+
+        var fetchedBalance = await QuotaBalanceRepository.GetAsync(
+            balance.Id,
+            balance.GetPartitionKey());
+        fetchedBalance.Consumed.ShouldBe(0m);
+
+        // the event that did not collide is untouched by the failure
+        var eventExists = await UsageEventRepository.ExistsAsync(
+            usageEvent.Id,
+            usageEvent.GetPartitionKey());
+        eventExists.ShouldBeFalse();
+    }
+
+    [Fact]
     public async Task ExecuteAsync_ShouldReportTheFirstFailingOperationNotTheFirstFailingType()
     {
         // Arrange: a batch where two operations of two types would both fail, and the type whose

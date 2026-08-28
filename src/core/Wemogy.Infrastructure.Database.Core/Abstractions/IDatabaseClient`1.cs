@@ -60,6 +60,12 @@ public interface IDatabaseClient<TEntity> : IDatabaseClient
     IDatabaseTransactionalBatch<TEntity> CreateTransactionalBatch(PartitionKeyValue partitionKey);
 
     /// <summary>
+    ///     Starts a mixed-type transactional batch against a single logical partition of this
+    ///     client's container.
+    /// </summary>
+    IDatabasePartitionBatch CreatePartitionBatch(PartitionKeyValue partitionKey);
+
+    /// <summary>
     ///     Applies a partial update to a single document, optionally only if the given condition
     ///     holds. The condition and the operations are applied as one atomic operation.
     /// </summary>

@@ -1,0 +1,331 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
+using Shouldly;
+using Wemogy.Core.Errors.Exceptions;
+using Wemogy.Infrastructure.Database.Core.Abstractions;
+using Wemogy.Infrastructure.Database.Core.Factories;
+using Wemogy.Infrastructure.Database.Core.UnitTests.Fakes.Entities;
+using Xunit;
+
+namespace Wemogy.Infrastructure.Database.Core.UnitTests.Repositories;
+
+/// <summary>
+///     The behaviour every provider owes a mixed-type partition batch: writing documents of
+///     different shapes into one logical partition of one container atomically. Kept apart from
+///     <see cref="RepositoryTestBase"/> for the reason <see cref="HierarchicalPartitionKeyTestBase"/>
+///     is - it needs its own repositories, and the Cosmos emulator does not survive one more client
+///     per test in the shared base.
+///     <para>
+///         The batch is created from the <see cref="UsageEvent"/> repository, and the
+///         <see cref="QuotaBalance"/> written through it is read back through its own repository -
+///         which, for Cosmos, is mapped to the same container, and for the in-memory provider shares
+///         the same static store.
+///     </para>
+/// </summary>
+public abstract class MixedPartitionBatchTestBase
+{
+    protected MixedPartitionBatchTestBase(
+        Func<IDatabaseRepository<UsageEvent>> usageEventRepositoryFactory,
+        Func<IDatabaseRepository<QuotaBalance>> quotaBalanceRepositoryFactory)
+    {
+        // cleared before the repositories are built, for the reason RepositoryTestBase clears it
+        DatabaseRepositoryFactoryFactory.DatabaseClientProxy = null;
+
+        UsageEventRepository = usageEventRepositoryFactory();
+        QuotaBalanceRepository = quotaBalanceRepositoryFactory();
+    }
+
+    protected IDatabaseRepository<UsageEvent> UsageEventRepository { get; }
+
+    protected IDatabaseRepository<QuotaBalance> QuotaBalanceRepository { get; }
+
+    protected virtual async Task ResetAsync()
+    {
+        await UsageEventRepository.DeleteAsync(x => true);
+        await QuotaBalanceRepository.DeleteAsync(x => true);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_ShouldWriteBothTypesAtomically()
+    {
+        // Arrange: a balance already exists, and a consume both records an event and moves the
+        // balance - two shapes, one partition, one batch
+        await ResetAsync();
+        var balance = NewBalance();
+        balance.Consumed = 3m;
+        await QuotaBalanceRepository.CreateAsync(balance);
+
+        var usageEvent = NewEventFor(balance);
+
+        // Act
+        var batch = UsageEventRepository.CreatePartitionBatch(balance.GetPartitionKey());
+        batch.Create(usageEvent);
+        batch.Patch<QuotaBalance>(
+            balance.Id,
+            p => p.Increment(x => x.Consumed, 1m));
+        await batch.ExecuteAsync();
+
+        // Assert: both writes landed
+        var fetchedBalance = await QuotaBalanceRepository.GetAsync(
+            balance.Id,
+            balance.GetPartitionKey());
+        fetchedBalance.Consumed.ShouldBe(4m);
+
+        var fetchedEvent = await UsageEventRepository.GetAsync(
+            usageEvent.Id,
+            usageEvent.GetPartitionKey());
+        fetchedEvent.ShouldNotBeNull();
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_ShouldRollBackBothTypesWhenThePatchConditionFails()
+    {
+        // Arrange: the balance is already at the cap, so the conditional increment cannot apply
+        await ResetAsync();
+        var balance = NewBalance();
+        balance.Consumed = 10m;
+        await QuotaBalanceRepository.CreateAsync(balance);
+
+        var usageEvent = NewEventFor(balance);
+
+        // Act: the event create would succeed on its own, but the failing patch condition has to
+        // roll the whole batch back - across the type boundary
+        var batch = UsageEventRepository.CreatePartitionBatch(balance.GetPartitionKey());
+        batch.Create(usageEvent);
+        batch.Patch<QuotaBalance>(
+            balance.Id,
+            p => p.Increment(x => x.Consumed, 1m),
+            x => x.Consumed < 10m);
+
+        var exception = await Record.ExceptionAsync(() => batch.ExecuteAsync());
+
+        // Assert: the failure names the unmet condition, and neither write survived
+        exception.ShouldBeOfType<ConflictErrorException>();
+        ((ConflictErrorException)exception).Code.ShouldBe("PatchConditionNotMet");
+
+        var fetchedBalance = await QuotaBalanceRepository.GetAsync(
+            balance.Id,
+            balance.GetPartitionKey());
+        fetchedBalance.Consumed.ShouldBe(10m);
+
+        var eventExists = await UsageEventRepository.ExistsAsync(
+            usageEvent.Id,
+            usageEvent.GetPartitionKey());
+        eventExists.ShouldBeFalse();
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_ShouldRollBackWhenACreateConflicts()
+    {
+        // Arrange: the event was already recorded, so replaying it is a conflict - the idempotency
+        // case the create guards against. Its code has to differ from the failed-condition case, so
+        // a caller can tell "already counted" from "cap reached"
+        await ResetAsync();
+        var balance = NewBalance();
+        balance.Consumed = 2m;
+        await QuotaBalanceRepository.CreateAsync(balance);
+
+        var usageEvent = NewEventFor(balance);
+        await UsageEventRepository.CreateAsync(usageEvent);
+
+        // Act
+        var batch = UsageEventRepository.CreatePartitionBatch(balance.GetPartitionKey());
+        batch.Create(usageEvent);
+        batch.Patch<QuotaBalance>(
+            balance.Id,
+            p => p.Increment(x => x.Consumed, 1m),
+            x => x.Consumed < 10m);
+
+        var exception = await Record.ExceptionAsync(() => batch.ExecuteAsync());
+
+        // Assert: reported as a conflict, distinct from the unmet-condition code, and the balance
+        // did not move
+        exception.ShouldBeOfType<ConflictErrorException>();
+        ((ConflictErrorException)exception).Code.ShouldBe("AlreadyExists");
+
+        var fetchedBalance = await QuotaBalanceRepository.GetAsync(
+            balance.Id,
+            balance.GetPartitionKey());
+        fetchedBalance.Consumed.ShouldBe(2m);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_ShouldRollBackWhenAReplaceCarriesAStaleETag()
+    {
+        // Arrange
+        await ResetAsync();
+        var balance = NewBalance();
+        await QuotaBalanceRepository.CreateAsync(balance);
+
+        // two reads of the same balance carry the same eTag; replacing through one of them bumps
+        // the stored eTag, so the other now holds a stale one - a real stale eTag, not a fabricated
+        // string the database would refuse to compare
+        var staleBalance = await QuotaBalanceRepository.GetAsync(
+            balance.Id,
+            balance.GetPartitionKey());
+        var freshBalance = await QuotaBalanceRepository.GetAsync(
+            balance.Id,
+            balance.GetPartitionKey());
+        freshBalance.Consumed = 5m;
+        await QuotaBalanceRepository.ReplaceAsync(freshBalance);
+
+        staleBalance.Consumed = 9m;
+        var usageEvent = NewEventFor(balance);
+
+        // Act
+        var batch = UsageEventRepository.CreatePartitionBatch(balance.GetPartitionKey());
+        batch.Create(usageEvent);
+        batch.Replace(staleBalance);
+
+        var exception = await Record.ExceptionAsync(() => batch.ExecuteAsync());
+
+        // Assert: the stale replace is reported as a precondition failure, distinct from an unmet
+        // patch condition, and neither write survived
+        exception.ShouldBeOfType<PreconditionFailedErrorException>();
+        ((PreconditionFailedErrorException)exception).Code.ShouldBe("EtagMismatch");
+
+        var fetchedBalance = await QuotaBalanceRepository.GetAsync(
+            balance.Id,
+            balance.GetPartitionKey());
+        fetchedBalance.Consumed.ShouldBe(5m);
+
+        var eventExists = await UsageEventRepository.ExistsAsync(
+            usageEvent.Id,
+            usageEvent.GetPartitionKey());
+        eventExists.ShouldBeFalse();
+    }
+
+    [Fact]
+    public async Task Add_ShouldRefuseAnEntityOfAnotherPartition()
+    {
+        // Arrange
+        await ResetAsync();
+        var balance = NewBalance();
+
+        // the same customer and meter, a different bucket - so it is a different logical partition,
+        // which a batch bound to one partition must refuse even across types
+        var otherLeafEvent = NewEventFor(balance);
+        otherLeafEvent.TimeBucket = balance.TimeBucket + "-later";
+
+        // Act: refused when the operation is added, before the batch is ever executed
+        var batch = UsageEventRepository.CreatePartitionBatch(balance.GetPartitionKey());
+        var exception = Record.Exception(() => batch.Create(otherLeafEvent));
+
+        // Assert
+        exception.ShouldBeOfType<UnexpectedErrorException>();
+        ((UnexpectedErrorException)exception).Code.ShouldBe("PartitionKeyMismatch");
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_ShouldHoldTheCapUnderConcurrentConsumes()
+    {
+        // Arrange: one balance, a cap of ten, and fifty consumes racing for it. Each consume is a
+        // batch that records a distinct event and conditionally increments the balance, so the cap
+        // holds only if the condition and the increment commit together and in isolation
+        await ResetAsync();
+        const int cap = 10;
+        const int attempts = 50;
+
+        var balance = NewBalance();
+        await QuotaBalanceRepository.CreateAsync(balance);
+
+        // Act
+        var consumedEvents = await Task.WhenAll(
+            Enumerable.Range(0, attempts)
+                .Select(_ => TryConsumeAsync(balance, cap)));
+        var succeeded = consumedEvents.Where(usageEvent => usageEvent != null).ToList();
+
+        // Assert: exactly the cap consumed, and the balance sits at the cap - the condition held
+        // the line under contention
+        succeeded.Count.ShouldBe(cap);
+
+        var fetchedBalance = await QuotaBalanceRepository.GetAsync(
+            balance.Id,
+            balance.GetPartitionKey());
+        fetchedBalance.Consumed.ShouldBe(cap);
+
+        // every success left its event behind - counted by the ids that succeeded rather than by a
+        // query, because both types share one container for Cosmos and a query over the events
+        // would also return the balance that sits in it
+        foreach (var usageEvent in succeeded)
+        {
+            var exists = await UsageEventRepository.ExistsAsync(
+                usageEvent!.Id,
+                usageEvent.GetPartitionKey());
+            exists.ShouldBeTrue();
+        }
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_ShouldCountAReplayedEventOnce()
+    {
+        // Arrange: the same event submitted twice, standing in for a retried request
+        await ResetAsync();
+        var balance = NewBalance();
+        await QuotaBalanceRepository.CreateAsync(balance);
+
+        var usageEvent = NewEventFor(balance);
+
+        // Act: the first consume records the event and moves the balance
+        var firstConsumed = await TryConsumeAsync(balance, 10, usageEvent);
+
+        // the second carries the same event id, so its create conflicts and rolls the balance back
+        var secondConsumed = await TryConsumeAsync(balance, 10, usageEvent);
+
+        // Assert: the replay did not count, so the balance moved once and the event is there once
+        firstConsumed.ShouldNotBeNull();
+        secondConsumed.ShouldBeNull();
+
+        var fetchedBalance = await QuotaBalanceRepository.GetAsync(
+            balance.Id,
+            balance.GetPartitionKey());
+        fetchedBalance.Consumed.ShouldBe(1m);
+
+        var eventExists = await UsageEventRepository.ExistsAsync(
+            usageEvent.Id,
+            usageEvent.GetPartitionKey());
+        eventExists.ShouldBeTrue();
+    }
+
+    private static QuotaBalance NewBalance()
+    {
+        var balance = QuotaBalance.Faker.Generate();
+        balance.Consumed = 0m;
+        return balance;
+    }
+
+    private static UsageEvent NewEventFor(QuotaBalance balance)
+    {
+        var usageEvent = UsageEvent.Faker.Generate();
+        usageEvent.CustomerId = balance.CustomerId;
+        usageEvent.MeterSlug = balance.MeterSlug;
+        usageEvent.TimeBucket = balance.TimeBucket;
+        return usageEvent;
+    }
+
+    private async Task<UsageEvent?> TryConsumeAsync(QuotaBalance balance, int cap, UsageEvent? usageEvent = null)
+    {
+        var eventToRecord = usageEvent ?? NewEventFor(balance);
+
+        var batch = UsageEventRepository.CreatePartitionBatch(balance.GetPartitionKey());
+        batch.Create(eventToRecord);
+        batch.Patch<QuotaBalance>(
+            balance.Id,
+            p => p.Increment(x => x.Consumed, 1m),
+            x => x.Consumed < cap);
+
+        try
+        {
+            await batch.ExecuteAsync();
+            return eventToRecord;
+        }
+        catch (ConflictErrorException)
+        {
+            // either the cap was reached (the condition did not hold) or the event was already
+            // recorded (the create conflicted) - both roll the batch back, so nothing was consumed
+            return null;
+        }
+    }
+}

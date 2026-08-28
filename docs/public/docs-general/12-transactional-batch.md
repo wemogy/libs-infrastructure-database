@@ -78,7 +78,8 @@ precondition, and a mismatch fails the **whole** batch.
 - **One logical partition.** A batch cannot span partitions or containers. That is a
   Cosmos DB constraint and it stays a constraint here.
 - **One entity type.** A batch is created from one repository and only accepts that
-  repository's entity type.
+  repository's entity type. To write several types into one partition, use a
+  [partition batch](#mixed-type-partition-batch).
 - **100 operations.** Adding the 101st operation throws, on every provider, so a batch
   that passes its test against the in-memory provider is not too large for Cosmos DB.
 - **An empty batch is a no-op.** `ExecuteAsync` on a batch without operations returns
@@ -114,9 +115,50 @@ the batch is *executed*. Mutating an entity after adding it to a batch therefore
 through a plain repository but not through a multi-tenant one — do not rely on either: set the
 entity up before you add it.
 
+## Mixed-type partition batch
+
+The typed batch above writes one entity type. When you need to write documents of
+**different** shapes together — the metered-usage case where a consume records a
+`UsageEvent` *and* moves a `QuotaBalance`, two types that share one container — start a
+**partition batch** instead:
+
+```csharp
+await usageEventRepository
+    .CreatePartitionBatch(partitionKey)
+    .Create(usageEvent)
+    .Patch<QuotaBalance>(
+        balanceId,
+        p => p.Increment(x => x.Consumed, 1),
+        x => x.Consumed < cap)
+    .ExecuteAsync();
+```
+
+`CreatePartitionBatch` returns an **untyped** batch bound to the repository's own
+container. Because the type is no longer fixed by the repository, every operation names
+its own: `Create<T>`, `Replace<T>`, `Upsert<T>`, `Delete<T>(id)` and `Patch<T>`. The
+generic argument is inferred from the entity for `Create`, `Replace` and `Upsert`, and
+given explicitly for `Delete<T>` and `Patch<T>`, which carry only an id.
+
+Everything else is the typed batch: it is atomic, limited to **one logical partition**
+and **one container** (the repository's), capped at 100 operations, single-use, and it
+throws the [same errors](#errors) — a conflicting `Create`, a stale `Replace`, a failed
+patch condition all roll the **whole** batch back, across the type boundary. The
+`PatchConditionNotMet` of a conditional [patch](./13-partial-update.md) stays distinct
+from the `EtagMismatch` of a stale replace, so a caller can tell *"the state does not
+permit this"* from *"someone changed this"*.
+
+A [multi-tenant](./04-multi-tenancy.md) repository prefixes the tenant id onto the
+partition key of every operation, whatever its type, exactly as it does for the typed
+batch.
+
+:::note One container, several types
+A partition batch stays inside the repository's container. Co-locating types in one
+Cosmos container means an ordinary `QueryAsync` over one type also sees the others, since
+the repository adds no type discriminator — address the documents by id, or keep the
+types in separate containers if you query them.
+:::
+
 ## Not supported
 
-- **Mixed entity types in one batch.** A Cosmos container can hold several types, but
-  the repository abstraction resolves id, partition key and eTag per entity type.
-- **Patch operations** such as an atomic `Increment`.
-- **Cross-partition or cross-container batches**, which Cosmos DB cannot do either.
+- **Cross-partition or cross-container batches**, which Cosmos DB cannot do either — a
+  partition batch stays inside one logical partition of one container.

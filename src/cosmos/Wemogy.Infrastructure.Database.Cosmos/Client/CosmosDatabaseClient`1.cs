@@ -258,6 +258,19 @@ namespace Wemogy.Infrastructure.Database.Cosmos.Client
                 _serializeMemberName);
         }
 
+        public IDatabasePartitionBatch CreatePartitionBatch(PartitionKeyValue partitionKey)
+        {
+            EnsurePartitionKeyDepth(partitionKey);
+
+            var batch = _container.CreateTransactionalBatch(partitionKey.ToCosmosPartitionKey());
+
+            return new CosmosPartitionBatch(
+                batch,
+                _container,
+                partitionKey,
+                _serializeMemberName);
+        }
+
         public async Task<TEntity> PatchAsync(
             string id,
             PartitionKeyValue partitionKey,

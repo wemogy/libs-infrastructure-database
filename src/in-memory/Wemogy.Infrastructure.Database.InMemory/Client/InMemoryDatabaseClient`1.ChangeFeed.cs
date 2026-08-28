@@ -393,5 +393,34 @@ namespace Wemogy.Infrastructure.Database.InMemory.Client
 
             public TEntity? Previous { get; }
         }
+
+        /// <summary>
+        ///     The result of staging a batch: a working copy of the partition and the changes it
+        ///     produced, both waiting for the batch to commit. Kept as a type of its own so a
+        ///     mixed-type batch can hold one per participating store and commit them together.
+        ///     <para>
+        ///         A class rather than a struct because it is handed out as <see cref="object"/> and
+        ///         applying an operation mutates it: a struct would be copied out of the box on every
+        ///         unboxing, and the copies would disagree about what has been staged.
+        ///     </para>
+        /// </summary>
+        private sealed class BatchStaging
+        {
+            public BatchStaging(
+                PartitionKeyValue partitionKey,
+                List<TEntity> workingCopy,
+                List<PendingChange> changes)
+            {
+                PartitionKey = partitionKey;
+                WorkingCopy = workingCopy;
+                Changes = changes;
+            }
+
+            public PartitionKeyValue PartitionKey { get; }
+
+            public List<TEntity> WorkingCopy { get; }
+
+            public List<PendingChange> Changes { get; }
+        }
     }
 }

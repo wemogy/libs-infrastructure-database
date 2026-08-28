@@ -33,9 +33,17 @@ namespace Wemogy.Infrastructure.Database.InMemory.Client
         /// <summary>
         ///     Guards <see cref="Partitions"/> and every entity list inside it. Clients are
         ///     typically registered as singletons, so concurrent requests would otherwise corrupt
-        ///     the dictionaries.
+        ///     the dictionaries. One gate per closed generic type, like the store it guards, so a
+        ///     write to one entity type does not block a write to another - a mixed-type partition
+        ///     batch holds the gates of the types it touches, and only those.
         /// </summary>
-        private static readonly object Gate = new object();
+        private static readonly InMemoryStoreGate Gate = new InMemoryStoreGate();
+
+        /// <summary>
+        ///     The gate guarding this entity type's store, for a mixed-type partition batch that has
+        ///     to hold it alongside the gates of the other types it writes.
+        /// </summary>
+        internal static InMemoryStoreGate StoreGate => Gate;
 
         public Task<TEntity> GetAsync(string id, PartitionKeyValue partitionKey, CancellationToken cancellationToken)
         {
@@ -319,6 +327,13 @@ namespace Wemogy.Infrastructure.Database.InMemory.Client
                 ResolvePartitionKey);
         }
 
+        public IDatabasePartitionBatch CreatePartitionBatch(PartitionKeyValue partitionKey)
+        {
+            EnsurePartitionKeyDepth(partitionKey);
+
+            return new InMemoryPartitionBatch(partitionKey);
+        }
+
         public Task<TEntity> PatchAsync(
             string id,
             PartitionKeyValue partitionKey,
@@ -411,38 +426,122 @@ namespace Wemogy.Infrastructure.Database.InMemory.Client
         {
             lock (Gate)
             {
-                var workingCopy = Partitions.TryGetValue(
-                    partitionKey,
-                    out var entities)
-                    ? new List<TEntity>(entities)
-                    : new List<TEntity>();
-
-                // collected rather than recorded straight away, so a batch that fails half way
-                // through leaves nothing on the change feed either - the same reason the entities
-                // are applied to a working copy
-                var changes = new List<PendingChange>();
+                var staging = BeginStaging(partitionKey);
 
                 for (var index = 0; index < operations.Count; index++)
                 {
-                    ApplyBatchOperation(
-                        workingCopy,
+                    StageOperation(
+                        staging,
                         operations[index],
-                        index,
-                        partitionKey,
-                        changes);
+                        index);
                 }
 
-                Partitions[partitionKey] = workingCopy;
+                CommitStaging(staging);
+            }
+        }
 
-                foreach (var change in changes)
-                {
-                    RecordChange(
-                        change.Operation,
-                        partitionKey,
-                        change.Id,
-                        change.Current,
-                        change.Previous);
-                }
+        /// <summary>
+        ///     Opens a working copy of the partition to validate a batch's operations against without
+        ///     touching the store. This is the first phase of a two-phase execution: a mixed-type
+        ///     batch opens a staging per participating store, applies every operation and commits the
+        ///     stores only once all of them staged without error, so a failure leaves every store
+        ///     untouched.
+        ///     <para>
+        ///         Has to be called while <see cref="Gate"/> is held, so the state it validates
+        ///         against does not change before the matching <see cref="CommitStaging"/> writes it.
+        ///     </para>
+        /// </summary>
+        /// <param name="partitionKey">The logical partition every operation of the batch acts on</param>
+        /// <returns>An opaque staging to hand to <see cref="StageOperation"/> and <see cref="CommitStaging"/></returns>
+        internal object BeginStaging(PartitionKeyValue partitionKey)
+        {
+            var workingCopy = Partitions.TryGetValue(
+                partitionKey,
+                out var entities)
+                ? new List<TEntity>(entities)
+                : new List<TEntity>();
+
+            // collected rather than recorded straight away, so a batch that fails half way
+            // through leaves nothing on the change feed either - the same reason the entities
+            // are applied to a working copy
+            return new BatchStaging(
+                partitionKey,
+                workingCopy,
+                new List<PendingChange>());
+        }
+
+        /// <summary>
+        ///     Applies one operation of a batch to an open staging, throwing if it is not valid
+        ///     against the working copy. Applied one operation at a time rather than a whole list, so
+        ///     a mixed-type batch can drive several stagings in the order the caller added the
+        ///     operations - the order Cosmos DB reports a failure in.
+        ///     <para>
+        ///         Has to be called while <see cref="Gate"/> is held.
+        ///     </para>
+        /// </summary>
+        /// <param name="staging">The staging of <see cref="BeginStaging"/> to apply the operation to</param>
+        /// <param name="operation">The operation to apply</param>
+        /// <param name="operationIndex">The index of the operation in the batch, to report a failure at</param>
+        internal void StageOperation(
+            object staging,
+            InMemoryTransactionalBatchOperation<TEntity> operation,
+            int operationIndex)
+        {
+            var batchStaging = (BatchStaging)staging;
+
+            ApplyBatchOperation(
+                batchStaging.WorkingCopy,
+                operation,
+                operationIndex,
+                batchStaging.PartitionKey,
+                batchStaging.Changes);
+        }
+
+        /// <summary>
+        ///     Whether the staged partition already holds an entity with the given id, counting the
+        ///     operations of the batch that have been staged so far. A mixed-type batch asks this of
+        ///     the stores it is not writing through, because an id is unique per logical partition of
+        ///     a container rather than per entity type.
+        ///     <para>
+        ///         Has to be called while <see cref="Gate"/> is held.
+        ///     </para>
+        /// </summary>
+        /// <param name="staging">The staging of <see cref="BeginStaging"/> to look in</param>
+        /// <param name="id">The id to look for</param>
+        /// <returns>True if the staged partition holds an entity with that id</returns>
+        internal bool StagingContainsId(object staging, string id)
+        {
+            var batchStaging = (BatchStaging)staging;
+
+            return FindEntityIndex(
+                batchStaging.WorkingCopy,
+                id) >= 0;
+        }
+
+        /// <summary>
+        ///     Writes a staged batch to the store and appends its changes to the feed. This is the
+        ///     second phase of a two-phase execution and only runs once every participating store
+        ///     staged without error, so it cannot fail on validation.
+        ///     <para>
+        ///         Has to be called while <see cref="Gate"/> is held, and with the value a matching
+        ///         <see cref="BeginStaging"/> returned.
+        ///     </para>
+        /// </summary>
+        /// <param name="staging">The staging of <see cref="BeginStaging"/> to write</param>
+        internal void CommitStaging(object staging)
+        {
+            var batchStaging = (BatchStaging)staging;
+
+            Partitions[batchStaging.PartitionKey] = batchStaging.WorkingCopy;
+
+            foreach (var change in batchStaging.Changes)
+            {
+                RecordChange(
+                    change.Operation,
+                    batchStaging.PartitionKey,
+                    change.Id,
+                    change.Current,
+                    change.Previous);
             }
         }
 

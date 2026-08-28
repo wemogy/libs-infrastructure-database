@@ -13,4 +13,12 @@ public partial class MultiTenantDatabaseRepository<TEntity>
             ComposeConditionPredicate,
             CleanupException);
     }
+
+    public IDatabasePartitionBatch CreatePartitionBatch(PartitionKeyValue partitionKey)
+    {
+        return new MultiTenantPartitionBatch(
+            _databaseRepository.CreatePartitionBatch(BuildComposedPartitionKey(partitionKey)),
+            GetPartitionKeyPrefix(),
+            CleanupException);
+    }
 }

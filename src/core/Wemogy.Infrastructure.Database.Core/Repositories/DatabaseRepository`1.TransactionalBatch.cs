@@ -10,4 +10,9 @@ public partial class DatabaseRepository<TEntity>
     {
         return _database.CreateTransactionalBatch(partitionKey);
     }
+
+    public IDatabasePartitionBatch CreatePartitionBatch(PartitionKeyValue partitionKey)
+    {
+        return _database.CreatePartitionBatch(partitionKey);
+    }
 }

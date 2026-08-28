@@ -11,32 +11,24 @@ using Wemogy.Infrastructure.Database.Core.ValueObjects;
 namespace Wemogy.Infrastructure.Database.Core.Repositories;
 
 /// <summary>
-///     Base class of the provider implementations of <see cref="IDatabaseTransactionalBatch{TEntity}"/>.
-///     It owns the validation every provider has to apply, so the providers cannot drift apart:
-///     a provider only contributes how an operation is recorded and how the batch is executed.
+///     Base class of the provider implementations of <see cref="IDatabasePartitionBatch"/>. It owns
+///     the validation every provider has to apply, so the providers cannot drift apart: a provider
+///     only contributes how an operation is recorded and how the batch is executed.
 /// </summary>
-/// <typeparam name="TEntity">The entity type every operation of the batch acts on</typeparam>
-public abstract class DatabaseTransactionalBatchBase<TEntity> : IDatabaseTransactionalBatch<TEntity>
-    where TEntity : class
+public abstract class DatabasePartitionBatchBase : IDatabasePartitionBatch
 {
     /// <inheritdoc cref="TransactionalBatchLimits.MaxOperationCount"/>
     public const int MaxOperationCount = TransactionalBatchLimits.MaxOperationCount;
 
-    private readonly Func<TEntity, PartitionKeyValue> _resolvePartitionKey;
-
     private bool _executed;
 
     /// <summary>
-    ///     Initializes a new instance of the <see cref="DatabaseTransactionalBatchBase{TEntity}"/> class.
+    ///     Initializes a new instance of the <see cref="DatabasePartitionBatchBase"/> class.
     /// </summary>
     /// <param name="partitionKey">The logical partition every operation of the batch acts on</param>
-    /// <param name="resolvePartitionKey">Reads the partition key of an entity</param>
-    protected DatabaseTransactionalBatchBase(
-        PartitionKeyValue partitionKey,
-        Func<TEntity, PartitionKeyValue> resolvePartitionKey)
+    protected DatabasePartitionBatchBase(PartitionKeyValue partitionKey)
     {
         PartitionKey = partitionKey;
-        _resolvePartitionKey = resolvePartitionKey;
     }
 
     /// <summary>
@@ -48,7 +40,8 @@ public abstract class DatabaseTransactionalBatchBase<TEntity> : IDatabaseTransac
     public int OperationCount { get; private set; }
 
     /// <inheritdoc />
-    public IDatabaseTransactionalBatch<TEntity> Create(TEntity entity)
+    public IDatabasePartitionBatch Create<T>(T entity)
+        where T : class
     {
         EnsureNotExecuted();
         EnsureCapacity();
@@ -60,7 +53,8 @@ public abstract class DatabaseTransactionalBatchBase<TEntity> : IDatabaseTransac
     }
 
     /// <inheritdoc />
-    public IDatabaseTransactionalBatch<TEntity> Replace(TEntity entity)
+    public IDatabasePartitionBatch Replace<T>(T entity)
+        where T : class
     {
         EnsureNotExecuted();
         EnsureCapacity();
@@ -72,7 +66,8 @@ public abstract class DatabaseTransactionalBatchBase<TEntity> : IDatabaseTransac
     }
 
     /// <inheritdoc />
-    public IDatabaseTransactionalBatch<TEntity> Upsert(TEntity entity)
+    public IDatabasePartitionBatch Upsert<T>(T entity)
+        where T : class
     {
         EnsureNotExecuted();
         EnsureCapacity();
@@ -84,28 +79,37 @@ public abstract class DatabaseTransactionalBatchBase<TEntity> : IDatabaseTransac
     }
 
     /// <inheritdoc />
-    public IDatabaseTransactionalBatch<TEntity> Delete(string id)
+    public IDatabasePartitionBatch Delete<T>(string id)
+        where T : class
     {
         EnsureNotExecuted();
         EnsureCapacity();
-        ApplyDelete(id);
+
+        // a delete addresses an id, so there is no entity whose partition could be compared - but
+        // the type still has to be partitioned as deeply as the batch's key, or the operation would
+        // address a partition the type cannot express
+        EntityMetadata<T>.EnsurePartitionKeyDepth(PartitionKey);
+        ApplyDelete<T>(id);
         OperationCount++;
         return this;
     }
 
     /// <inheritdoc />
-    public IDatabaseTransactionalBatch<TEntity> Patch(
+    public IDatabasePartitionBatch Patch<T>(
         string id,
-        Action<IPatchOperations<TEntity>> operations,
-        Expression<Func<TEntity, bool>>? condition = null)
+        Action<IPatchOperations<T>> operations,
+        Expression<Func<T, bool>>? condition = null)
+        where T : class
     {
         EnsureNotExecuted();
         EnsureCapacity();
 
-        // a patch addresses an id, like a delete, so there is no entity to check the partition of
+        // a patch addresses an id, like a delete, so there is no entity to check the partition of -
+        // only that the type is partitioned as deeply as the batch's key
+        EntityMetadata<T>.EnsurePartitionKeyDepth(PartitionKey);
         ApplyPatch(
             id,
-            PatchOperationsBuilder<TEntity>.Build(operations),
+            PatchOperationsBuilder<T>.Build(operations),
             condition);
         OperationCount++;
         return this;
@@ -136,25 +140,33 @@ public abstract class DatabaseTransactionalBatchBase<TEntity> : IDatabaseTransac
     ///     Records a create operation. Called after the operation has been validated.
     /// </summary>
     /// <param name="entity">The entity to create</param>
-    protected abstract void ApplyCreate(TEntity entity);
+    /// <typeparam name="T">The type of the entity</typeparam>
+    protected abstract void ApplyCreate<T>(T entity)
+        where T : class;
 
     /// <summary>
     ///     Records a replace operation. Called after the operation has been validated.
     /// </summary>
     /// <param name="entity">The updated entity which will replace the existing one</param>
-    protected abstract void ApplyReplace(TEntity entity);
+    /// <typeparam name="T">The type of the entity</typeparam>
+    protected abstract void ApplyReplace<T>(T entity)
+        where T : class;
 
     /// <summary>
     ///     Records an upsert operation. Called after the operation has been validated.
     /// </summary>
     /// <param name="entity">The entity to insert or update</param>
-    protected abstract void ApplyUpsert(TEntity entity);
+    /// <typeparam name="T">The type of the entity</typeparam>
+    protected abstract void ApplyUpsert<T>(T entity)
+        where T : class;
 
     /// <summary>
     ///     Records a delete operation. Called after the operation has been validated.
     /// </summary>
     /// <param name="id">The id of the entity to delete</param>
-    protected abstract void ApplyDelete(string id);
+    /// <typeparam name="T">The type of the entity to delete</typeparam>
+    protected abstract void ApplyDelete<T>(string id)
+        where T : class;
 
     /// <summary>
     ///     Records a patch operation. Called after the operations have been validated.
@@ -162,10 +174,12 @@ public abstract class DatabaseTransactionalBatchBase<TEntity> : IDatabaseTransac
     /// <param name="id">The id of the document to patch</param>
     /// <param name="operations">The validated operations to apply</param>
     /// <param name="condition">An optional condition that has to hold for the patch to be applied</param>
-    protected abstract void ApplyPatch(
+    /// <typeparam name="T">The type of the document to patch</typeparam>
+    protected abstract void ApplyPatch<T>(
         string id,
         IReadOnlyList<DatabasePatchOperation> operations,
-        Expression<Func<TEntity, bool>>? condition);
+        Expression<Func<T, bool>>? condition)
+        where T : class;
 
     /// <summary>
     ///     Executes the recorded operations atomically. Only called when the batch holds at least
@@ -191,9 +205,14 @@ public abstract class DatabaseTransactionalBatchBase<TEntity> : IDatabaseTransac
         }
     }
 
-    private void EnsureSamePartition(TEntity entity)
+    private void EnsureSamePartition<T>(T entity)
+        where T : class
     {
-        var entityPartitionKey = _resolvePartitionKey(entity);
+        // checked before the values are compared, so a type that is not partitioned as deeply as
+        // the batch's key is named as such instead of reported as a mismatch of values
+        EntityMetadata<T>.EnsurePartitionKeyDepth(PartitionKey);
+
+        var entityPartitionKey = EntityMetadata<T>.ResolvePartitionKey(entity);
 
         // compared by value across every component: a batch is limited to one logical partition,
         // and for a hierarchical key that means the whole hierarchy has to match, not just its head
@@ -202,7 +221,7 @@ public abstract class DatabaseTransactionalBatchBase<TEntity> : IDatabaseTransac
             throw TransactionalBatchError.PartitionKeyMismatch(
                 entityPartitionKey.ToString(),
                 PartitionKey.ToString(),
-                typeof(TEntity).Name);
+                typeof(T).Name);
         }
     }
 }

@@ -6,6 +6,7 @@ using Shouldly;
 using Wemogy.Core.Errors.Exceptions;
 using Wemogy.Infrastructure.Database.Core.Abstractions;
 using Wemogy.Infrastructure.Database.Core.Factories;
+using Wemogy.Infrastructure.Database.Core.Repositories;
 using Wemogy.Infrastructure.Database.Core.UnitTests.Fakes.Entities;
 using Xunit;
 
@@ -287,6 +288,109 @@ public abstract class MixedPartitionBatchTestBase
             usageEvent.Id,
             usageEvent.GetPartitionKey());
         eventExists.ShouldBeTrue();
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_ShouldApplyDeleteAndUpsertAcrossTypes()
+    {
+        // Arrange: the two operations the atomic-write tests above do not reach, on two types -
+        // retiring an event while the balance it moved is written back
+        await ResetAsync();
+        var balance = NewBalance();
+        balance.Consumed = 2m;
+        await QuotaBalanceRepository.CreateAsync(balance);
+
+        var usageEvent = NewEventFor(balance);
+        await UsageEventRepository.CreateAsync(usageEvent);
+
+        balance.Consumed = 7m;
+
+        // Act
+        var batch = UsageEventRepository.CreatePartitionBatch(balance.GetPartitionKey());
+        batch.Delete<UsageEvent>(usageEvent.Id);
+        batch.Upsert(balance);
+        await batch.ExecuteAsync();
+
+        // Assert: the delete addressed a type the batch was not created from, and the upsert
+        // carried no precondition
+        var eventExists = await UsageEventRepository.ExistsAsync(
+            usageEvent.Id,
+            usageEvent.GetPartitionKey());
+        eventExists.ShouldBeFalse();
+
+        var fetchedBalance = await QuotaBalanceRepository.GetAsync(
+            balance.Id,
+            balance.GetPartitionKey());
+        fetchedBalance.Consumed.ShouldBe(7m);
+    }
+
+    [Fact]
+    public async Task Add_ShouldThrowWhenExceedingTheOperationLimit()
+    {
+        // Arrange
+        await ResetAsync();
+        var balance = NewBalance();
+        var batch = UsageEventRepository.CreatePartitionBatch(balance.GetPartitionKey());
+
+        // Act: the batch is never executed, the cap is enforced client-side - and it counts every
+        // operation of the batch, not one counter per type
+        for (var i = 0; i < DatabasePartitionBatchBase.MaxOperationCount - 1; i++)
+        {
+            batch.Create(NewEventFor(balance));
+        }
+
+        batch.Patch<QuotaBalance>(
+            balance.Id,
+            p => p.Increment(x => x.Consumed, 1m));
+
+        // Assert
+        batch.OperationCount.ShouldBe(DatabasePartitionBatchBase.MaxOperationCount);
+        Should.Throw<UnexpectedErrorException>(() => batch.Create(NewEventFor(balance)));
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_ShouldThrowWhenExecutedTwice()
+    {
+        // Arrange
+        await ResetAsync();
+        var balance = NewBalance();
+        await QuotaBalanceRepository.CreateAsync(balance);
+
+        var usageEvent = NewEventFor(balance);
+
+        var batch = UsageEventRepository.CreatePartitionBatch(balance.GetPartitionKey());
+        batch.Create(usageEvent);
+        batch.Patch<QuotaBalance>(
+            balance.Id,
+            p => p.Increment(x => x.Consumed, 1m));
+        await batch.ExecuteAsync();
+
+        // Act & Assert: a batch is single-use, replaying it would apply every write a second time
+        await Should.ThrowAsync<UnexpectedErrorException>(() => batch.ExecuteAsync());
+        Should.Throw<UnexpectedErrorException>(() => batch.Create(NewEventFor(balance)));
+        batch.OperationCount.ShouldBe(2);
+
+        // the replay was refused before it reached the database, so the increment landed once
+        var fetchedBalance = await QuotaBalanceRepository.GetAsync(
+            balance.Id,
+            balance.GetPartitionKey());
+        fetchedBalance.Consumed.ShouldBe(1m);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_ShouldDoNothingWhenEmpty()
+    {
+        // Arrange
+        await ResetAsync();
+        var balance = NewBalance();
+        var batch = UsageEventRepository.CreatePartitionBatch(balance.GetPartitionKey());
+
+        // Act
+        await batch.ExecuteAsync();
+
+        // Assert: an empty batch completes without touching the database, but is still spent
+        batch.OperationCount.ShouldBe(0);
+        await Should.ThrowAsync<UnexpectedErrorException>(() => batch.ExecuteAsync());
     }
 
     private static QuotaBalance NewBalance()

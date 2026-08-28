@@ -151,11 +151,25 @@ A [multi-tenant](./04-multi-tenancy.md) repository prefixes the tenant id onto t
 partition key of every operation, whatever its type, exactly as it does for the typed
 batch.
 
-:::note One container, several types
-A partition batch stays inside the repository's container. Co-locating types in one
-Cosmos container means an ordinary `QueryAsync` over one type also sees the others, since
-the repository adds no type discriminator — address the documents by id, or keep the
-types in separate containers if you query them.
+:::warning One container, several types — and the in-memory provider cannot check it
+A partition batch writes into the container of the repository it was created from, and the
+library cannot verify that the types you add belong there: a container is configured per
+**repository interface** (`[RepositoryOptions(collectionName:)]`), not per entity type, so
+`Create<T>` has no container of its own to compare against. Adding a type whose repository
+is mapped to a *different* container is therefore not refused — on Cosmos DB the document
+lands in **this** batch's container, where its own repository will never find it. Choosing
+the repository is how you declare which container the batch writes to; make sure every
+type you add is mapped to it.
+
+The in-memory provider will not catch a mistake here. It keeps one store per entity type
+and ignores containers entirely, so a batch mixing types from different containers passes
+in-memory, and two types sharing an id in one partition succeed in-memory where Cosmos DB
+answers `409` → `AlreadyExists`. Unlike the operation cap, this invariant is **not**
+covered by a green in-memory test — verify a co-located mapping against Cosmos DB.
+
+Co-locating types in one container also means an ordinary `QueryAsync` over one type sees
+the others, since the repository adds no type discriminator — address the documents by id,
+or keep the types in separate containers if you query them.
 :::
 
 ## Not supported

@@ -13,22 +13,30 @@ namespace Wemogy.Infrastructure.Database.InMemory.Client
     /// <summary>
     ///     In-memory implementation of a mixed-type partition batch. Each entity type keeps its own
     ///     static store, so a batch that mixes types has to write to several stores and still appear
-    ///     atomic across all of them. It does so by grouping the operations by type into
-    ///     participants, and executing them in two phases under the one process-wide lock: every
-    ///     participant is staged first, and only once all of them staged without error is any of
-    ///     them committed. A failure during staging therefore leaves every store untouched, the same
-    ///     guarantee Cosmos DB gives.
+    ///     atomic across all of them. It does so by opening a staging per participating store and
+    ///     executing in two phases under the one process-wide lock: every operation is staged first,
+    ///     and only once all of them staged without error is any store committed. A failure during
+    ///     staging therefore leaves every store untouched, the same guarantee Cosmos DB gives.
     /// </summary>
     public class InMemoryPartitionBatch : DatabasePartitionBatchBase
     {
         /// <summary>
         ///     One participant per entity type the batch touches, in the order the types were first
-        ///     seen. The order only decides which store is staged and committed first, which does
-        ///     not matter because the change feed is per type.
+        ///     seen. The order only decides which store opens its staging and commits first, neither
+        ///     of which can fail.
         /// </summary>
         private readonly List<IParticipant> _participants = new List<IParticipant>();
 
         private readonly Dictionary<Type, IParticipant> _participantsByType = new Dictionary<Type, IParticipant>();
+
+        /// <summary>
+        ///     Stages one recorded operation against its own participant's staging. Held in the order
+        ///     the operations were added - across types, not grouped by them - because that is the
+        ///     order Cosmos DB reports a failure in: when two operations of different types would
+        ///     both fail, the error has to name the first one the caller added, not the first store
+        ///     that happens to be staged.
+        /// </summary>
+        private readonly List<Action> _stageOperations = new List<Action>();
 
         /// <summary>
         ///     Initializes a new instance of the <see cref="InMemoryPartitionBatch"/> class.
@@ -42,33 +50,25 @@ namespace Wemogy.Infrastructure.Database.InMemory.Client
         /// <inheritdoc />
         protected override void ApplyCreate<T>(T entity)
         {
-            GetParticipant<T>().Add(
-                OperationCount,
-                InMemoryTransactionalBatchOperation<T>.Create(entity));
+            Record(InMemoryTransactionalBatchOperation<T>.Create(entity));
         }
 
         /// <inheritdoc />
         protected override void ApplyReplace<T>(T entity)
         {
-            GetParticipant<T>().Add(
-                OperationCount,
-                InMemoryTransactionalBatchOperation<T>.Replace(entity));
+            Record(InMemoryTransactionalBatchOperation<T>.Replace(entity));
         }
 
         /// <inheritdoc />
         protected override void ApplyUpsert<T>(T entity)
         {
-            GetParticipant<T>().Add(
-                OperationCount,
-                InMemoryTransactionalBatchOperation<T>.Upsert(entity));
+            Record(InMemoryTransactionalBatchOperation<T>.Upsert(entity));
         }
 
         /// <inheritdoc />
         protected override void ApplyDelete<T>(string id)
         {
-            GetParticipant<T>().Add(
-                OperationCount,
-                InMemoryTransactionalBatchOperation<T>.Delete(id));
+            Record(InMemoryTransactionalBatchOperation<T>.Delete(id));
         }
 
         /// <inheritdoc />
@@ -78,8 +78,7 @@ namespace Wemogy.Infrastructure.Database.InMemory.Client
             Expression<Func<T, bool>>? condition)
         {
             // compiled when the operation is added, so the execution does not compile under the lock
-            GetParticipant<T>().Add(
-                OperationCount,
+            Record(
                 InMemoryTransactionalBatchOperation<T>.Patch(
                     id,
                     operations,
@@ -95,11 +94,17 @@ namespace Wemogy.Infrastructure.Database.InMemory.Client
             // and committing, and the several stores appear to change at one instant
             lock (InMemoryDatabaseSync.Gate)
             {
-                // staged first, so a failure - a conflict, a missing entity, a failed patch
-                // condition - throws before any store is written, leaving every store untouched
                 foreach (var participant in _participants)
                 {
-                    participant.Stage(PartitionKey);
+                    participant.BeginStage(PartitionKey);
+                }
+
+                // staged before anything is committed, so a failure - a conflict, a missing entity,
+                // a failed patch condition - throws before any store is written, leaving every store
+                // untouched
+                foreach (var stageOperation in _stageOperations)
+                {
+                    stageOperation();
                 }
 
                 foreach (var participant in _participants)
@@ -109,6 +114,19 @@ namespace Wemogy.Infrastructure.Database.InMemory.Client
             }
 
             return Task.CompletedTask;
+        }
+
+        private void Record<T>(InMemoryTransactionalBatchOperation<T> operation)
+            where T : class
+        {
+            var participant = GetParticipant<T>();
+
+            // captured now, read at execute time: the index is the one the base class is about to
+            // assign this operation
+            var operationIndex = OperationCount;
+            _stageOperations.Add(() => participant.Stage(
+                operation,
+                operationIndex));
         }
 
         private Participant<T> GetParticipant<T>()
@@ -131,19 +149,19 @@ namespace Wemogy.Infrastructure.Database.InMemory.Client
 
         /// <summary>
         ///     A participant of the batch, hiding the entity type so the batch can hold participants
-        ///     of several types in one list and drive their two phases without knowing the types.
+        ///     of several types in one list and drive the phases that do not need the type.
         /// </summary>
         private interface IParticipant
         {
-            void Stage(PartitionKeyValue partitionKey);
+            void BeginStage(PartitionKeyValue partitionKey);
 
             void Commit();
         }
 
         /// <summary>
-        ///     The operations of one entity type, applied through a client of that type - which
-        ///     shares the one static store of the type - so the mixed batch reuses the same staging
-        ///     and validation a single-type batch uses.
+        ///     The staging of one entity type, opened on a client of that type - which shares the one
+        ///     static store of the type - so the mixed batch reuses the same validation a single-type
+        ///     batch uses.
         /// </summary>
         /// <typeparam name="T">The entity type this participant writes</typeparam>
         private sealed class Participant<T> : IParticipant
@@ -151,21 +169,19 @@ namespace Wemogy.Infrastructure.Database.InMemory.Client
         {
             private readonly InMemoryDatabaseClient<T> _client = new InMemoryDatabaseClient<T>();
 
-            private readonly List<(int OperationIndex, InMemoryTransactionalBatchOperation<T> Operation)> _operations =
-                new List<(int, InMemoryTransactionalBatchOperation<T>)>();
-
             private object? _staging;
 
-            public void Add(int operationIndex, InMemoryTransactionalBatchOperation<T> operation)
+            public void BeginStage(PartitionKeyValue partitionKey)
             {
-                _operations.Add((operationIndex, operation));
+                _staging = _client.BeginStaging(partitionKey);
             }
 
-            public void Stage(PartitionKeyValue partitionKey)
+            public void Stage(InMemoryTransactionalBatchOperation<T> operation, int operationIndex)
             {
-                _staging = _client.StageBatch(
-                    partitionKey,
-                    _operations);
+                _client.StageOperation(
+                    _staging!,
+                    operation,
+                    operationIndex);
             }
 
             public void Commit()

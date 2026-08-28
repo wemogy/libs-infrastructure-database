@@ -19,12 +19,8 @@ namespace Wemogy.Infrastructure.Database.Core.Repositories;
 public abstract class DatabaseTransactionalBatchBase<TEntity> : IDatabaseTransactionalBatch<TEntity>
     where TEntity : class
 {
-    /// <summary>
-    ///     Cosmos DB caps a transactional batch at 100 operations. The cap is enforced for every
-    ///     provider, so a batch that runs against the in-memory provider in a test cannot be
-    ///     larger than one that runs against Cosmos DB in production.
-    /// </summary>
-    public const int MaxOperationCount = 100;
+    /// <inheritdoc cref="TransactionalBatchLimits.MaxOperationCount"/>
+    public const int MaxOperationCount = TransactionalBatchLimits.MaxOperationCount;
 
     private readonly Func<TEntity, PartitionKeyValue> _resolvePartitionKey;
 

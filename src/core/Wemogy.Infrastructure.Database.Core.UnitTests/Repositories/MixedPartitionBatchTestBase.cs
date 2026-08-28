@@ -291,6 +291,41 @@ public abstract class MixedPartitionBatchTestBase
     }
 
     [Fact]
+    public async Task ExecuteAsync_ShouldReportTheFirstFailingOperationNotTheFirstFailingType()
+    {
+        // Arrange: a batch where two operations of two types would both fail, and the type whose
+        // operation fails *later* is the one the batch touches *first*. A provider that validates
+        // per type instead of in the order the operations were added reports the wrong one
+        await ResetAsync();
+        var balance = NewBalance();
+        await QuotaBalanceRepository.CreateAsync(balance);
+
+        var usageEvent = NewEventFor(balance);
+        await UsageEventRepository.CreateAsync(usageEvent);
+
+        var batch = UsageEventRepository.CreatePartitionBatch(balance.GetPartitionKey());
+
+        // sees QuotaBalance first, and succeeds
+        batch.Upsert(balance);
+
+        // fails: the event was already recorded
+        batch.Create(usageEvent);
+
+        // would also fail, on the type the batch saw first - a cap of zero cannot admit a consume
+        batch.Patch<QuotaBalance>(
+            balance.Id,
+            p => p.Increment(x => x.Consumed, 1m),
+            x => x.Consumed < 0m);
+
+        // Act
+        var exception = await Record.ExceptionAsync(() => batch.ExecuteAsync());
+
+        // Assert: the conflict of the second operation, not the unmet condition of the third
+        exception.ShouldBeOfType<ConflictErrorException>();
+        ((ConflictErrorException)exception).Code.ShouldBe("AlreadyExists");
+    }
+
+    [Fact]
     public async Task ExecuteAsync_ShouldApplyDeleteAndUpsertAcrossTypes()
     {
         // Arrange: the two operations the atomic-write tests above do not reach, on two types -

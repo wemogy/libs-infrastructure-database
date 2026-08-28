@@ -16,6 +16,14 @@ namespace Wemogy.Infrastructure.Database.Core.Abstractions;
 ///         <c>TransactionalBatch</c> works the same way.
 ///     </para>
 ///     <para>
+///         Which container that is comes from the repository the batch was created from. A container
+///         is configured per repository interface rather than per entity type, so an operation cannot
+///         be checked against a container of its own: adding a type that is mapped elsewhere is not
+///         refused, and on Cosmos DB the document lands in this batch's container instead. The
+///         in-memory provider keeps a store per type and ignores containers, so it does not catch
+///         that either - verify a co-located mapping against Cosmos DB.
+///     </para>
+///     <para>
 ///         A batch is single-use and not thread-safe: build it from one thread, execute it once.
 ///         Read filters, property filters and soft-delete are not applied to its operations, the
 ///         same way <c>CreateAsync</c> and <c>ReplaceAsync</c> pass straight through to the provider.

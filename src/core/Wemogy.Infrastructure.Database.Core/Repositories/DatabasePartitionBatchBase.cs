@@ -17,12 +17,8 @@ namespace Wemogy.Infrastructure.Database.Core.Repositories;
 /// </summary>
 public abstract class DatabasePartitionBatchBase : IDatabasePartitionBatch
 {
-    /// <summary>
-    ///     Cosmos DB caps a transactional batch at 100 operations. The cap is enforced for every
-    ///     provider, so a batch that runs against the in-memory provider in a test cannot be larger
-    ///     than one that runs against Cosmos DB in production.
-    /// </summary>
-    public const int MaxOperationCount = 100;
+    /// <inheritdoc cref="TransactionalBatchLimits.MaxOperationCount"/>
+    public const int MaxOperationCount = TransactionalBatchLimits.MaxOperationCount;
 
     private bool _executed;
 
@@ -88,6 +84,11 @@ public abstract class DatabasePartitionBatchBase : IDatabasePartitionBatch
     {
         EnsureNotExecuted();
         EnsureCapacity();
+
+        // a delete addresses an id, so there is no entity whose partition could be compared - but
+        // the type still has to be partitioned as deeply as the batch's key, or the operation would
+        // address a partition the type cannot express
+        EntityMetadata<T>.EnsurePartitionKeyDepth(PartitionKey);
         ApplyDelete<T>(id);
         OperationCount++;
         return this;
@@ -103,7 +104,9 @@ public abstract class DatabasePartitionBatchBase : IDatabasePartitionBatch
         EnsureNotExecuted();
         EnsureCapacity();
 
-        // a patch addresses an id, like a delete, so there is no entity to check the partition of
+        // a patch addresses an id, like a delete, so there is no entity to check the partition of -
+        // only that the type is partitioned as deeply as the batch's key
+        EntityMetadata<T>.EnsurePartitionKeyDepth(PartitionKey);
         ApplyPatch(
             id,
             PatchOperationsBuilder<T>.Build(operations),
@@ -205,6 +208,10 @@ public abstract class DatabasePartitionBatchBase : IDatabasePartitionBatch
     private void EnsureSamePartition<T>(T entity)
         where T : class
     {
+        // checked before the values are compared, so a type that is not partitioned as deeply as
+        // the batch's key is named as such instead of reported as a mismatch of values
+        EntityMetadata<T>.EnsurePartitionKeyDepth(PartitionKey);
+
         var entityPartitionKey = EntityMetadata<T>.ResolvePartitionKey(entity);
 
         // compared by value across every component: a batch is limited to one logical partition,

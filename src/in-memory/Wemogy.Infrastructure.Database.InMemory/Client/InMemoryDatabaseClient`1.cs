@@ -418,26 +418,27 @@ namespace Wemogy.Infrastructure.Database.InMemory.Client
             PartitionKeyValue partitionKey,
             IReadOnlyList<InMemoryTransactionalBatchOperation<TEntity>> operations)
         {
-            var indexedOperations = new List<(int OperationIndex, InMemoryTransactionalBatchOperation<TEntity> Operation)>(operations.Count);
-            for (var index = 0; index < operations.Count; index++)
-            {
-                indexedOperations.Add((index, operations[index]));
-            }
-
             lock (Gate)
             {
-                var staging = StageBatch(
-                    partitionKey,
-                    indexedOperations);
+                var staging = BeginStaging(partitionKey);
+
+                for (var index = 0; index < operations.Count; index++)
+                {
+                    StageOperation(
+                        staging,
+                        operations[index],
+                        index);
+                }
+
                 CommitStaging(staging);
             }
         }
 
         /// <summary>
-        ///     Validates the operations of a batch against a working copy of the partition without
-        ///     touching the store, and returns the staged result to be committed later. This is the
-        ///     first phase of a two-phase execution: a mixed-type batch stages every participating
-        ///     store before it commits any of them, so a failure in one store leaves every store
+        ///     Opens a working copy of the partition to validate a batch's operations against without
+        ///     touching the store. This is the first phase of a two-phase execution: a mixed-type
+        ///     batch opens a staging per participating store, applies every operation and commits the
+        ///     stores only once all of them staged without error, so a failure leaves every store
         ///     untouched.
         ///     <para>
         ///         Has to be called while <see cref="Gate"/> is held, so the state it validates
@@ -445,11 +446,8 @@ namespace Wemogy.Infrastructure.Database.InMemory.Client
         ///     </para>
         /// </summary>
         /// <param name="partitionKey">The logical partition every operation of the batch acts on</param>
-        /// <param name="operations">The recorded operations paired with the index to report a failure at</param>
-        /// <returns>An opaque staging result to hand to <see cref="CommitStaging"/></returns>
-        internal object StageBatch(
-            PartitionKeyValue partitionKey,
-            IReadOnlyList<(int OperationIndex, InMemoryTransactionalBatchOperation<TEntity> Operation)> operations)
+        /// <returns>An opaque staging to hand to <see cref="StageOperation"/> and <see cref="CommitStaging"/></returns>
+        internal object BeginStaging(PartitionKeyValue partitionKey)
         {
             var workingCopy = Partitions.TryGetValue(
                 partitionKey,
@@ -460,22 +458,37 @@ namespace Wemogy.Infrastructure.Database.InMemory.Client
             // collected rather than recorded straight away, so a batch that fails half way
             // through leaves nothing on the change feed either - the same reason the entities
             // are applied to a working copy
-            var changes = new List<PendingChange>();
-
-            foreach (var (operationIndex, operation) in operations)
-            {
-                ApplyBatchOperation(
-                    workingCopy,
-                    operation,
-                    operationIndex,
-                    partitionKey,
-                    changes);
-            }
-
             return new BatchStaging(
                 partitionKey,
                 workingCopy,
-                changes);
+                new List<PendingChange>());
+        }
+
+        /// <summary>
+        ///     Applies one operation of a batch to an open staging, throwing if it is not valid
+        ///     against the working copy. Applied one operation at a time rather than a whole list, so
+        ///     a mixed-type batch can drive several stagings in the order the caller added the
+        ///     operations - the order Cosmos DB reports a failure in.
+        ///     <para>
+        ///         Has to be called while <see cref="Gate"/> is held.
+        ///     </para>
+        /// </summary>
+        /// <param name="staging">The staging of <see cref="BeginStaging"/> to apply the operation to</param>
+        /// <param name="operation">The operation to apply</param>
+        /// <param name="operationIndex">The index of the operation in the batch, to report a failure at</param>
+        internal void StageOperation(
+            object staging,
+            InMemoryTransactionalBatchOperation<TEntity> operation,
+            int operationIndex)
+        {
+            var batchStaging = (BatchStaging)staging;
+
+            ApplyBatchOperation(
+                batchStaging.WorkingCopy,
+                operation,
+                operationIndex,
+                batchStaging.PartitionKey,
+                batchStaging.Changes);
         }
 
         /// <summary>
@@ -484,10 +497,10 @@ namespace Wemogy.Infrastructure.Database.InMemory.Client
         ///     staged without error, so it cannot fail on validation.
         ///     <para>
         ///         Has to be called while <see cref="Gate"/> is held, and with the value a matching
-        ///         <see cref="StageBatch"/> returned.
+        ///         <see cref="BeginStaging"/> returned.
         ///     </para>
         /// </summary>
-        /// <param name="staging">The staging result of <see cref="StageBatch"/></param>
+        /// <param name="staging">The staging of <see cref="BeginStaging"/> to write</param>
         internal void CommitStaging(object staging)
         {
             var batchStaging = (BatchStaging)staging;

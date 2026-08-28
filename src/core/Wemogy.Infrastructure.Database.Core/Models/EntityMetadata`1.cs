@@ -1,4 +1,6 @@
+using System;
 using System.Reflection;
+using System.Threading;
 using Wemogy.Core.Errors;
 using Wemogy.Core.Extensions;
 using Wemogy.Infrastructure.Database.Core.Attributes;
@@ -17,42 +19,29 @@ namespace Wemogy.Infrastructure.Database.Core.Models;
 public static class EntityMetadata<T>
     where T : class
 {
-    private static readonly PropertyInfo IdProperty;
-    private static readonly PropertyInfo? ETagProperty;
-
-    static EntityMetadata()
-    {
-        var idPropertyInfo = typeof(T).GetPropertyByCustomAttribute<IdAttribute>();
-        if (idPropertyInfo == null)
-        {
-            throw Error.Unexpected(
-                "IdPropertyNotFound",
-                $"There is no ID attribute specified for the model {typeof(T).FullName}");
-        }
-
-        IdProperty = idPropertyInfo;
-
-        // resolves either the single [PartitionKey] property or the ordered
-        // [HierarchicalPartitionKey] ones, and throws if the declaration is broken
-        Definition = PartitionKeyDefinition.Resolve(typeof(T));
-
-        // optional: entities opt into optimistic concurrency via the [ETag] attribute
-        ETagProperty = typeof(T).GetPropertyByCustomAttribute<ETagAttribute>();
-    }
+    /// <summary>
+    ///     Constructed here, but resolved on first use. Resolving in the field initializer would run
+    ///     the reflection inside the type initializer, so an entity type with a broken declaration
+    ///     would reach the caller as a <see cref="TypeInitializationException"/> instead of the
+    ///     named error this library raises everywhere else - and the CLR caches a failed type
+    ///     initializer, so every later touch of the type would keep throwing that wrapper.
+    ///     <para>
+    ///         <see cref="LazyThreadSafetyMode.PublicationOnly"/> because it does not cache the
+    ///         failure either: the named error is raised again on the next call rather than once.
+    ///         Resolving twice under a race is harmless, it only reads attributes.
+    ///     </para>
+    /// </summary>
+    private static readonly Lazy<EntityMembers> Members = new Lazy<EntityMembers>(
+        Resolve,
+        LazyThreadSafetyMode.PublicationOnly);
 
     /// <summary>
     ///     The property holding the broadest component of the partition key. The multi-tenant
     ///     plugin composes its prefix into this component alone.
     /// </summary>
-    public static PropertyInfo PartitionKeyProperty => Definition.FirstProperty;
+    public static PropertyInfo PartitionKeyProperty => Members.Value.Definition.FirstProperty;
 
-    /// <summary>
-    ///     Whether the entity type opts into optimistic concurrency via the
-    ///     <see cref="ETagAttribute"/> and the eTag can be assigned.
-    /// </summary>
-    public static bool SupportsETag => ETagProperty is { CanWrite: true };
-
-    internal static PartitionKeyDefinition Definition { get; }
+    internal static PartitionKeyDefinition Definition => Members.Value.Definition;
 
     /// <summary>
     ///     Returns the id value of the entity.
@@ -61,7 +50,7 @@ public static class EntityMetadata<T>
     /// <returns>The id value of the entity</returns>
     public static string ResolveId(T entity)
     {
-        return (string)IdProperty.GetValue(entity)!;
+        return (string)Members.Value.IdProperty.GetValue(entity)!;
     }
 
     /// <summary>
@@ -72,7 +61,7 @@ public static class EntityMetadata<T>
     /// <returns>The partition key of the entity</returns>
     public static PartitionKeyValue ResolvePartitionKey(T entity)
     {
-        return Definition.GetValue(entity);
+        return Members.Value.Definition.GetValue(entity);
     }
 
     /// <summary>
@@ -83,23 +72,7 @@ public static class EntityMetadata<T>
     /// <returns>The eTag value, or null when the entity does not carry one</returns>
     public static string? ResolveETag(T entity)
     {
-        return (string?)ETagProperty?.GetValue(entity);
-    }
-
-    /// <summary>
-    ///     Assigns the eTag value of the entity. Does nothing if the entity does not opt into
-    ///     optimistic concurrency via the <see cref="ETagAttribute"/>.
-    /// </summary>
-    /// <param name="entity">The entity to stamp</param>
-    /// <param name="eTag">The eTag value to assign</param>
-    public static void SetETag(T entity, string? eTag)
-    {
-        if (!SupportsETag)
-        {
-            return;
-        }
-
-        ETagProperty!.SetValue(entity, eTag);
+        return (string?)Members.Value.ETagProperty?.GetValue(entity);
     }
 
     /// <summary>
@@ -109,6 +82,50 @@ public static class EntityMetadata<T>
     /// <param name="partitionKey">The partition key to validate</param>
     public static void EnsurePartitionKeyDepth(PartitionKeyValue partitionKey)
     {
-        Definition.EnsureDepth(partitionKey, typeof(T));
+        Members.Value.Definition.EnsureDepth(
+            partitionKey,
+            typeof(T));
+    }
+
+    private static EntityMembers Resolve()
+    {
+        var idPropertyInfo = typeof(T).GetPropertyByCustomAttribute<IdAttribute>();
+        if (idPropertyInfo == null)
+        {
+            throw Error.Unexpected(
+                "IdPropertyNotFound",
+                $"There is no ID attribute specified for the model {typeof(T).FullName}");
+        }
+
+        // resolves either the single [PartitionKey] property or the ordered
+        // [HierarchicalPartitionKey] ones, and throws if the declaration is broken
+        var definition = PartitionKeyDefinition.Resolve(typeof(T));
+
+        // optional: entities opt into optimistic concurrency via the [ETag] attribute
+        var eTagPropertyInfo = typeof(T).GetPropertyByCustomAttribute<ETagAttribute>();
+
+        return new EntityMembers(
+            idPropertyInfo,
+            definition,
+            eTagPropertyInfo);
+    }
+
+    private sealed class EntityMembers
+    {
+        public EntityMembers(
+            PropertyInfo idProperty,
+            PartitionKeyDefinition definition,
+            PropertyInfo? eTagProperty)
+        {
+            IdProperty = idProperty;
+            Definition = definition;
+            ETagProperty = eTagProperty;
+        }
+
+        public PropertyInfo IdProperty { get; }
+
+        public PartitionKeyDefinition Definition { get; }
+
+        public PropertyInfo? ETagProperty { get; }
     }
 }

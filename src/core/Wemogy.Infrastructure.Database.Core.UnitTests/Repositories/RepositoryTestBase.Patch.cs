@@ -390,26 +390,30 @@ public partial class RepositoryTestBase
         user.CreditsCap = 10;
         await MicrosoftUserRepository.CreateAsync(user);
 
-        // Act
+        // Act: each attempt is handed to the thread pool rather than awaited where it is created.
+        // The in-memory provider applies a patch synchronously and hands back a completed task, so
+        // awaiting the calls in sequence ran all fifty one after another and the cap held without
+        // anything ever racing for it
         var results = await Task.WhenAll(
             Enumerable.Range(0, 50)
                 .Select(
-                    async _ =>
-                    {
-                        try
+                    _ => Task.Run(
+                        async () =>
                         {
-                            await MicrosoftUserRepository.PatchAsync(
-                                user.Id,
-                                partitionKey,
-                                p => p.Increment(x => x.Credits, 1),
-                                x => x.Credits < x.CreditsCap);
-                            return true;
-                        }
-                        catch (ConflictErrorException)
-                        {
-                            return false;
-                        }
-                    }));
+                            try
+                            {
+                                await MicrosoftUserRepository.PatchAsync(
+                                    user.Id,
+                                    partitionKey,
+                                    p => p.Increment(x => x.Credits, 1),
+                                    x => x.Credits < x.CreditsCap);
+                                return true;
+                            }
+                            catch (ConflictErrorException)
+                            {
+                                return false;
+                            }
+                        })));
 
         // Assert: exactly the cap was granted, and the stored balance agrees
         results.Count(x => x).ShouldBe(10);

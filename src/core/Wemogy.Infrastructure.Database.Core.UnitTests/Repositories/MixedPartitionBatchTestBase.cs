@@ -232,10 +232,12 @@ public abstract class MixedPartitionBatchTestBase
         var balance = NewBalance();
         await QuotaBalanceRepository.CreateAsync(balance);
 
-        // Act
+        // Act: Task.Run, not a bare call - the in-memory provider applies a batch synchronously, so
+        // awaiting the calls in order would run all fifty one after another and prove nothing about
+        // isolation on that provider
         var consumedEvents = await Task.WhenAll(
             Enumerable.Range(0, attempts)
-                .Select(_ => TryConsumeAsync(balance, cap)));
+                .Select(_ => Task.Run(() => TryConsumeAsync(balance, cap))));
         var succeeded = consumedEvents.Where(usageEvent => usageEvent != null).ToList();
 
         // Assert: exactly the cap consumed, and the balance sits at the cap - the condition held
@@ -288,6 +290,50 @@ public abstract class MixedPartitionBatchTestBase
             usageEvent.Id,
             usageEvent.GetPartitionKey());
         eventExists.ShouldBeTrue();
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_ShouldNotDeadlockWhenBatchesTouchTheTypesInOppositeOrders()
+    {
+        // Arrange: batches that write the same two types, half of them adding one type first and
+        // half the other, so a provider locking a store per entity type has to reconcile the two
+        // orders. A deadlock would surface here as the timeout below - though only sometimes, which
+        // is why the ordering rule itself is pinned by InMemoryStoreGateTests rather than by this
+        // test. What this one does cover on every provider is that concurrent mixed batches all land
+        await ResetAsync();
+        const int attempts = 20;
+
+        var balance = NewBalance();
+        await QuotaBalanceRepository.CreateAsync(balance);
+
+        // Act
+        // Task.Run, not a bare call: the in-memory provider applies a batch synchronously, so
+        // awaiting the calls in order would run them one after another and never contend at all
+        var consumes = Task.WhenAll(
+            Enumerable.Range(0, attempts)
+                .Select(attempt => Task.Run(() => ConsumeAsync(
+                    balance,
+                    eventFirst: attempt % 2 == 0))));
+
+        var finished = await Task.WhenAny(
+            consumes,
+            Task.Delay(TimeSpan.FromSeconds(60)));
+
+        // Assert: they all got through, and every increment landed
+        if (finished != consumes)
+        {
+            throw new TimeoutException(
+                "the batches did not all complete, which is what a deadlock between the stores of "
+                + "the two entity types looks like");
+        }
+
+        // awaited so a failure inside a batch surfaces as itself rather than as the timeout above
+        await consumes;
+
+        var fetchedBalance = await QuotaBalanceRepository.GetAsync(
+            balance.Id,
+            balance.GetPartitionKey());
+        fetchedBalance.Consumed.ShouldBe(attempts);
     }
 
     [Fact]
@@ -490,6 +536,31 @@ public abstract class MixedPartitionBatchTestBase
         usageEvent.MeterSlug = balance.MeterSlug;
         usageEvent.TimeBucket = balance.TimeBucket;
         return usageEvent;
+    }
+
+    /// <summary>
+    ///     Records an event and moves the balance unconditionally, adding the two types in either
+    ///     order so a batch can be built that sees one type first and one that sees the other.
+    /// </summary>
+    private async Task ConsumeAsync(QuotaBalance balance, bool eventFirst)
+    {
+        var batch = UsageEventRepository.CreatePartitionBatch(balance.GetPartitionKey());
+
+        if (eventFirst)
+        {
+            batch.Create(NewEventFor(balance));
+        }
+
+        batch.Patch<QuotaBalance>(
+            balance.Id,
+            p => p.Increment(x => x.Consumed, 1m));
+
+        if (!eventFirst)
+        {
+            batch.Create(NewEventFor(balance));
+        }
+
+        await batch.ExecuteAsync();
     }
 
     private async Task<UsageEvent?> TryConsumeAsync(QuotaBalance balance, int cap, UsageEvent? usageEvent = null)

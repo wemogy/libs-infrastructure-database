@@ -13,11 +13,12 @@ namespace Wemogy.Infrastructure.Database.InMemory.Client
 {
     /// <summary>
     ///     In-memory implementation of a mixed-type partition batch. Each entity type keeps its own
-    ///     static store, so a batch that mixes types has to write to several stores and still appear
-    ///     atomic across all of them. It does so by opening a staging per participating store and
-    ///     executing in two phases under the one process-wide lock: every operation is staged first,
-    ///     and only once all of them staged without error is any store committed. A failure during
-    ///     staging therefore leaves every store untouched, the same guarantee Cosmos DB gives.
+    ///     static store behind its own gate, so a batch that mixes types has to write to several
+    ///     stores and still appear atomic across all of them. It does so by holding the gates of the
+    ///     types it touches - and only those - for the whole execution, and running in two phases
+    ///     under them: every operation is staged first, and only once all of them staged without
+    ///     error is any store committed. A failure during staging therefore leaves every store
+    ///     untouched, the same guarantee Cosmos DB gives.
     /// </summary>
     public class InMemoryPartitionBatch : DatabasePartitionBatchBase
     {
@@ -95,10 +96,26 @@ namespace Wemogy.Infrastructure.Database.InMemory.Client
         {
             cancellationToken.ThrowIfCancellationRequested();
 
-            // the whole batch runs under one lock, so no other write can interleave between staging
-            // and committing, and the several stores appear to change at one instant
-            lock (InMemoryDatabaseSync.Gate)
+            // the gates of the types this batch writes, and no others: a batch over one type costs
+            // exactly what a plain write of that type costs, and a batch over two leaves every other
+            // entity type free to be written in parallel
+            var gates = new List<InMemoryStoreGate>(_participants.Count);
+            foreach (var participant in _participants)
             {
+                gates.Add(participant.Gate);
+            }
+
+            var entered = new bool[gates.Count];
+
+            try
+            {
+                // held for the whole batch, so no other write can interleave between staging and
+                // committing and the several stores appear to change at one instant. Entered in rank
+                // order, so two batches whose types overlap cannot deadlock
+                InMemoryStoreGate.EnterAll(
+                    gates,
+                    entered);
+
                 foreach (var participant in _participants)
                 {
                     participant.BeginStage(PartitionKey);
@@ -116,6 +133,12 @@ namespace Wemogy.Infrastructure.Database.InMemory.Client
                 {
                     participant.Commit();
                 }
+            }
+            finally
+            {
+                InMemoryStoreGate.ExitAll(
+                    gates,
+                    entered);
             }
 
             return Task.CompletedTask;
@@ -201,6 +224,8 @@ namespace Wemogy.Infrastructure.Database.InMemory.Client
         /// </summary>
         private interface IParticipant
         {
+            InMemoryStoreGate Gate { get; }
+
             void BeginStage(PartitionKeyValue partitionKey);
 
             bool ContainsId(string id);
@@ -220,6 +245,8 @@ namespace Wemogy.Infrastructure.Database.InMemory.Client
             private readonly InMemoryDatabaseClient<T> _client = new InMemoryDatabaseClient<T>();
 
             private object? _staging;
+
+            public InMemoryStoreGate Gate => InMemoryDatabaseClient<T>.StoreGate;
 
             public void BeginStage(PartitionKeyValue partitionKey)
             {

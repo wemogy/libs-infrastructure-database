@@ -33,11 +33,17 @@ namespace Wemogy.Infrastructure.Database.InMemory.Client
         /// <summary>
         ///     Guards <see cref="Partitions"/> and every entity list inside it. Clients are
         ///     typically registered as singletons, so concurrent requests would otherwise corrupt
-        ///     the dictionaries. The lock is shared across every entity type (see
-        ///     <see cref="InMemoryDatabaseSync"/>), so a mixed-type partition batch that writes to
-        ///     several stores at once can hold one lock for all of them.
+        ///     the dictionaries. One gate per closed generic type, like the store it guards, so a
+        ///     write to one entity type does not block a write to another - a mixed-type partition
+        ///     batch holds the gates of the types it touches, and only those.
         /// </summary>
-        private static readonly object Gate = InMemoryDatabaseSync.Gate;
+        private static readonly InMemoryStoreGate Gate = new InMemoryStoreGate();
+
+        /// <summary>
+        ///     The gate guarding this entity type's store, for a mixed-type partition batch that has
+        ///     to hold it alongside the gates of the other types it writes.
+        /// </summary>
+        internal static InMemoryStoreGate StoreGate => Gate;
 
         public Task<TEntity> GetAsync(string id, PartitionKeyValue partitionKey, CancellationToken cancellationToken)
         {

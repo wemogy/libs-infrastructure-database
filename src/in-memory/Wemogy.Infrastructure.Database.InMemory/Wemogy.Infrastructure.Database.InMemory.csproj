@@ -22,6 +22,16 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!--
+      the store gates are an implementation detail, but the order they are entered in is what keeps
+      concurrent mixed-type batches deadlock-free, and that rule is worth a test of its own
+    -->
+    <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleTo">
+      <_Parameter1>Wemogy.Infrastructure.Database.InMemory.UnitTests</_Parameter1>
+    </AssemblyAttribute>
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\..\core\Wemogy.Infrastructure.Database.Core\Wemogy.Infrastructure.Database.Core.csproj" />
   </ItemGroup>
 
